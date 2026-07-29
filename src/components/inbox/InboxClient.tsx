@@ -5,8 +5,8 @@ import { useState, useEffect } from 'react';
 import { Search, MoreVertical, Send, User, Tag, Clock, Bot, PauseCircle, MessageCircle } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 
-export function InboxClient({ initialConversations, workspaceId }: { initialConversations: any[], workspaceId: string }) {
-  const [conversations, setConversations] = useState<any[]>(initialConversations);
+export function InboxClient({ initialConversations = [], workspaceId }: { initialConversations?: any[], workspaceId: string }) {
+  const [conversations, setConversations] = useState<any[]>(initialConversations || []);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');

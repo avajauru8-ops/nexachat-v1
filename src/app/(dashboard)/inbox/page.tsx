@@ -18,5 +18,26 @@ export default async function InboxPage() {
     return <div className="p-8 text-center text-slate-500">Workspace não encontrado.</div>;
   }
 
-  return <InboxClient workspaceId={workspace.id} />;
+  const { data: conversationsData } = await supabase
+    .from('conversations')
+    .select('*, contacts(*)')
+    .eq('workspace_id', workspace.id)
+    .order('updated_at', { ascending: false });
+
+  const conversations = await Promise.all((conversationsData || []).map(async (conv) => {
+    const { data: lastMsg } = await supabase
+      .from('messages')
+      .select('content')
+      .eq('conversation_id', conv.id)
+      .order('timestamp', { ascending: false })
+      .limit(1)
+      .single();
+
+    return {
+      ...conv,
+      lastMessage: lastMsg?.content || 'Nova conversa'
+    };
+  }));
+
+  return <InboxClient initialConversations={conversations} workspaceId={workspace.id} />;
 }
