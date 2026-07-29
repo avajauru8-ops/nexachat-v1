@@ -32,7 +32,7 @@ export default async function DashboardPage() {
       supabase.from('leads').select('*', { count: 'exact', head: true }).eq('workspace_id', workspace.id),
       supabase.from('messages').select('*', { count: 'exact', head: true }).eq('workspace_id', workspace.id),
       supabase.from('automation_flows').select('*', { count: 'exact', head: true }).eq('workspace_id', workspace.id).eq('is_active', true),
-      supabase.from('instagram_accounts').select('ig_user_id, status').eq('workspace_id', workspace.id)
+      supabase.from('instagram_accounts').select('page_id, ig_user_id, status').eq('workspace_id', workspace.id)
     ]);
     
     totalLeads = leadsCount || 0;
@@ -41,31 +41,29 @@ export default async function DashboardPage() {
     connectedAccounts = accounts || [];
   }
 
-  const stats = [
-    { title: 'Total de Leads', value: totalLeads.toString(), change: '+12%', icon: Users },
-    { title: 'Mensagens Trocadas', value: totalMessages.toString(), change: '+24%', icon: MessageCircle },
-    { title: 'Automações Ativas', value: activeFlows.toString(), change: '0%', icon: Zap },
-    { title: 'Taxa de Resposta', value: '0%', change: '+5%', icon: TrendingUp },
-  ];
-
   return (
-    <div className="space-y-6 flex flex-col h-full">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Visão Geral</h1>
-        <div className="flex gap-2">
-          {/* Pode adicionar botões de ação aqui */}
+    <div className="flex flex-col gap-6 p-6 min-h-screen bg-slate-50">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Painel Principal</h1>
+          <p className="text-slate-500 text-sm">Gerencie suas automações e veja o resumo da sua operação.</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 shrink-0">
-        {stats.map((stat) => {
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { title: 'Total de Leads', value: totalLeads, change: '+12%', icon: Users },
+          { title: 'Mensagens Trocadas', value: totalMessages, change: '+25%', icon: MessageCircle },
+          { title: 'Automações Ativas', value: activeFlows, change: 'Estável', icon: Zap },
+          { title: 'Taxa de Resposta', value: '98%', change: '+3%', icon: TrendingUp },
+        ].map((stat, i) => {
           const Icon = stat.icon;
           return (
-            <div key={stat.title} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+            <div key={i} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-sm font-medium text-slate-500 mb-1">{stat.title}</p>
-                  <h3 className="text-2xl font-bold text-slate-800">{stat.value}</h3>
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{stat.title}</p>
+                  <p className="text-2xl font-bold text-slate-800 mt-1">{stat.value}</p>
                 </div>
                 <div className="w-8 h-8 rounded bg-blue-50 flex items-center justify-center text-blue-600">
                   <Icon className="w-4 h-4" />
@@ -85,7 +83,7 @@ export default async function DashboardPage() {
           <div className="flex justify-between items-center mb-4 shrink-0">
             <h3 className="font-bold text-slate-800">Atividade Recente</h3>
           </div>
-          <div className="flex-1 flex items-center justify-center border-2 border-dashed border-slate-100 rounded-lg bg-slate-50">
+          <div className="flex-1 flex items-center justify-center border-2 border-dashed border-slate-100 rounded-lg bg-slate-50 min-h-[220px]">
             <p className="text-slate-400 text-sm font-medium">O gráfico de atividade será exibido aqui</p>
           </div>
         </div>
@@ -95,14 +93,16 @@ export default async function DashboardPage() {
           <div className="flex-1 overflow-y-auto pr-2">
             <div className="space-y-3">
               {connectedAccounts.length > 0 ? connectedAccounts.map((acc, i) => (
-                <div key={i} className="flex items-center p-3 border border-slate-100 rounded-lg hover:border-blue-100 transition-colors">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500 p-[2px]">
-                    <div className="w-full h-full bg-white rounded-full flex items-center justify-center">
-                      <span className="font-bold text-xs">IG</span>
+                <div key={i} className="flex items-center p-3 border border-slate-100 rounded-lg hover:border-pink-200 transition-colors">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 p-[2px] shrink-0">
+                    <div className="w-full h-full bg-white rounded-full flex items-center justify-center text-pink-600 font-bold text-xs">
+                      IG
                     </div>
                   </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-semibold text-slate-800">@{acc.ig_user_id || 'Instagram'}</p>
+                  <div className="ml-3 min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-slate-800 truncate">
+                      @{acc.page_id && acc.page_id !== acc.ig_user_id ? acc.page_id : 'instagram'}
+                    </p>
                     <p className="text-xs text-emerald-600 font-medium">Conectado</p>
                   </div>
                 </div>
@@ -114,9 +114,12 @@ export default async function DashboardPage() {
             </div>
           </div>
           <div className="mt-4 pt-4 border-t border-slate-100 shrink-0">
-            <button className="w-full py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-bold hover:bg-blue-100 transition-colors">
+            <a 
+              href="/api/auth/meta" 
+              className="block text-center w-full py-2.5 bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 text-white rounded-lg text-sm font-bold shadow-sm hover:opacity-95 transition-opacity"
+            >
               + Conectar Nova Conta
-            </button>
+            </a>
           </div>
         </div>
       </div>
