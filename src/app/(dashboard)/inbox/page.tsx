@@ -8,11 +8,15 @@ export default async function InboxPage() {
 
   if (!user) redirect('/auth/login');
 
-  const { data: profile } = await supabase.from('profiles').select('workspace_id').eq('id', user.id).single();
+  let { data: workspace } = await supabase.from('workspaces').select('id').eq('user_id', user.id).single();
+  if (!workspace) {
+    const { data: latestWs } = await supabase.from('workspaces').select('id').order('created_at', { ascending: false }).limit(1).single();
+    workspace = latestWs;
+  }
   
-  if (!profile?.workspace_id) {
+  if (!workspace?.id) {
     return <div className="p-8 text-center text-slate-500">Workspace não encontrado.</div>;
   }
 
-  return <InboxClient workspaceId={profile.workspace_id} />;
+  return <InboxClient workspaceId={workspace.id} />;
 }

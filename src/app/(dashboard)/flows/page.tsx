@@ -9,16 +9,20 @@ export default async function FlowsPage() {
 
   if (!user) redirect('/auth/login');
 
-  const { data: profile } = await supabase.from('profiles').select('workspace_id').eq('id', user.id).single();
+  let { data: workspace } = await supabase.from('workspaces').select('id').eq('user_id', user.id).single();
+  if (!workspace) {
+    const { data: latestWs } = await supabase.from('workspaces').select('id').order('created_at', { ascending: false }).limit(1).single();
+    workspace = latestWs;
+  }
   
-  if (!profile?.workspace_id) {
+  if (!workspace?.id) {
     return <div className="p-8 text-center text-slate-500">Workspace não encontrado.</div>;
   }
 
   const { data: flows } = await supabase
-    .from('automation_flows')
+    .from('flows')
     .select('*')
-    .eq('workspace_id', profile.workspace_id)
+    .eq('workspace_id', workspace.id)
     .order('updated_at', { ascending: false });
 
   return (
@@ -42,7 +46,7 @@ export default async function FlowsPage() {
           <div key={flow.id} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col group hover:border-blue-200 hover:shadow-md transition-all">
             <div className="p-5 flex-1">
               <div className="flex justify-between items-start mb-4">
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${flow.is_active ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${flow.status === 'active' || flow.is_active ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
                   <Play className="w-5 h-5" />
                 </div>
                 <button className="p-1.5 text-slate-400 hover:bg-slate-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
@@ -51,14 +55,14 @@ export default async function FlowsPage() {
               </div>
               <h3 className="font-bold text-slate-800 text-lg mb-1">{flow.name}</h3>
               <p className="text-sm text-slate-500 line-clamp-2">
-                {flow.description || 'Nenhuma descrição fornecida.'}
+                {flow.description || (flow.triggers as Record<string, string>)?.keyword ? `Gatilho: "${(flow.triggers as Record<string, string>).keyword}"` : 'Nenhuma descrição fornecida.'}
               </p>
             </div>
             
             <div className="px-5 py-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full ${flow.is_active ? 'bg-emerald-500' : 'bg-slate-300'}`}></span>
-                <span className="text-xs font-semibold text-slate-600">{flow.is_active ? 'Ativo' : 'Inativo'}</span>
+                <span className={`w-2 h-2 rounded-full ${flow.status === 'active' || flow.is_active ? 'bg-emerald-500' : 'bg-slate-300'}`}></span>
+                <span className="text-xs font-semibold text-slate-600">{flow.status === 'active' || flow.is_active ? 'Ativo (LIVE)' : 'Inativo'}</span>
               </div>
               <Link 
                 href={`/flows/builder/${flow.id}`}
