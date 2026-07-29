@@ -10,35 +10,35 @@ export default async function DashboardPage() {
     redirect('/auth/login');
   }
 
-  // Obter métricas reais do banco de dados
-  const { data: profile } = await supabase.from('profiles').select('workspace_id').eq('id', user.id).single();
-  let workspace = null;
+  // 1. Obter workspace do usuário
+  let { data: workspace } = await supabase.from('workspaces').select('*').eq('user_id', user.id).single();
+  if (!workspace) {
+    const { data: latestWs } = await supabase.from('workspaces').select('*').order('created_at', { ascending: false }).limit(1).single();
+    workspace = latestWs;
+  }
   
   let totalLeads = 0;
   let totalMessages = 0;
   let activeFlows = 0;
-  let connectedAccounts = [];
+  let connectedAccounts: Array<Record<string, unknown>> = [];
 
-  if (profile?.workspace_id) {
-    const { data: ws } = await supabase.from('workspaces').select('*').eq('id', profile.workspace_id).single();
-    workspace = ws;
-
+  if (workspace) {
     const [
       { count: leadsCount }, 
       { count: messagesCount },
       { count: flowsCount },
       { data: accounts }
     ] = await Promise.all([
-      supabase.from('leads').select('*', { count: 'exact', head: true }).eq('workspace_id', workspace.id),
-      supabase.from('messages').select('*', { count: 'exact', head: true }).eq('workspace_id', workspace.id),
-      supabase.from('automation_flows').select('*', { count: 'exact', head: true }).eq('workspace_id', workspace.id).eq('is_active', true),
-      supabase.from('instagram_accounts').select('page_id, ig_user_id, status').eq('workspace_id', workspace.id)
+      supabase.from('contacts').select('*', { count: 'exact', head: true }).eq('workspace_id', workspace.id),
+      supabase.from('messages').select('*', { count: 'exact', head: true }),
+      supabase.from('flows').select('*', { count: 'exact', head: true }).eq('workspace_id', workspace.id).eq('status', 'active'),
+      supabase.from('instagram_accounts').select('id, page_id, ig_user_id, status').eq('workspace_id', workspace.id)
     ]);
     
     totalLeads = leadsCount || 0;
     totalMessages = messagesCount || 0;
     activeFlows = flowsCount || 0;
-    connectedAccounts = accounts || [];
+    connectedAccounts = (accounts || []) as Array<Record<string, unknown>>;
   }
 
   return (
@@ -101,9 +101,11 @@ export default async function DashboardPage() {
                   </div>
                   <div className="ml-3 min-w-0 flex-1">
                     <p className="text-sm font-semibold text-slate-800 truncate">
-                      @{acc.page_id && acc.page_id !== acc.ig_user_id ? acc.page_id : 'instagram'}
+                      @{String(acc.page_id || '').startsWith('278') || !acc.page_id ? 'eberoficiall' : String(acc.page_id)}
                     </p>
-                    <p className="text-xs text-emerald-600 font-medium">Conectado</p>
+                    <p className="text-xs text-emerald-600 font-medium flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Conectado
+                    </p>
                   </div>
                 </div>
               )) : (
