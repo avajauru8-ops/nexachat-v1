@@ -1,0 +1,135 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model workspaces {
+  id                 String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id            String               @db.Uuid
+  name               String
+  created_at         DateTime?            @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime?            @default(now()) @db.Timestamptz(6)
+  contacts           contacts[]
+  conversations      conversations[]
+  flows              flows[]
+  instagram_accounts instagram_accounts[]
+  tags               tags[]
+  subscriptions      subscriptions[]
+}
+
+model instagram_accounts {
+  id           String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  workspace_id String     @db.Uuid
+  ig_user_id   String     @unique
+  page_id      String
+  access_token String
+  status       String?    @default("active")
+  created_at   DateTime?  @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime?  @default(now()) @db.Timestamptz(6)
+  contacts     contacts[]
+  flows        flows[]
+  workspaces   workspaces @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+}
+
+model contacts {
+  id                   String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  workspace_id         String               @db.Uuid
+  instagram_account_id String               @db.Uuid
+  ig_scoped_id         String
+  name                 String?
+  profile_picture      String?
+  custom_fields        Json?                @default("{}")
+  created_at           DateTime?            @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime?            @default(now()) @db.Timestamptz(6)
+  contact_tags         contact_tags[]
+  instagram_accounts   instagram_accounts   @relation(fields: [instagram_account_id], references: [id], onDelete: Cascade)
+  workspaces           workspaces           @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  conversations        conversations[]
+
+  @@unique([instagram_account_id, ig_scoped_id])
+}
+
+model tags {
+  id           String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  workspace_id String         @db.Uuid
+  name         String
+  created_at   DateTime?      @default(now()) @db.Timestamptz(6)
+  contact_tags contact_tags[]
+  workspaces   workspaces     @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+}
+
+model contact_tags {
+  contact_id String   @db.Uuid
+  tag_id     String   @db.Uuid
+  contacts   contacts @relation(fields: [contact_id], references: [id], onDelete: Cascade)
+  tags       tags     @relation(fields: [tag_id], references: [id], onDelete: Cascade)
+
+  @@id([contact_id, tag_id])
+}
+
+model flows {
+  id                   String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  workspace_id         String             @db.Uuid
+  instagram_account_id String             @db.Uuid
+  name                 String
+  status               String?            @default("draft")
+  flow_data            Json?              @default("{}")
+  triggers             Json?              @default("{}")
+  created_at           DateTime?          @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime?          @default(now()) @db.Timestamptz(6)
+  instagram_accounts   instagram_accounts @relation(fields: [instagram_account_id], references: [id], onDelete: Cascade)
+  workspaces           workspaces         @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+}
+
+model templates {
+  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name        String
+  description String?
+  category    String?
+  flow_data   Json
+  is_public   Boolean?  @default(true)
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+model conversations {
+  id                  String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  workspace_id        String     @db.Uuid
+  contact_id          String     @db.Uuid
+  status              String?    @default("bot_active")
+  last_interaction_at DateTime?  @default(now()) @db.Timestamptz(6)
+  window_expires_at   DateTime?  @db.Timestamptz(6)
+  created_at          DateTime?  @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime?  @default(now()) @db.Timestamptz(6)
+  contacts            contacts   @relation(fields: [contact_id], references: [id], onDelete: Cascade)
+  workspaces          workspaces @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  messages            messages[]
+}
+
+model messages {
+  id              String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  conversation_id String        @db.Uuid
+  sender_type     String
+  message_type    String
+  content         String?
+  timestamp       DateTime?     @default(now()) @db.Timestamptz(6)
+  conversations   conversations @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+}
+
+model subscriptions {
+  id                   String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  workspace_id         String     @db.Uuid
+  plan_name            String     @default("free") // free, pro, enterprise
+  status               String     @default("active") // active, past_due, canceled
+  current_period_start DateTime?  @db.Timestamptz(6)
+  current_period_end   DateTime?  @db.Timestamptz(6)
+  stripe_customer_id   String?
+  stripe_sub_id        String?
+  created_at           DateTime?  @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime?  @default(now()) @db.Timestamptz(6)
+  workspaces           workspaces @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+}
