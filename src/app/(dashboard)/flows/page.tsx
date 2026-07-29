@@ -9,21 +9,41 @@ export default async function FlowsPage() {
 
   if (!user) redirect('/auth/login');
 
-  let { data: workspace } = await supabase.from('workspaces').select('id').eq('user_id', user.id).single();
-  if (!workspace) {
-    const { data: latestWs } = await supabase.from('workspaces').select('id').order('created_at', { ascending: false }).limit(1).single();
-    workspace = latestWs;
-  }
-  
-  if (!workspace?.id) {
-    return <div className="p-8 text-center text-slate-500">Workspace não encontrado.</div>;
+  let workspaceId: string | null = null;
+  try {
+    const { data: wsList } = await supabase
+      .from('workspaces')
+      .select('id')
+      .eq('user_id', user.id)
+      .limit(1);
+
+    if (wsList && wsList.length > 0) {
+      workspaceId = wsList[0].id;
+    } else {
+      const { data: latestWs } = await supabase
+        .from('workspaces')
+        .select('id')
+        .order('created_at', { ascending: false })
+        .limit(1);
+      if (latestWs && latestWs.length > 0) {
+        workspaceId = latestWs[0].id;
+      }
+    }
+  } catch { /* ignora erro de busca */ }
+
+  if (!workspaceId) {
+    return <div className="p-8 text-center text-slate-500 font-medium">Workspace não encontrado.</div>;
   }
 
-  const { data: flows } = await supabase
-    .from('flows')
-    .select('*')
-    .eq('workspace_id', workspace.id)
-    .order('updated_at', { ascending: false });
+  let flows: any[] = [];
+  try {
+    const { data } = await supabase
+      .from('flows')
+      .select('*')
+      .eq('workspace_id', workspaceId)
+      .order('updated_at', { ascending: false });
+    if (data) flows = data;
+  } catch { /* ignora erro de busca */ }
 
   return (
     <div className="space-y-6">
@@ -42,7 +62,7 @@ export default async function FlowsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {flows && flows.length > 0 ? flows.map((flow: any) => {
+        {flows.length > 0 ? flows.map((flow: any) => {
           const keyword = typeof flow.triggers === 'object' && flow.triggers !== null ? flow.triggers.keyword : '';
           const flowDesc = flow.description || (keyword ? `Gatilho: "${keyword}"` : 'Nenhuma descrição fornecida.');
           const isActive = flow.status === 'active' || flow.is_active;
@@ -96,5 +116,5 @@ export default async function FlowsPage() {
         )}
       </div>
     </div>
-  )
+  );
 }
