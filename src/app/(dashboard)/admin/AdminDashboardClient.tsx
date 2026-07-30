@@ -1052,6 +1052,102 @@ export default function AdminDashboardClient({ currentUser }: Props) {
                   Utilizado para consultar fotos de avatar, nome de usuário e metadados das contas conectadas.
                 </p>
               </div>
+
+              {/* 7. SEND IMAGE ENDPOINT */}
+              <div className="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-extrabold text-indigo-900 flex items-center gap-1.5">
+                    <span className="px-2 py-0.5 bg-emerald-600 text-white rounded-md text-[10px]">POST</span>
+                    7. Enviar Imagem (Image Media)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy('https://graph.facebook.com/v22.0/{ig_user_id}/messages', 'meta_ep_image', 'Image Endpoint')}
+                    className="p-1.5 bg-white border border-indigo-200 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold transition-colors shadow-xs"
+                    title="Copiar URL"
+                  >
+                    {copiedField === 'meta_ep_image' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+                <p className="text-[11px] font-mono text-indigo-800 bg-white/80 p-2 rounded-xl border border-indigo-100 break-all select-all">
+                  https://graph.facebook.com/v22.0/&#123;ig_user_id&#125;/messages
+                </p>
+                <p className="text-[11px] text-indigo-700 leading-snug">
+                  Payload: <code>&#123;"message": &#123;"attachment": &#123;"type": "image", "payload": &#123;"url": "URL_AQUI"&#125;&#125;&#125;&#125;</code>
+                </p>
+              </div>
+
+              {/* 8. SEND VIDEO ENDPOINT */}
+              <div className="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-extrabold text-indigo-900 flex items-center gap-1.5">
+                    <span className="px-2 py-0.5 bg-emerald-600 text-white rounded-md text-[10px]">POST</span>
+                    8. Enviar Vídeo (Video Media)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy('https://graph.facebook.com/v22.0/{ig_user_id}/messages', 'meta_ep_video', 'Video Endpoint')}
+                    className="p-1.5 bg-white border border-indigo-200 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold transition-colors shadow-xs"
+                    title="Copiar URL"
+                  >
+                    {copiedField === 'meta_ep_video' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+                <p className="text-[11px] font-mono text-indigo-800 bg-white/80 p-2 rounded-xl border border-indigo-100 break-all select-all">
+                  https://graph.facebook.com/v22.0/&#123;ig_user_id&#125;/messages
+                </p>
+                <p className="text-[11px] text-indigo-700 leading-snug">
+                  Payload: <code>&#123;"message": &#123;"attachment": &#123;"type": "video", "payload": &#123;"url": "URL_AQUI"&#125;&#125;&#125;&#125;</code>
+                </p>
+              </div>
+
+              {/* 9. SEND AUDIO ENDPOINT */}
+              <div className="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-extrabold text-indigo-900 flex items-center gap-1.5">
+                    <span className="px-2 py-0.5 bg-emerald-600 text-white rounded-md text-[10px]">POST</span>
+                    9. Enviar Áudio (Audio Media)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy('https://graph.facebook.com/v22.0/{ig_user_id}/messages', 'meta_ep_audio', 'Audio Endpoint')}
+                    className="p-1.5 bg-white border border-indigo-200 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold transition-colors shadow-xs"
+                    title="Copiar URL"
+                  >
+                    {copiedField === 'meta_ep_audio' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+                <p className="text-[11px] font-mono text-indigo-800 bg-white/80 p-2 rounded-xl border border-indigo-100 break-all select-all">
+                  https://graph.facebook.com/v22.0/&#123;ig_user_id&#125;/messages
+                </p>
+                <p className="text-[11px] text-indigo-700 leading-snug">
+                  Payload: <code>&#123;"message": &#123;"attachment": &#123;"type": "audio", "payload": &#123;"url": "URL_AQUI"&#125;&#125;&#125;&#125;</code>
+                </p>
+              </div>
+
+              {/* 10. SEND PDF / FILE ENDPOINT */}
+              <div className="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-extrabold text-indigo-900 flex items-center gap-1.5">
+                    <span className="px-2 py-0.5 bg-emerald-600 text-white rounded-md text-[10px]">POST</span>
+                    10. Enviar Documento (PDF / File)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy('https://graph.facebook.com/v22.0/{ig_user_id}/messages', 'meta_ep_file', 'File Endpoint')}
+                    className="p-1.5 bg-white border border-indigo-200 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold transition-colors shadow-xs"
+                    title="Copiar URL"
+                  >
+                    {copiedField === 'meta_ep_file' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+                <p className="text-[11px] font-mono text-indigo-800 bg-white/80 p-2 rounded-xl border border-indigo-100 break-all select-all">
+                  https://graph.facebook.com/v22.0/&#123;ig_user_id&#125;/messages
+                </p>
+                <p className="text-[11px] text-indigo-700 leading-snug">
+                  Payload: <code>&#123;"message": &#123;"attachment": &#123;"type": "file", "payload": &#123;"url": "URL_AQUI"&#125;&#125;&#125;&#125;</code>
+                </p>
+              </div>
             </div>
           </div>
         </form>
