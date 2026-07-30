@@ -54,7 +54,7 @@ export async function saveFlow(
       .select('id')
       .single()
       
-    if (error) throw error
+    if (error) throw new Error(error.message || 'Erro ao criar fluxo no banco de dados')
 
     // Grava a versão 1 em flow_versions
     try {
@@ -90,7 +90,7 @@ export async function saveFlow(
       .eq('id', id)
       .eq('workspace_id', workspace.id)
 
-    if (error) throw error
+    if (error) throw new Error(error.message || 'Erro ao atualizar fluxo no banco de dados')
 
     try {
       await supabase.from('flow_versions').insert({
@@ -116,7 +116,7 @@ export async function publishFlow(id: string, publish: boolean = true) {
     .update({ status, updated_at: new Date().toISOString() })
     .eq('id', id);
 
-  if (error) throw error;
+  if (error) throw new Error(error.message || 'Erro ao publicar fluxo');
   return { success: true, status };
 }
 
@@ -130,7 +130,7 @@ export async function deleteFlow(id: string) {
     .delete()
     .eq('id', id);
 
-  if (error) throw error;
+  if (error) throw new Error(error.message || 'Erro ao deletar fluxo');
   return { success: true };
 }
 
@@ -163,6 +163,6 @@ export async function duplicateFlow(id: string) {
     .select('id')
     .single();
 
-  if (insertErr) throw insertErr;
+  if (insertErr) throw new Error(insertErr.message || 'Erro ao duplicar fluxo no banco de dados');
   return newFlow.id;
 }
