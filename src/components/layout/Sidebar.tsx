@@ -1,81 +1,92 @@
-import Link from 'next/link';
-import { Home, MessageSquare, Webhook, Workflow, LayoutTemplate, Settings, LogOut } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { createClient } from '@/utils/supabase/server';
-import { redirect } from 'next/navigation';
+import { logout } from '@/app/auth/actions';
+import { SidebarLinks } from './SidebarLinks';
+import { UserProfileMenu } from './UserProfileMenu';
+import { parseRole } from '@/utils/rbac';
 
 export async function Sidebar() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  
+  let workspaceName = 'Workspace';
+  let userInitials = 'U';
+  const userEmail = user?.email || 'Usuário';
+  let avatarUrl: string | null = null;
+  let userDisplayName = 'Usuário';
+  let badgeLabel = 'FREE';
+  let isAdmin = false;
 
-  if (!user) {
-    redirect('/auth/login');
+  let workspaceId = '';
+  let unreadCount = 0;
+
+  if (user) {
+    const meta = user.user_metadata || {};
+    const role = parseRole(meta.role, user.email);
+    isAdmin = role === 'admin';
+
+    avatarUrl = meta.avatar_url || meta.picture || meta.avatar || null;
+    userDisplayName = meta.full_name || meta.name || userEmail.split('@')[0] || 'Usuário';
+    userInitials = userDisplayName.substring(0, 2).toUpperCase();
+    badgeLabel = isAdmin ? 'ADMIN' : 'PRO';
+
+    const { data: workspace } = await supabase
+      .from('workspaces')
+      .select('id, name')
+      .eq('user_id', user.id)
+      .single();
+    
+    if (workspace) {
+      workspaceName = workspace.name;
+      workspaceId = workspace.id;
+
+      const { count } = await supabase
+        .from('conversations')
+        .select('id', { count: 'exact', head: true })
+        .eq('workspace_id', workspace.id);
+      
+      unreadCount = count || 0;
+    }
   }
 
-  const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-
-  const menuItems = [
-    { name: 'Visão Geral', href: '/', icon: Home },
-    { name: 'Caixa de Entrada', href: '/inbox', icon: MessageSquare },
-    { name: 'Fluxos de Automação', href: '/flows', icon: Workflow },
-    { name: 'Templates', href: '/templates', icon: LayoutTemplate },
-    { name: 'Integrações', href: '/integrations', icon: Webhook },
-    { name: 'Configurações', href: '/settings', icon: Settings },
-  ];
-
   return (
-    <aside className="w-64 h-full bg-white border-r border-slate-200 p-4 flex flex-col gap-2 shrink-0">
-      <div className="h-12 flex items-center px-3 mb-2 gap-3">
-        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-          <span className="text-white font-bold text-lg">N</span>
-        </div>
-        <span className="font-black text-xl text-slate-800 tracking-tight">NexaChat</span>
+    <aside className="w-[240px] h-screen bg-[#f8f9fa] border-r border-gray-200 flex flex-col fixed left-0 top-0 z-30">
+      
+      {/* Top Logo */}
+      <div className="h-16 flex items-center px-5 flex-shrink-0">
+        <span className="text-2xl font-black text-gray-900 tracking-tighter">NexaChat</span>
       </div>
-
-      <div className="flex-1 overflow-y-auto">
-        <ul className="space-y-1">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <li key={item.name}>
-                <Link
-                  href={item.href}
-                  className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-lg font-medium text-sm transition-colors group"
-                >
-                  <Icon className="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" />
-                  {item.name}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+      
+      {/* User Profile Selector (Interactive Dropdown Menu) */}
+      <UserProfileMenu
+        userDisplayName={userDisplayName}
+        userEmail={userEmail}
+        avatarUrl={avatarUrl}
+        userInitials={userInitials}
+        badgeLabel={badgeLabel}
+        isAdmin={isAdmin}
+        workspaceName={workspaceName}
+      />
+      
+      {/* Navigation Links */}
+      <div className="px-3 flex-1 overflow-y-auto">
+        <SidebarLinks workspaceId={workspaceId} initialUnreadCount={unreadCount} />
       </div>
-
-      <div className="pt-4 border-t border-slate-200 mt-auto">
-        <div className="flex items-center gap-3 px-3 py-2 mb-2">
-          <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold border border-slate-200 shadow-sm">
-            {profile?.full_name?.charAt(0) || user.email?.charAt(0) || 'U'}
+      
+      {/* Bottom Logout Quick Bar */}
+      <div className="p-3 border-t border-gray-200 bg-[#f8f9fa]">
+        <div className="flex items-center justify-between px-2">
+          <div className="flex items-center gap-3 truncate">
+            <div className="text-xs truncate">
+              <p className="font-medium text-gray-700 truncate" title={userEmail}>{userEmail}</p>
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-slate-700 truncate">{profile?.full_name || 'Usuário'}</p>
-            <p className="text-xs text-slate-500 truncate">{user.email}</p>
-          </div>
+          <form action={logout}>
+            <button className="text-gray-400 hover:text-red-600 transition-colors shrink-0 p-1 rounded hover:bg-red-50" title="Sair da Conta">
+              <LogOut className="w-4 h-4" />
+            </button>
+          </form>
         </div>
-        
-        {profile?.role === 'admin' && (
-          <Link
-            href="/admin"
-            className="flex items-center gap-3 px-3 py-2 text-blue-600 hover:bg-blue-50 rounded-lg font-semibold text-sm transition-colors mb-1"
-          >
-            Administração
-          </Link>
-        )}
-        
-        <form action="/auth/logout" method="post">
-          <button className="w-full flex items-center gap-3 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg font-medium text-sm transition-colors group">
-            <LogOut className="w-5 h-5 text-red-400 group-hover:text-red-600 transition-colors" />
-            Sair da Conta
-          </button>
-        </form>
       </div>
     </aside>
   );

@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
 export async function POST(request: Request) {
   try {
-    const { conversationId, content } = await request.json();
+    const { conversationId, content, mediaUrl, messageType } = await request.json();
 
-    if (!conversationId || !content) {
+    if (!conversationId || (!content && !mediaUrl)) {
       return NextResponse.json({ error: 'Faltam parâmetros' }, { status: 400 });
     }
 
@@ -21,14 +22,14 @@ export async function POST(request: Request) {
       .from('conversations')
       .select(`
         id,
-        instagram_account_id,
         contact_id,
         contacts (
-          ig_scoped_id
-        ),
-        instagram_accounts (
-          ig_user_id,
-          access_token
+          ig_scoped_id,
+          instagram_account_id,
+          instagram_accounts (
+            ig_user_id,
+            access_token
+          )
         )
       `)
       .eq('id', conversationId)
@@ -38,8 +39,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Conversa não encontrada' }, { status: 404 });
     }
 
-    const contact = conversation.contacts as unknown as { ig_scoped_id: string };
-    const igAccount = conversation.instagram_accounts as unknown as { ig_user_id: string, access_token: string };
+    const rawContact = Array.isArray(conversation.contacts) ? conversation.contacts[0] : conversation.contacts;
+    const contact = rawContact as unknown as Record<string, unknown>;
+    
+    const rawAccount = Array.isArray(contact?.instagram_accounts) ? contact?.instagram_accounts[0] : contact?.instagram_accounts;
+    const igAccount = rawAccount as unknown as Record<string, unknown>;
 
     const igScopedId = contact?.ig_scoped_id;
     const igUserId = igAccount?.ig_user_id;
@@ -49,13 +53,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Dados da conta/contato incompletos para disparo' }, { status: 400 });
     }
 
-    // Chama a API da Meta
-    const metaUrl = `https://graph.facebook.com/v19.0/${igUserId}/messages`;
+    // Chama a API da Meta (Nova API Instagram Login: usa /v22.0/me/messages)
+    const metaUrl = `https://graph.instagram.com/v22.0/me/messages`;
     
-    const metaBody = {
-      recipient: { id: igScopedId },
-      message: { text: content }
+    const metaBody: Record<string, unknown> = {
+      recipient: { id: igScopedId }
     };
+
+    if (mediaUrl) {
+      metaBody.message = {
+        attachment: {
+          type: messageType === 'video' ? 'video' : 'image',
+          payload: { url: mediaUrl }
+        }
+      };
+    } else {
+      metaBody.message = { text: content };
+    }
 
     const metaRes = await fetch(metaUrl, {
       method: 'POST',
@@ -70,28 +84,35 @@ export async function POST(request: Request) {
 
     if (metaData.error) {
       console.error('Erro na Meta Send API:', metaData.error);
-      return NextResponse.json({ error: 'Erro ao enviar pela Meta', details: metaData.error }, { status: 500 });
+      return NextResponse.json({ error: metaData.error.message || 'Erro ao enviar pela Meta', details: metaData.error }, { status: 500 });
     }
 
     // Se a mensagem enviou com sucesso pela Meta, salvamos no nosso banco
-    const { data: messageData, error: msgError } = await supabase
+    // Usamos o Admin Client porque o banco de dados tem RLS ativado que bloqueia INSERTs do usuário comum
+    const supabaseAdmin = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { data: messageData, error: msgError } = await supabaseAdmin
       .from('messages')
       .insert({
         conversation_id: conversationId,
         sender_type: 'human_agent',
-        message_type: 'text',
-        content: content,
-        status: 'sent'
+        message_type: mediaUrl ? (messageType === 'video' ? 'video' : 'image') : 'text',
+        content: content || null,
+        media_url: mediaUrl || null
       })
       .select()
       .single();
 
     if (msgError) {
+      console.error('Erro ao salvar no Supabase:', msgError);
       return NextResponse.json({ error: 'Erro ao salvar a mensagem no banco' }, { status: 500 });
     }
 
     // Atualiza a conversation para last_interaction_at
-    await supabase.from('conversations').update({ last_interaction_at: new Date().toISOString() }).eq('id', conversationId);
+    await supabaseAdmin.from('conversations').update({ last_interaction_at: new Date().toISOString() }).eq('id', conversationId);
 
     return NextResponse.json({ success: true, message: messageData });
   } catch (error: unknown) {

@@ -24,3 +24,47 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Animação Neon Azul Pontilhada se Movendo Contínuamente */
+@keyframes dash-flow-neon {
+  from {
+    stroke-dashoffset: 24;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-dash-flow-neon {
+  animation: dash-flow-neon 0.75s linear infinite;
+  pointer-events: none;
+}
+
+/* Handles e Pontos de Conexão Neon Azul */
+.react-flow__handle {
+  width: 12px !important;
+  height: 12px !important;
+  border-radius: 50% !important;
+  background-color: #00f0ff !important;
+  border: 2.5px solid #ffffff !important;
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.8) !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease !important;
+}
+
+.react-flow__handle:hover {
+  transform: scale(1.4) !important;
+  background-color: #00ffff !important;
+  box-shadow: 0 0 14px rgba(0, 255, 255, 1) !important;
+}
+
+/* Suavização das Linhas do React Flow */
+.react-flow__edge-path {
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  transition: stroke 0.2s ease, stroke-width 0.2s ease !important;
+}
+
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke-width: 4px !important;
+  stroke: #00ffff !important;
+}

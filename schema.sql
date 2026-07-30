@@ -204,3 +204,18 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE OR REPLACE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+
+-- Flow Logs para o Dashboard
+CREATE TABLE flow_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
+    instagram_account_id UUID REFERENCES instagram_accounts(id) ON DELETE CASCADE,
+    flow_id UUID REFERENCES flows(id) ON DELETE CASCADE,
+    lead_username TEXT,
+    keyword_matched TEXT,
+    trigger_type TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE flow_logs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can access flow logs" ON flow_logs FOR SELECT USING (workspace_id IN (SELECT id FROM workspaces WHERE user_id = auth.uid()));
+CREATE POLICY "Users can insert flow logs" ON flow_logs FOR INSERT WITH CHECK (workspace_id IN (SELECT id FROM workspaces WHERE user_id = auth.uid()));

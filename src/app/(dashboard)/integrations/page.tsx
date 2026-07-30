@@ -1,18 +1,56 @@
+import { createClient } from '@/utils/supabase/server';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
+import IntegrationsClient from './IntegrationsClient';
 
-import { Webhook } from 'lucide-react';
+export default async function IntegrationsPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-export default function IntegrationsPage() {
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Integrações</h1>
-      </div>
-      
-      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center">
-        <Webhook className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-        <h2 className="text-lg font-bold text-slate-800">Em Breve</h2>
-        <p className="text-slate-500 max-w-md mx-auto mt-2">Novas integrações com CRMs e plataformas de pagamento estarão disponíveis em breve.</p>
-      </div>
-    </div>
-  );
+  let connectedAccount = null;
+
+  if (user) {
+    const serviceSupabase = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { data: workspace } = await serviceSupabase
+      .from('workspaces')
+      .select('id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (workspace) {
+      const { data: account } = await serviceSupabase
+        .from('instagram_accounts')
+        .select('id, ig_user_id, page_id, status, access_token, created_at')
+        .eq('workspace_id', workspace.id)
+        .single();
+
+      if (account) {
+        // Se page_id contiver o username salvo no banco, usa ele
+        let username = account.page_id && account.page_id !== 'ig_login_direct' ? account.page_id : account.ig_user_id;
+        let profilePictureUrl = null;
+
+        try {
+          const res = await fetch(
+            `https://graph.instagram.com/v22.0/${account.ig_user_id}?fields=id,username,name,profile_picture_url&access_token=${account.access_token}`
+          );
+          const profile = await res.json();
+          if (profile.username) username = profile.username;
+          if (profile.profile_picture_url) profilePictureUrl = profile.profile_picture_url;
+        } catch {
+          // ignora falhas de API externa e usa o username do banco
+        }
+
+        connectedAccount = {
+          ...account,
+          username,
+          profile_picture_url: profilePictureUrl,
+        };
+      }
+    }
+  }
+
+  return <IntegrationsClient connectedAccount={connectedAccount} />;
 }
