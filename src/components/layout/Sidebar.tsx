@@ -50,14 +50,29 @@ export async function Sidebar() {
       // Buscar foto e @ da conta conectada do instagram
       const { data: account } = await supabase
         .from('instagram_accounts')
-        .select('username, profile_picture_url')
+        .select('ig_user_id, page_id, access_token')
         .eq('workspace_id', workspace.id)
         .limit(1)
         .single();
         
       if (account) {
-        if (account.profile_picture_url) avatarUrl = account.profile_picture_url;
-        if (account.username) userDisplayName = `@${account.username}`;
+        let dbUsername = account.page_id && account.page_id !== 'ig_login_direct' ? account.page_id : account.ig_user_id;
+        let profilePic = null;
+
+        try {
+          const isMetaToken = account.access_token && account.access_token.startsWith('EAA');
+          const apiUrl = isMetaToken
+            ? `https://graph.facebook.com/v22.0/${account.ig_user_id}?fields=username,profile_picture_url&access_token=${account.access_token}`
+            : `https://graph.instagram.com/v22.0/${account.ig_user_id}?fields=username,profile_picture_url&access_token=${account.access_token}`;
+          
+          const metaRes = await fetch(apiUrl);
+          const metaData = await metaRes.json();
+          if (metaData.profile_picture_url) profilePic = metaData.profile_picture_url;
+          if (metaData.username) dbUsername = metaData.username;
+        } catch (e) { /* ignore */ }
+
+        if (profilePic) avatarUrl = profilePic;
+        if (dbUsername) userDisplayName = `@${dbUsername}`;
         userInitials = userDisplayName.replace('@', '').substring(0, 2).toUpperCase();
       }
     }
