@@ -2,11 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { 
-  Users, ShieldAlert, Sparkles, CreditCard, Bell, Save, UserPlus, 
-  Trash2, Copy, Check, Key, Globe, Plus, RefreshCw, X, ShieldCheck, 
-  CheckCircle, AlertTriangle, Cpu, Layers, Eye, EyeOff, Pencil, LayoutDashboard
-} from 'lucide-react';
+import { Check, Copy, Settings, Users, Database, Sparkles, Plus, Trash2, Save, CreditCard, Bell, Send, LayoutDashboard, ShieldAlert, UserPlus, RefreshCw, ShieldCheck, Cpu } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 interface UserItem {
@@ -47,26 +43,20 @@ interface Props {
 
 export default function AdminDashboardClient({ currentUser }: Props) {
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'meta' | 'ai' | 'plans' | 'notifications'>('dashboard');
-
-  useEffect(() => {
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'meta' | 'ai' | 'plans' | 'notifications'>(() => {
     const tabParam = searchParams.get('tab');
-    if (tabParam && ['dashboard', 'users', 'meta', 'ai', 'plans', 'notifications'].includes(tabParam)) {
-      setActiveTab(tabParam as 'dashboard' | 'users' | 'meta' | 'ai' | 'plans' | 'notifications');
-    }
-  }, [searchParams]);
+    return (tabParam as any) || 'dashboard';
+  });
 
-  // 1. Estados da Gestão de Usuários
   const [users, setUsers] = useState<UserItem[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
   const [newEmail, setNewEmail] = useState('');
   const [newName, setNewName] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [newRole, setNewRole] = useState('Atendente (Usuário)');
+  const [newRole, setNewRole] = useState('Atendente');
   const [isCreatingUser, setIsCreatingUser] = useState(false);
 
-  // Estados para Editar Usuário (Modal Dropdown)
   const [showEditUserModal, setShowEditUserModal] = useState(false);
   const [editingUserId, setEditingUserId] = useState('');
   const [editingUserName, setEditingUserName] = useState('');
@@ -75,53 +65,37 @@ export default function AdminDashboardClient({ currentUser }: Props) {
   const [editingUserPassword, setEditingUserPassword] = useState('');
   const [isUpdatingUser, setIsUpdatingUser] = useState(false);
 
-  // Estado para Alerta de Confirmação de Exclusão de Usuário
   const [confirmDeleteUserItem, setConfirmDeleteUserItem] = useState<UserItem | null>(null);
   const [isDeletingUser, setIsDeletingUser] = useState(false);
 
-  // 2. Estados Credenciais Meta Official
-  const [metaAppId, setMetaAppId] = useState('1762123168122342');
-  const [metaAppSecret, setMetaAppSecret] = useState('717ea4b8e025223a6e314725369d76a5');
-  const [metaVerifyToken, setMetaVerifyToken] = useState('nexachat_webhook_secret_2026');
+  const [metaAppId, setMetaAppId] = useState('');
+  const [metaAppSecret, setMetaAppSecret] = useState('');
+  const [metaVerifyToken, setMetaVerifyToken] = useState('');
   const [showMetaSecret, setShowMetaSecret] = useState(false);
   const [isSavingMeta, setIsSavingMeta] = useState(false);
   const [copiedWebhookUrl, setCopiedWebhookUrl] = useState(false);
-  const [webhookUrl, setWebhookUrl] = useState('https://nexachat-v1.vercel.app/api/webhooks/instagram');
 
-  // 3. Estados Conexão IA (Gemini & OpenAI)
   const [geminiApiKey, setGeminiApiKey] = useState('');
   const [openaiApiKey, setOpenaiApiKey] = useState('');
   const [showGeminiKey, setShowGeminiKey] = useState(false);
   const [showOpenaiKey, setShowOpenaiKey] = useState(false);
   const [defaultProvider, setDefaultProvider] = useState('gemini');
   const [defaultModel, setDefaultModel] = useState('gemini-1.5-flash');
-  const [globalSystemPrompt, setGlobalSystemPrompt] = useState('Você é um assistente virtual atencioso da nossa empresa no Instagram.');
+  const [globalSystemPrompt, setGlobalSystemPrompt] = useState('Você é um assistente virtual atencioso.');
   const [isSavingAi, setIsSavingAi] = useState(false);
+  const [isLoadingAi, setIsLoadingAi] = useState(true);
 
-  // Estado para botão de copiar 1-clique
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
-  const handleCopy = (text: string, fieldName: string, label: string) => {
-    if (!text) {
-      toast.error(`Preencha ${label} antes de copiar.`);
-      return;
-    }
-    navigator.clipboard.writeText(text);
-    setCopiedField(fieldName);
-    toast.success(`${label} copiado!`);
-    setTimeout(() => setCopiedField(null), 2000);
-  };
-
-  // 4. Estados Planos & Assinaturas
   const [plans, setPlans] = useState<PlanItem[]>([]);
+  const [isLoadingPlans, setIsLoadingPlans] = useState(true);
   const [showCreatePlanModal, setShowCreatePlanModal] = useState(false);
   const [planName, setPlanName] = useState('');
   const [planPrice, setPlanPrice] = useState('97');
   const [planLimit, setPlanLimit] = useState('50000');
-  const [planFeatures, setPlanFeatures] = useState('DMs Ilimitadas, IA Gemini Flash, Conexão Meta Graph API');
+  const [planFeatures, setPlanFeatures] = useState('');
   const [isCreatingPlan, setIsCreatingPlan] = useState(false);
 
-  // Estados Editar Plano
   const [showEditPlanModal, setShowEditPlanModal] = useState(false);
   const [editingPlanId, setEditingPlanId] = useState('');
   const [editingPlanName, setEditingPlanName] = useState('');
@@ -130,70 +104,19 @@ export default function AdminDashboardClient({ currentUser }: Props) {
   const [editingPlanFeatures, setEditingPlanFeatures] = useState('');
   const [isUpdatingPlan, setIsUpdatingPlan] = useState(false);
 
-  // 5. Estados Envio de Notificações
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [notifTitle, setNotifTitle] = useState('');
   const [notifMessage, setNotifMessage] = useState('');
-  const [notifTarget, setNotifTarget] = useState('Todos os Usuários');
+  const [notifTarget, setNotifTarget] = useState('Todos');
   const [notifType, setNotifType] = useState('info');
   const [isSendingNotif, setIsSendingNotif] = useState(false);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setWebhookUrl(`${window.location.origin}/api/webhooks/instagram`);
-    }
-  }, []);
-
-  // Carregar Dados do Servidor
-  const fetchUsers = () => {
-    setIsLoadingUsers(true);
-    fetch('/api/admin/users')
-      .then(res => res.json())
-      .then(data => {
-        if (data.users) setUsers(data.users);
-      })
-      .finally(() => setIsLoadingUsers(false));
-  };
-
-  const fetchMetaCredentials = () => {
-    fetch('/api/admin/meta-credentials')
-      .then(res => res.json())
-      .then(data => {
-        if (data.meta_app_id) setMetaAppId(data.meta_app_id);
-        if (data.meta_app_secret) setMetaAppSecret(data.meta_app_secret);
-        if (data.meta_verify_token) setMetaVerifyToken(data.meta_verify_token);
-      });
-  };
-
-  const fetchAiCredentials = () => {
-    fetch('/api/admin/ai-credentials')
-      .then(res => res.json())
-      .then(data => {
-        if (data.gemini_api_key) setGeminiApiKey(data.gemini_api_key);
-        if (data.openai_api_key) setOpenaiApiKey(data.openai_api_key);
-        if (data.default_provider) setDefaultProvider(data.default_provider);
-        if (data.default_model) setDefaultModel(data.default_model);
-        if (data.global_system_prompt) setGlobalSystemPrompt(data.global_system_prompt);
-      });
-  };
-
-  const fetchPlans = () => {
-    fetch('/api/admin/plans')
-      .then(res => res.json())
-      .then(data => {
-        if (data.plans) setPlans(data.plans);
-      });
-  };
-
-  const fetchNotifications = () => {
-    fetch('/api/admin/notifications')
-      .then(res => res.json())
-      .then(data => {
-        if (data.notifications) setNotifications(data.notifications);
-      });
-  };
+  const [isClient, setIsClient] = useState(false);
+  const [webhookUrl, setWebhookUrl] = useState('');
 
   useEffect(() => {
+    setIsClient(true);
+    setWebhookUrl(`${window.location.origin}/api/webhooks/instagram`);
     fetchUsers();
     fetchMetaCredentials();
     fetchAiCredentials();
@@ -201,355 +124,173 @@ export default function AdminDashboardClient({ currentUser }: Props) {
     fetchNotifications();
   }, []);
 
-  // CRUD: Criar Novo Usuário
+  const handleCopy = (text: string, fieldId: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(fieldId);
+    toast.success(`${label} copiado!`);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  const fetchUsers = () => {
+    fetch('/api/admin/users')
+      .then(res => res.json())
+      .then(data => { if (data.users) setUsers(data.users); })
+      .finally(() => setIsLoadingUsers(false));
+  };
+
+  const fetchMetaCredentials = () => {
+    fetch('/api/admin/meta-credentials')
+      .then(res => res.json())
+      .then(data => {
+        setMetaAppId(data.meta_app_id || '');
+        setMetaAppSecret(data.meta_app_secret || '');
+        setMetaVerifyToken(data.meta_verify_token || '');
+      });
+  };
+
+  const fetchAiCredentials = () => {
+    fetch('/api/admin/ai-credentials')
+      .then(res => res.json())
+      .then(data => {
+        setGeminiApiKey(data.gemini_api_key || '');
+        setOpenaiApiKey(data.openai_api_key || '');
+        setDefaultProvider(data.default_provider || 'gemini');
+        setDefaultModel(data.default_model || 'gemini-1.5-flash');
+        setGlobalSystemPrompt(data.global_system_prompt || '');
+      })
+      .finally(() => setIsLoadingAi(false));
+  };
+
+  const fetchPlans = () => {
+    fetch('/api/admin/plans')
+      .then(res => res.json())
+      .then(data => { if (data.plans) setPlans(data.plans); })
+      .finally(() => setIsLoadingPlans(false));
+  };
+
+  const fetchNotifications = () => {
+    fetch('/api/admin/notifications')
+      .then(res => res.json())
+      .then(data => { if (data.notifications) setNotifications(data.notifications); });
+  };
+
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newEmail || !newPassword) {
-      toast.error('Preencha e-mail e senha do usuário.');
-      return;
-    }
-
     setIsCreatingUser(true);
-    const toastId = toast.loading('Criando usuário no banco Supabase...');
-
     try {
       const res = await fetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: newEmail,
-          password: newPassword,
-          name: newName,
-          role: newRole
-        })
+        body: JSON.stringify({ email: newEmail, password: newPassword, name: newName, role: newRole })
       });
-
-      const data = await res.json();
-      if (res.ok && data.success) {
-        toast.success(`Usuário ${newEmail} criado com sucesso!`, { id: toastId });
+      if (res.ok) {
+        toast.success('Usuário criado!');
         setShowCreateUserModal(false);
-        setNewEmail('');
-        setNewPassword('');
-        setNewName('');
         fetchUsers();
-      } else {
-        toast.error(data.error || 'Erro ao criar usuário.', { id: toastId });
-      }
-    } catch {
-      toast.error('Erro ao conectar com o servidor.', { id: toastId });
-    } finally {
-      setIsCreatingUser(false);
-    }
+      } else toast.error('Erro ao criar usuário');
+    } finally { setIsCreatingUser(false); }
   };
 
-  // Abrir Modal de Edição de Usuário
-  const openEditUserModal = (user: UserItem) => {
-    setEditingUserId(user.id);
-    setEditingUserName(user.name);
-    setEditingUserEmail(user.email);
-    setEditingUserRole(user.role.includes('Admin') ? 'Administrador' : 'Usuário');
-    setEditingUserPassword('');
-    setShowEditUserModal(true);
-  };
-
-  // CRUD: Atualizar Dados e/ou Senha do Usuário
   const handleUpdateUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingUserId || !editingUserEmail) {
-      toast.error('Preencha o e-mail do usuário.');
-      return;
-    }
-
     setIsUpdatingUser(true);
-    const toastId = toast.loading('Atualizando usuário no banco...');
-
     try {
-      const res = await fetch('/api/admin/users', {
+      await fetch('/api/admin/users', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: editingUserId,
-          name: editingUserName,
-          email: editingUserEmail,
-          role: editingUserRole === 'Administrador' ? '👑 Administrador (Acesso Total)' : '🎧 Usuário (Acesso Padrão)',
-          password: editingUserPassword || undefined
-        })
+        body: JSON.stringify({ userId: editingUserId, name: editingUserName, email: editingUserEmail, role: editingUserRole, password: editingUserPassword })
       });
-
-      const data = await res.json();
-      if (res.ok && data.success) {
-        toast.success('Usuário atualizado com sucesso!', { id: toastId });
-        setShowEditUserModal(false);
-        fetchUsers();
-      } else {
-        toast.error(data.error || 'Erro ao atualizar usuário.', { id: toastId });
-      }
-    } catch {
-      toast.error('Erro ao conectar com o servidor.', { id: toastId });
-    } finally {
-      setIsUpdatingUser(false);
-    }
+      toast.success('Usuário atualizado!');
+      setShowEditUserModal(false);
+      fetchUsers();
+    } finally { setIsUpdatingUser(false); }
   };
 
-  // CRUD: Alterar Role do Usuário via Select na Tabela
-  const handleChangeRole = async (userId: string, role: string) => {
-    const toastId = toast.loading('Atualizando permissões...');
-    try {
-      const res = await fetch('/api/admin/users', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, role })
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        toast.success('Papel do usuário atualizado no banco!', { id: toastId });
-        fetchUsers();
-      } else {
-        toast.error(data.error || 'Erro ao alterar papel.', { id: toastId });
-      }
-    } catch {
-      toast.error('Erro de servidor.', { id: toastId });
-    }
-  };
-
-  // CRUD: Executar Deletar Usuário com Confirmação
   const executeDeleteUser = async () => {
     if (!confirmDeleteUserItem) return;
-
     setIsDeletingUser(true);
-    const toastId = toast.loading('Deletando usuário...');
     try {
       const res = await fetch(`/api/admin/users?userId=${confirmDeleteUserItem.id}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        toast.success(`Usuário ${confirmDeleteUserItem.email} removido com sucesso!`, { id: toastId });
+      if (res.ok) {
+        toast.success('Usuário removido!');
         setConfirmDeleteUserItem(null);
         fetchUsers();
-      } else {
-        toast.error(data.error || 'Erro ao deletar usuário.', { id: toastId });
-      }
-    } catch {
-      toast.error('Erro de conexão com o servidor.', { id: toastId });
-    } finally {
-      setIsDeletingUser(false);
-    }
+      } else toast.error('Erro ao excluir usuário');
+    } finally { setIsDeletingUser(false); }
   };
 
-  // CRUD: Salvar Credenciais da Meta
   const handleSaveMeta = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSavingMeta(true);
-    const toastId = toast.loading('Salvando credenciais da Meta no banco...');
-
-    try {
-      const res = await fetch('/api/admin/meta-credentials', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          meta_app_id: metaAppId,
-          meta_app_secret: metaAppSecret,
-          meta_verify_token: metaVerifyToken
-        })
-      });
-
-      const data = await res.json();
-      if (res.ok && data.success) {
-        toast.success('Credenciais da Meta atualizadas no banco!', { id: toastId });
-      } else {
-        toast.error(data.error || 'Erro ao salvar credenciais.', { id: toastId });
-      }
-    } catch {
-      toast.error('Erro ao conectar com o servidor.', { id: toastId });
-    } finally {
-      setIsSavingMeta(false);
-    }
+    await fetch('/api/admin/meta-credentials', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ meta_app_id: metaAppId, meta_app_secret: metaAppSecret, meta_verify_token: metaVerifyToken })
+    });
+    toast.success('Credenciais salvas!');
+    setIsSavingMeta(false);
   };
 
-  // CRUD: Salvar Credenciais de IA (Gemini & OpenAI)
   const handleSaveAi = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSavingAi(true);
-    const toastId = toast.loading('Salvando chaves e modelo da IA no banco...');
-
-    try {
-      const res = await fetch('/api/admin/ai-credentials', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          gemini_api_key: geminiApiKey,
-          openai_api_key: openaiApiKey,
-          default_provider: defaultProvider,
-          default_model: defaultModel,
-          global_system_prompt: globalSystemPrompt
-        })
-      });
-
-      const data = await res.json();
-      if (res.ok && data.success) {
-        toast.success('Conexão da API de IA salva com sucesso!', { id: toastId });
-      } else {
-        toast.error(data.error || 'Erro ao salvar IA.', { id: toastId });
-      }
-    } catch {
-      toast.error('Erro no servidor.', { id: toastId });
-    } finally {
-      setIsSavingAi(false);
-    }
+    await fetch('/api/admin/ai-credentials', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gemini_api_key: geminiApiKey, openai_api_key: openaiApiKey, default_provider: defaultProvider, default_model: defaultModel, global_system_prompt: globalSystemPrompt })
+    });
+    toast.success('IA atualizada!');
+    setIsSavingAi(false);
   };
 
-  // CRUD: Criar Novo Plano
   const handleCreatePlan = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!planName || !planPrice) {
-      toast.error('Preencha o nome e preço do plano.');
-      return;
-    }
-
     setIsCreatingPlan(true);
-    const toastId = toast.loading('Salvando novo plano no banco...');
-
-    try {
-      const featuresList = planFeatures.split(',').map(f => f.trim()).filter(Boolean);
-
-      const res = await fetch('/api/admin/plans', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: planName,
-          price: Number(planPrice),
-          message_limit: Number(planLimit),
-          features: featuresList
-        })
-      });
-
-      const data = await res.json();
-      if (res.ok && data.success) {
-        toast.success('Novo plano criado com sucesso!', { id: toastId });
-        setShowCreatePlanModal(false);
-        setPlanName('');
-        fetchPlans();
-      } else {
-        toast.error(data.error || 'Erro ao criar plano.', { id: toastId });
-      }
-    } catch {
-      toast.error('Erro de conexão.', { id: toastId });
-    } finally {
-      setIsCreatingPlan(false);
-    }
+    await fetch('/api/admin/plans', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: planName, price: Number(planPrice), message_limit: Number(planLimit), features: planFeatures.split(',') })
+    });
+    toast.success('Plano criado!');
+    setShowCreatePlanModal(false);
+    fetchPlans();
+    setIsCreatingPlan(false);
   };
 
-  // Abrir Modal de Edição de Plano
-  const openEditPlanModal = (plan: PlanItem) => {
-    setEditingPlanId(plan.id);
-    setEditingPlanName(plan.name);
-    setEditingPlanPrice(String(plan.price));
-    setEditingPlanLimit(String(plan.message_limit));
-    setEditingPlanFeatures(Array.isArray(plan.features) ? plan.features.join(', ') : String(plan.features || ''));
-    setShowEditPlanModal(true);
-  };
-
-  // CRUD: Atualizar Plano Existente
   const handleUpdatePlan = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingPlanId || !editingPlanName || editingPlanPrice === undefined) {
-      toast.error('Preencha o nome e preço do plano.');
-      return;
-    }
-
     setIsUpdatingPlan(true);
-    const toastId = toast.loading('Atualizando plano no banco...');
-
-    try {
-      const featuresList = editingPlanFeatures.split(',').map(f => f.trim()).filter(Boolean);
-
-      const res = await fetch('/api/admin/plans', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: editingPlanId,
-          name: editingPlanName,
-          price: Number(editingPlanPrice),
-          message_limit: Number(editingPlanLimit),
-          features: featuresList
-        })
-      });
-
-      const data = await res.json();
-      if (res.ok && data.success) {
-        toast.success('Plano atualizado com sucesso!', { id: toastId });
-        setShowEditPlanModal(false);
-        fetchPlans();
-      } else {
-        toast.error(data.error || 'Erro ao atualizar plano.', { id: toastId });
-      }
-    } catch {
-      toast.error('Erro ao conectar com o servidor.', { id: toastId });
-    } finally {
-      setIsUpdatingPlan(false);
-    }
+    await fetch('/api/admin/plans', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: editingPlanId, name: editingPlanName, price: Number(editingPlanPrice), message_limit: Number(editingPlanLimit), features: editingPlanFeatures.split(',') })
+    });
+    toast.success('Plano atualizado!');
+    setShowEditPlanModal(false);
+    fetchPlans();
+    setIsUpdatingPlan(false);
   };
 
-  // CRUD: Deletar Plano
   const handleDeletePlan = async (planId: string) => {
-    if (!confirm('Deseja excluir este plano de assinatura?')) return;
-    const toastId = toast.loading('Excluindo plano...');
-    try {
-      const res = await fetch(`/api/admin/plans?planId=${planId}`, { method: 'DELETE' });
-      if (res.ok) {
-        toast.success('Plano excluído!', { id: toastId });
-        fetchPlans();
-      } else {
-        toast.error('Erro ao excluir plano.', { id: toastId });
-      }
-    } catch {
-      toast.error('Erro de servidor.', { id: toastId });
-    }
+    if (!confirm('Deseja excluir?')) return;
+    await fetch(`/api/admin/plans?planId=${planId}`, { method: 'DELETE' });
+    toast.success('Plano excluído!');
+    fetchPlans();
   };
 
-  // CRUD: Enviar Notificação aos Usuários
   const handleSendNotification = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!notifTitle || !notifMessage) {
-      toast.error('Preencha o título e mensagem da notificação.');
-      return;
-    }
-
     setIsSendingNotif(true);
-    const toastId = toast.loading('Enviando notificação no banco...');
-
-    try {
-      const res = await fetch('/api/admin/notifications', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: notifTitle,
-          message: notifMessage,
-          target_user: notifTarget,
-          type: notifType
-        })
-      });
-
-      const data = await res.json();
-      if (res.ok && data.success) {
-        toast.success('Notificação enviada a todos os usuários!', { id: toastId });
-        setNotifTitle('');
-        setNotifMessage('');
-        fetchNotifications();
-      } else {
-        toast.error(data.error || 'Erro ao enviar notificação.', { id: toastId });
-      }
-    } catch {
-      toast.error('Erro no servidor.', { id: toastId });
-    } finally {
-      setIsSendingNotif(false);
-    }
-  };
-
-  const copyWebhookUrl = () => {
-    navigator.clipboard.writeText(webhookUrl);
-    setCopiedWebhookUrl(true);
-    toast.success('URL de Webhook copiada!');
-    setTimeout(() => setCopiedWebhookUrl(false), 2000);
+    await fetch('/api/admin/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: notifTitle, message: notifMessage, target_user: notifTarget, type: notifType })
+    });
+    toast.success('Notificação enviada!');
+    setNotifTitle('');
+    setNotifMessage('');
+    fetchNotifications();
+    setIsSendingNotif(false);
   };
 
   return (
@@ -1073,7 +814,7 @@ export default function AdminDashboardClient({ currentUser }: Props) {
                   https://graph.facebook.com/v22.0/&#123;ig_user_id&#125;/messages
                 </p>
                 <p className="text-[11px] text-indigo-700 leading-snug">
-                  Payload: <code>&#123;"message": &#123;"attachment": &#123;"type": "image", "payload": &#123;"url": "URL_AQUI"&#125;&#125;&#125;&#125;</code>
+                  Payload: <code>{`{"message": {"attachment": {"type": "image", "payload": {"url": "URL_AQUI"}}}}`}</code>
                 </p>
               </div>
 
@@ -1097,7 +838,7 @@ export default function AdminDashboardClient({ currentUser }: Props) {
                   https://graph.facebook.com/v22.0/&#123;ig_user_id&#125;/messages
                 </p>
                 <p className="text-[11px] text-indigo-700 leading-snug">
-                  Payload: <code>&#123;"message": &#123;"attachment": &#123;"type": "video", "payload": &#123;"url": "URL_AQUI"&#125;&#125;&#125;&#125;</code>
+                  Payload: <code>{`{"message": {"attachment": {"type": "video", "payload": {"url": "URL_AQUI"}}}}`}</code>
                 </p>
               </div>
 
@@ -1121,7 +862,7 @@ export default function AdminDashboardClient({ currentUser }: Props) {
                   https://graph.facebook.com/v22.0/&#123;ig_user_id&#125;/messages
                 </p>
                 <p className="text-[11px] text-indigo-700 leading-snug">
-                  Payload: <code>&#123;"message": &#123;"attachment": &#123;"type": "audio", "payload": &#123;"url": "URL_AQUI"&#125;&#125;&#125;&#125;</code>
+                  Payload: <code>{`{"message": {"attachment": {"type": "audio", "payload": {"url": "URL_AQUI"}}}}`}</code>
                 </p>
               </div>
 
@@ -1145,7 +886,7 @@ export default function AdminDashboardClient({ currentUser }: Props) {
                   https://graph.facebook.com/v22.0/&#123;ig_user_id&#125;/messages
                 </p>
                 <p className="text-[11px] text-indigo-700 leading-snug">
-                  Payload: <code>&#123;"message": &#123;"attachment": &#123;"type": "file", "payload": &#123;"url": "URL_AQUI"&#125;&#125;&#125;&#125;</code>
+                  Payload: <code>{`{"message": {"attachment": {"type": "file", "payload": {"url": "URL_AQUI"}}}}`}</code>
                 </p>
               </div>
             </div>
