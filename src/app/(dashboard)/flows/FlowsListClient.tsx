@@ -4,8 +4,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { 
-  Search, Folder, Plus, Trash2, LayoutGrid, MoreVertical, 
-  Play, Pause, Copy, Edit, Sparkles, Filter, CheckCircle2, MessageSquare
+  Search, Folder, Plus, Trash2,
+  Play, Pause, Copy, Edit
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { publishFlow, deleteFlow, duplicateFlow } from './actions';
@@ -33,7 +33,6 @@ export function FlowsListClient({ initialFlows }: Props) {
   const [activeFolder, setActiveFolder] = useState('all');
   const [folders, setFolders] = useState(['Geral', 'Básico', 'Vendas']);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   const timeAgo = (dateString: string) => {
     if (!dateString) return '';
@@ -75,8 +74,8 @@ export function FlowsListClient({ initialFlows }: Props) {
       const res = await publishFlow(id, !isCurrentlyPublished);
       if (res.error) throw new Error(res.error);
       toast.success(isCurrentlyPublished ? 'Automação pausada!' : 'Automação publicada com sucesso!');
-    } catch (err: any) {
-      toast.error(err.message || 'Erro ao atualizar status do fluxo');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao atualizar status do fluxo');
       setFlows(prev => prev.map(f => f.id === id ? { ...f, status: currentStatus } : f));
     }
   };
@@ -88,8 +87,8 @@ export function FlowsListClient({ initialFlows }: Props) {
       if (res.error) throw new Error(res.error);
       setFlows(prev => prev.filter(f => f.id !== id));
       toast.success('Automação excluída');
-    } catch (err: any) {
-      toast.error(err.message || 'Erro ao excluir automação');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao excluir automação');
     }
   };
 
@@ -100,8 +99,8 @@ export function FlowsListClient({ initialFlows }: Props) {
       if (res.error) throw new Error(res.error);
       toast.success('Automação duplicada com sucesso!', { id: toastId });
       router.push(`/flows/builder/${res.id}`);
-    } catch (err: any) {
-      toast.error(err.message || 'Erro ao duplicar automação', { id: toastId });
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao duplicar automação', { id: toastId });
     }
   };
 

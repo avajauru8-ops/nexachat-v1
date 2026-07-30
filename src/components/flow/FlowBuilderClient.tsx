@@ -25,10 +25,10 @@ import { HumanHandoffNode } from '@/components/flow/nodes/HumanHandoffNode';
 import { AiHandoffNode } from '@/components/flow/nodes/AiHandoffNode';
 import { CrmNode } from '@/components/flow/nodes/CrmNode';
 
-import { saveFlow, publishFlow } from '@/app/(dashboard)/flows/actions';
+import { saveFlow } from '@/app/(dashboard)/flows/actions';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
-import { ArrowLeft, Save, Play, Download, Upload, Sparkles, UserCheck, Globe, Bot, Clock, Filter, MessageSquare, Tag, StickyNote } from 'lucide-react';
+import { ArrowLeft, Save, Play, Download, Upload, Sparkles, UserCheck, Globe, Clock, Filter, MessageSquare, Tag, StickyNote } from 'lucide-react';
 
 import { NoteNode } from '@/components/flow/nodes/NoteNode';
 
@@ -76,7 +76,7 @@ export function FlowBuilderClient({
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>((initialFlowData?.edges as Edge[]) || initialEdgesDefault);
   const [flowName, setFlowName] = useState(initialName);
   const [status, setStatus] = useState(initialStatus);
-  const [accountId, setAccountId] = useState<string>(initialAccountId || ((instagramAccounts[0]?.id as string) || ''));
+  const [accountId] = useState<string>(initialAccountId || ((instagramAccounts[0]?.id as string) || ''));
   const [isPending, startTransition] = useTransition();
   const [activeTab, setActiveTab] = useState<'visualizacao' | 'insights'>('visualizacao');
 

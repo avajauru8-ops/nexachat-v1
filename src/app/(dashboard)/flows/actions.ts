@@ -75,8 +75,8 @@ export async function saveFlow(
 
       return { success: true, id: id }
     }
-  } catch (err: any) {
-    return { success: false, error: err.message || 'Erro inesperado' }
+  } catch (err: unknown) {
+    return { success: false, error: err instanceof Error ? err.message : 'Erro inesperado' }
   }
 }
 
@@ -95,8 +95,8 @@ export async function publishFlow(id: string, publish: boolean = true) {
 
     if (error) return { success: false, error: error.message || 'Erro ao publicar fluxo' }
     return { success: true, status };
-  } catch (err: any) {
-    return { success: false, error: err.message || 'Erro inesperado' }
+  } catch (err: unknown) {
+    return { success: false, error: err instanceof Error ? err.message : 'Erro inesperado' }
   }
 }
 
@@ -113,8 +113,8 @@ export async function deleteFlow(id: string) {
 
     if (error) return { success: false, error: error.message || 'Erro ao deletar fluxo' }
     return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message || 'Erro inesperado' }
+  } catch (err: unknown) {
+    return { success: false, error: err instanceof Error ? err.message : 'Erro inesperado' }
   }
 }
 
@@ -139,18 +139,15 @@ export async function duplicateFlow(id: string) {
         instagram_account_id: flow.instagram_account_id,
         name: `${flow.name} (Cópia)`,
         flow_data: flow.flow_data,
-        graph_json: flow.graph_json || flow.flow_data,
         triggers: flow.triggers,
-        status: 'draft',
-        version: 1,
-        created_by: user.id
+        status: 'draft'
       })
       .select('id')
       .single();
 
     if (insertErr) return { success: false, error: insertErr.message || 'Erro ao duplicar fluxo no banco de dados' }
     return { success: true, id: newFlow.id };
-  } catch (err: any) {
-    return { success: false, error: err.message || 'Erro inesperado' }
+  } catch (err: unknown) {
+    return { success: false, error: err instanceof Error ? err.message : 'Erro inesperado' }
   }
 }
