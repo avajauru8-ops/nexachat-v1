@@ -7,14 +7,10 @@ const supabase = createClient(
 
 async function main() {
   const { data, error } = await supabase.rpc('run_sql', {
-    query: `
-      SELECT pg_get_constraintdef(oid) 
-      FROM pg_constraint 
-      WHERE conname = 'flows_status_check';
-    `
+    query: `SELECT * FROM pg_policies WHERE tablename = 'flows';`
   });
   if (error) {
-    console.log("RPC error:", error.message);
+    console.log("No RPC");
   } else {
     console.log(data);
   }

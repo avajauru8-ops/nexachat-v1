@@ -3,11 +3,27 @@ import { FlowsListClient, FlowItem } from './FlowsListClient';
 
 export default async function FlowsPage() {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  let flows: any[] | null = [];
   
-  const { data: flows } = await supabase
-    .from('flows')
-    .select('id, name, status, triggers, trigger_type, updated_at')
-    .order('updated_at', { ascending: false });
+  if (user) {
+    const { data: workspace } = await supabase
+      .from('workspaces')
+      .select('id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (workspace) {
+      const { data } = await supabase
+        .from('flows')
+        .select('id, name, status, triggers, trigger_type, updated_at')
+        .eq('workspace_id', workspace.id)
+        .order('updated_at', { ascending: false });
+        
+      flows = data;
+    }
+  }
 
   const formattedFlows: FlowItem[] = (flows || []).map(f => ({
     id: f.id,

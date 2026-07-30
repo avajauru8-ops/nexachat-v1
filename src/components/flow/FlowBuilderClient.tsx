@@ -76,7 +76,7 @@ export function FlowBuilderClient({
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>((initialFlowData?.edges as Edge[]) || initialEdgesDefault);
   const [flowName, setFlowName] = useState(initialName);
   const [status, setStatus] = useState(initialStatus);
-  const [accountId] = useState<string>(initialAccountId || ((instagramAccounts[0]?.id as string) || ''));
+  const [accountId, setAccountId] = useState<string>(initialAccountId || ((instagramAccounts[0]?.id as string) || ''));
   const [isPending, startTransition] = useTransition();
   const [activeTab, setActiveTab] = useState<'visualizacao' | 'insights'>('visualizacao');
 
@@ -201,6 +201,21 @@ export function FlowBuilderClient({
               }`}>
                 {isPublished ? '🟢 PUBLICADO (LIVE)' : '🟡 RASCUNHO (PAUSADO)'}
               </span>
+              
+              {instagramAccounts && instagramAccounts.length > 0 && (
+                <select
+                  value={accountId}
+                  onChange={(e) => setAccountId(e.target.value)}
+                  className="text-[11px] font-medium border border-gray-300 rounded px-2 py-0.5 bg-gray-50 text-gray-700 outline-none focus:ring-1 focus:ring-blue-500 max-w-[150px] truncate"
+                >
+                  <option value="">Selecione a DM...</option>
+                  {instagramAccounts.map((acc: any) => (
+                    <option key={acc.id as string} value={acc.id as string}>
+                      @{acc.page_id !== 'ig_login_direct' && acc.page_id ? acc.page_id : acc.ig_user_id}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
           </div>
         </div>
