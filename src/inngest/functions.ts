@@ -98,9 +98,9 @@ export const processWebhookEvent = inngest.createFunction(
                 instagram_account_id: account.id,
                 ig_scoped_id: senderId,
                 name: contactName,
-                last_interaction_at: new Date().toISOString()
+                last_interaction_at: new Date().toISOString(),
+                custom_fields: contactUsername ? { username: contactUsername } : {}
               };
-              if (contactUsername) insertPayload.username = contactUsername;
               if (contactProfilePic) insertPayload.profile_picture = contactProfilePic;
 
               const { data: newC } = await supabase
@@ -119,7 +119,7 @@ export const processWebhookEvent = inngest.createFunction(
             // Identificar ou Criar Conversa
             let { data: conversation } = await supabase
               .from('conversations')
-              .select('id, status, flow_cursor, window_expires_at')
+              .select('id, status, window_expires_at')
               .eq('workspace_id', activeWorkspaceId)
               .eq('contact_id', contact.id)
               .maybeSingle();
@@ -137,7 +137,7 @@ export const processWebhookEvent = inngest.createFunction(
                   last_interaction_at: new Date().toISOString(),
                   window_expires_at: windowExpiresAt
                 })
-                .select('id, status, flow_cursor, window_expires_at')
+                .select('id, status, window_expires_at')
                 .single();
               conversation = newConv;
             } else {
@@ -218,11 +218,7 @@ export const processWebhookEvent = inngest.createFunction(
 
                     const outgoingEdge = edges.find((e: Record<string, unknown>) => e.source === triggerNode.id);
                     if (outgoingEdge) {
-                      // Registrar flow_cursor na conversa
-                      await supabase.from('conversations').update({
-                        active_flow_id: flow.id,
-                        flow_cursor: { currentNodeId: outgoingEdge.target, updatedAt: new Date().toISOString() }
-                      }).eq('id', conversation.id);
+                      // Omitindo flow_cursor e active_flow_id pois colunas podem não existir na v1
 
                       // Disparar execução assíncrona do fluxo
                       await inngest.send({

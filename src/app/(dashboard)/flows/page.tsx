@@ -1,6 +1,8 @@
 import { createClient } from '@/utils/supabase/server';
 import { FlowsListClient, FlowItem } from './FlowsListClient';
 
+export const dynamic = 'force-dynamic';
+
 export default async function FlowsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

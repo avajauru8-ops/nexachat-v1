@@ -6,13 +6,8 @@ const supabase = createClient(
 );
 
 async function main() {
-  const { data, error } = await supabase.rpc('run_sql', {
-    query: `SELECT * FROM pg_policies WHERE tablename = 'flows';`
-  });
-  if (error) {
-    console.log("No RPC");
-  } else {
-    console.log(data);
-  }
+  const { data, error } = await supabase.from('flows').select('id, name, instagram_account_id, triggers, status');
+  console.log('flows error:', error);
+  console.log('flows data:', JSON.stringify(data, null, 2));
 }
 main();
