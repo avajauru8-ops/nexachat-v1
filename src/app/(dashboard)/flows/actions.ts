@@ -46,45 +46,25 @@ export async function saveFlow(
           instagram_account_id: targetAccountId,
           name: name,
           flow_data: flowData,
-          graph_json: flowData,
           triggers: triggers,
-          status: status,
-          version: 1,
-          created_by: user.id
+          status: status
         })
         .select('id')
         .single()
         
       if (error) return { success: false, error: error.message || 'Erro ao criar fluxo no banco de dados' }
 
-      // Grava a versão 1 em flow_versions
-      try {
-        await supabase.from('flow_versions').insert({
-          flow_id: data.id,
-          version: 1,
-          graph_json: flowData
-        });
-      } catch { /* ignore version error */ }
+      // Removed flow_versions insertion as table does not exist
 
       return { success: true, id: data.id }
     } else {
-      const { data: currentFlow } = await supabase
-        .from('flows')
-        .select('version')
-        .eq('id', id)
-        .single();
-
-      const nextVersion = (currentFlow?.version || 1) + 1;
-
       const { error } = await supabase
         .from('flows')
         .update({
           name: name,
           flow_data: flowData,
-          graph_json: flowData,
           triggers: triggers,
           status: status,
-          version: nextVersion,
           instagram_account_id: targetAccountId,
           updated_at: new Date().toISOString()
         })
@@ -92,14 +72,6 @@ export async function saveFlow(
         .eq('workspace_id', workspace.id)
 
       if (error) return { success: false, error: error.message || 'Erro ao atualizar fluxo no banco de dados' }
-
-      try {
-        await supabase.from('flow_versions').insert({
-          flow_id: id,
-          version: nextVersion,
-          graph_json: flowData
-        });
-      } catch { /* ignore version error */ }
 
       return { success: true, id: id }
     }

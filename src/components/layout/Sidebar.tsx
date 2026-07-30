@@ -46,6 +46,20 @@ export async function Sidebar() {
         .eq('workspace_id', workspace.id);
       
       unreadCount = count || 0;
+
+      // Buscar foto e @ da conta conectada do instagram
+      const { data: account } = await supabase
+        .from('instagram_accounts')
+        .select('username, profile_picture_url')
+        .eq('workspace_id', workspace.id)
+        .limit(1)
+        .single();
+        
+      if (account) {
+        if (account.profile_picture_url) avatarUrl = account.profile_picture_url;
+        if (account.username) userDisplayName = `@${account.username}`;
+        userInitials = userDisplayName.replace('@', '').substring(0, 2).toUpperCase();
+      }
     }
   }
 
