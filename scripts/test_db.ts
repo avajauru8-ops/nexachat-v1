@@ -6,15 +6,17 @@ const supabase = createClient(
 );
 
 async function main() {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/`, {
-    headers: { 'apikey': process.env.SUPABASE_SERVICE_ROLE_KEY! }
+  const { data, error } = await supabase.rpc('run_sql', {
+    query: `
+      SELECT pg_get_constraintdef(oid) 
+      FROM pg_constraint 
+      WHERE conname = 'flows_status_check';
+    `
   });
-  const spec = await res.json();
-  const tables = Object.keys(spec.definitions);
-  for (const table of tables) {
-    console.log(`Table: ${table}`);
-    console.log('Columns:', Object.keys(spec.definitions[table].properties).join(', '));
-    console.log('---');
+  if (error) {
+    console.log("RPC error:", error.message);
+  } else {
+    console.log(data);
   }
 }
 main();

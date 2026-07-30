@@ -66,7 +66,7 @@ export function FlowsListClient({ initialFlows }: Props) {
 
   const handleTogglePublish = async (id: string, currentStatus: string) => {
     const isCurrentlyPublished = currentStatus === 'published' || currentStatus === 'active';
-    const newStatus = isCurrentlyPublished ? 'draft' : 'published';
+    const newStatus = isCurrentlyPublished ? 'draft' : 'active';
 
     // Optimistic Update
     setFlows(prev => prev.map(f => f.id === id ? { ...f, status: newStatus } : f));

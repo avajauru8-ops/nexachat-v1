@@ -246,7 +246,7 @@ export function FlowBuilderClient({
           </button>
 
           <button 
-            onClick={() => handleSaveFlow('published')}
+            onClick={() => handleSaveFlow('active')}
             disabled={isPending}
             className="px-4 py-2 bg-[#0064e0] text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5 shadow-sm"
           >

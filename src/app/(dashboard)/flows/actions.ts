@@ -86,7 +86,7 @@ export async function publishFlow(id: string, publish: boolean = true) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { success: false, error: "Não autenticado" }
 
-    const status = publish ? 'published' : 'draft';
+    const status = publish ? 'active' : 'draft';
 
     const { error } = await supabase
       .from('flows')
