@@ -10,159 +10,175 @@ export async function saveFlow(
   status: string = 'draft', 
   instagramAccountId?: string
 ) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error("Não autenticado")
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: "Não autenticado" }
 
-  const { data: workspace } = await supabase
-    .from('workspaces')
-    .select('id')
-    .eq('user_id', user.id)
-    .single()
-
-  if (!workspace) throw new Error("Workspace não encontrado")
-
-  let targetAccountId = instagramAccountId;
-  if (!targetAccountId) {
-    const { data: account } = await supabase
-      .from('instagram_accounts')
+    const { data: workspace } = await supabase
+      .from('workspaces')
       .select('id')
-      .eq('workspace_id', workspace.id)
-      .limit(1)
+      .eq('user_id', user.id)
       .single()
-    if (account) targetAccountId = account.id;
-  }
 
-  if (!targetAccountId) {
-    throw new Error("Nenhuma conta do Instagram selecionada ou conectada")
-  }
+    if (!workspace) return { success: false, error: "Workspace não encontrado" }
 
-  if (id === 'new') {
-    const { data, error } = await supabase
-      .from('flows')
-      .insert({
-        workspace_id: workspace.id,
-        instagram_account_id: targetAccountId,
-        name: name,
-        flow_data: flowData,
-        graph_json: flowData,
-        triggers: triggers,
-        status: status,
-        version: 1,
-        created_by: user.id
-      })
-      .select('id')
-      .single()
-      
-    if (error) throw new Error(error.message || 'Erro ao criar fluxo no banco de dados')
+    let targetAccountId = instagramAccountId;
+    if (!targetAccountId) {
+      const { data: account } = await supabase
+        .from('instagram_accounts')
+        .select('id')
+        .eq('workspace_id', workspace.id)
+        .limit(1)
+        .single()
+      if (account) targetAccountId = account.id;
+    }
 
-    // Grava a versão 1 em flow_versions
-    try {
-      await supabase.from('flow_versions').insert({
-        flow_id: data.id,
-        version: 1,
-        graph_json: flowData
-      });
-    } catch { /* ignore version error */ }
+    if (!targetAccountId) {
+      return { success: false, error: "Nenhuma conta do Instagram conectada. Vá em 'Painel Inicial' e conecte sua conta Meta primeiro." }
+    }
 
-    return data.id
-  } else {
-    const { data: currentFlow } = await supabase
-      .from('flows')
-      .select('version')
-      .eq('id', id)
-      .single();
+    if (id === 'new') {
+      const { data, error } = await supabase
+        .from('flows')
+        .insert({
+          workspace_id: workspace.id,
+          instagram_account_id: targetAccountId,
+          name: name,
+          flow_data: flowData,
+          graph_json: flowData,
+          triggers: triggers,
+          status: status,
+          version: 1,
+          created_by: user.id
+        })
+        .select('id')
+        .single()
+        
+      if (error) return { success: false, error: error.message || 'Erro ao criar fluxo no banco de dados' }
 
-    const nextVersion = (currentFlow?.version || 1) + 1;
+      // Grava a versão 1 em flow_versions
+      try {
+        await supabase.from('flow_versions').insert({
+          flow_id: data.id,
+          version: 1,
+          graph_json: flowData
+        });
+      } catch { /* ignore version error */ }
 
-    const { error } = await supabase
-      .from('flows')
-      .update({
-        name: name,
-        flow_data: flowData,
-        graph_json: flowData,
-        triggers: triggers,
-        status: status,
-        version: nextVersion,
-        instagram_account_id: targetAccountId,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id)
-      .eq('workspace_id', workspace.id)
+      return { success: true, id: data.id }
+    } else {
+      const { data: currentFlow } = await supabase
+        .from('flows')
+        .select('version')
+        .eq('id', id)
+        .single();
 
-    if (error) throw new Error(error.message || 'Erro ao atualizar fluxo no banco de dados')
+      const nextVersion = (currentFlow?.version || 1) + 1;
 
-    try {
-      await supabase.from('flow_versions').insert({
-        flow_id: id,
-        version: nextVersion,
-        graph_json: flowData
-      });
-    } catch { /* ignore version error */ }
+      const { error } = await supabase
+        .from('flows')
+        .update({
+          name: name,
+          flow_data: flowData,
+          graph_json: flowData,
+          triggers: triggers,
+          status: status,
+          version: nextVersion,
+          instagram_account_id: targetAccountId,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .eq('workspace_id', workspace.id)
 
-    return id
+      if (error) return { success: false, error: error.message || 'Erro ao atualizar fluxo no banco de dados' }
+
+      try {
+        await supabase.from('flow_versions').insert({
+          flow_id: id,
+          version: nextVersion,
+          graph_json: flowData
+        });
+      } catch { /* ignore version error */ }
+
+      return { success: true, id: id }
+    }
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Erro inesperado' }
   }
 }
 
 export async function publishFlow(id: string, publish: boolean = true) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error("Não autenticado")
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: "Não autenticado" }
 
-  const status = publish ? 'published' : 'draft';
+    const status = publish ? 'published' : 'draft';
 
-  const { error } = await supabase
-    .from('flows')
-    .update({ status, updated_at: new Date().toISOString() })
-    .eq('id', id);
+    const { error } = await supabase
+      .from('flows')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', id);
 
-  if (error) throw new Error(error.message || 'Erro ao publicar fluxo');
-  return { success: true, status };
+    if (error) return { success: false, error: error.message || 'Erro ao publicar fluxo' }
+    return { success: true, status };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Erro inesperado' }
+  }
 }
 
 export async function deleteFlow(id: string) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error("Não autenticado")
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: "Não autenticado" }
 
-  const { error } = await supabase
-    .from('flows')
-    .delete()
-    .eq('id', id);
+    const { error } = await supabase
+      .from('flows')
+      .delete()
+      .eq('id', id);
 
-  if (error) throw new Error(error.message || 'Erro ao deletar fluxo');
-  return { success: true };
+    if (error) return { success: false, error: error.message || 'Erro ao deletar fluxo' }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Erro inesperado' }
+  }
 }
 
 export async function duplicateFlow(id: string) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error("Não autenticado")
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: "Não autenticado" }
 
-  const { data: flow, error: fetchErr } = await supabase
-    .from('flows')
-    .select('*')
-    .eq('id', id)
-    .single();
+    const { data: flow, error: fetchErr } = await supabase
+      .from('flows')
+      .select('*')
+      .eq('id', id)
+      .single();
 
-  if (fetchErr || !flow) throw new Error("Fluxo não encontrado para duplicação");
+    if (fetchErr || !flow) return { success: false, error: "Fluxo não encontrado para duplicação" }
 
-  const { data: newFlow, error: insertErr } = await supabase
-    .from('flows')
-    .insert({
-      workspace_id: flow.workspace_id,
-      instagram_account_id: flow.instagram_account_id,
-      name: `${flow.name} (Cópia)`,
-      flow_data: flow.flow_data,
-      graph_json: flow.graph_json || flow.flow_data,
-      triggers: flow.triggers,
-      status: 'draft',
-      version: 1,
-      created_by: user.id
-    })
-    .select('id')
-    .single();
+    const { data: newFlow, error: insertErr } = await supabase
+      .from('flows')
+      .insert({
+        workspace_id: flow.workspace_id,
+        instagram_account_id: flow.instagram_account_id,
+        name: `${flow.name} (Cópia)`,
+        flow_data: flow.flow_data,
+        graph_json: flow.graph_json || flow.flow_data,
+        triggers: flow.triggers,
+        status: 'draft',
+        version: 1,
+        created_by: user.id
+      })
+      .select('id')
+      .single();
 
-  if (insertErr) throw new Error(insertErr.message || 'Erro ao duplicar fluxo no banco de dados');
-  return newFlow.id;
+    if (insertErr) return { success: false, error: insertErr.message || 'Erro ao duplicar fluxo no banco de dados' }
+    return { success: true, id: newFlow.id };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Erro inesperado' }
+  }
 }

@@ -72,10 +72,11 @@ export function FlowsListClient({ initialFlows }: Props) {
     setFlows(prev => prev.map(f => f.id === id ? { ...f, status: newStatus } : f));
 
     try {
-      await publishFlow(id, !isCurrentlyPublished);
+      const res = await publishFlow(id, !isCurrentlyPublished);
+      if (res.error) throw new Error(res.error);
       toast.success(isCurrentlyPublished ? 'Automação pausada!' : 'Automação publicada com sucesso!');
-    } catch {
-      toast.error('Erro ao atualizar status do fluxo');
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao atualizar status do fluxo');
       setFlows(prev => prev.map(f => f.id === id ? { ...f, status: currentStatus } : f));
     }
   };
@@ -83,22 +84,24 @@ export function FlowsListClient({ initialFlows }: Props) {
   const handleDelete = async (id: string) => {
     if (!confirm('Deseja realmente excluir esta automação?')) return;
     try {
-      await deleteFlow(id);
+      const res = await deleteFlow(id);
+      if (res.error) throw new Error(res.error);
       setFlows(prev => prev.filter(f => f.id !== id));
       toast.success('Automação excluída');
-    } catch {
-      toast.error('Erro ao excluir automação');
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao excluir automação');
     }
   };
 
   const handleDuplicate = async (id: string) => {
     const toastId = toast.loading('Duplicando automação...');
     try {
-      const newId = await duplicateFlow(id);
+      const res = await duplicateFlow(id);
+      if (res.error) throw new Error(res.error);
       toast.success('Automação duplicada com sucesso!', { id: toastId });
-      router.push(`/flows/builder/${newId}`);
-    } catch {
-      toast.error('Erro ao duplicar automação', { id: toastId });
+      router.push(`/flows/builder/${res.id}`);
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao duplicar automação', { id: toastId });
     }
   };
 

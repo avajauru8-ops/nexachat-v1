@@ -121,7 +121,14 @@ export function FlowBuilderClient({
         }
 
         const flowData = { nodes, edges };
-        const newId = await saveFlow(id, flowName, flowData, triggers, targetStatus, accountId);
+        const res = await saveFlow(id, flowName, flowData, triggers, targetStatus, accountId);
+        
+        if (res.error) {
+          toast.error(res.error);
+          return;
+        }
+        
+        const newId = res.id;
         
         setStatus(targetStatus);
 

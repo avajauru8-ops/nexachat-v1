@@ -35,13 +35,20 @@ export function TemplatesClient() {
 
       const triggerKeyword = (template.nodes.find(n => n.type === 'triggerNode')?.data?.keyword as string) || '';
 
-      const newId = await saveFlow(
+      const res = await saveFlow(
         'new',
         template.title,
         flowData,
         { triggerType: 'keyword', keyword: triggerKeyword },
         'draft'
       );
+
+      if (res.error) {
+        toast.error(res.error);
+        setIsInstalling(null);
+        return;
+      }
+      const newId = res.id;
 
       toast.success('Modelo instalado com sucesso!', { id: toastId });
       router.push(`/flows/builder/${newId}`);

@@ -55,11 +55,18 @@ export default async function DashboardPage() {
         let username = dbUsername;
 
         try {
-          const res = await fetch(`https://graph.instagram.com/v22.0/${acc.ig_user_id}?fields=username,profile_picture_url&access_token=${acc.access_token}`);
+          const isMetaToken = acc.access_token && acc.access_token.startsWith('EAA');
+          const apiUrl = isMetaToken
+            ? `https://graph.facebook.com/v22.0/${acc.ig_user_id}?fields=username,profile_picture_url&access_token=${acc.access_token}`
+            : `https://graph.instagram.com/v22.0/me?fields=username,profile_picture_url&access_token=${acc.access_token}`;
+            
+          const res = await fetch(apiUrl);
           const data = await res.json();
           if (data.username) username = data.username;
           if (data.profile_picture_url) profilePic = data.profile_picture_url;
-        } catch {}
+        } catch (err) {
+          console.error("Failed to fetch IG profile picture", err);
+        }
 
         return { ...acc, username, profile_picture_url: profilePic };
       })

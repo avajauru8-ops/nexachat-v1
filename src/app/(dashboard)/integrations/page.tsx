@@ -33,14 +33,17 @@ export default async function IntegrationsPage() {
         let profilePictureUrl = null;
 
         try {
-          const res = await fetch(
-            `https://graph.instagram.com/v22.0/${account.ig_user_id}?fields=id,username,name,profile_picture_url&access_token=${account.access_token}`
-          );
+          const isMetaToken = account.access_token && account.access_token.startsWith('EAA');
+          const apiUrl = isMetaToken
+            ? `https://graph.facebook.com/v22.0/${account.ig_user_id}?fields=id,username,name,profile_picture_url&access_token=${account.access_token}`
+            : `https://graph.instagram.com/v22.0/me?fields=id,username,name,profile_picture_url&access_token=${account.access_token}`;
+            
+          const res = await fetch(apiUrl);
           const profile = await res.json();
           if (profile.username) username = profile.username;
           if (profile.profile_picture_url) profilePictureUrl = profile.profile_picture_url;
-        } catch {
-          // ignora falhas de API externa e usa o username do banco
+        } catch (err) {
+          console.error("Failed to fetch IG profile in integrations", err);
         }
 
         connectedAccount = {
