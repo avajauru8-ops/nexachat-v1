@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Check, Copy, Settings, Users, Database, Sparkles, Plus, Trash2, Save, CreditCard, Bell, Send, LayoutDashboard, ShieldAlert, UserPlus, RefreshCw, ShieldCheck, Cpu } from 'lucide-react';
+import { Check, Copy, Settings, Users, Database, Sparkles, Plus, Trash2, Save, CreditCard, Bell, Send, LayoutDashboard, ShieldAlert, UserPlus, RefreshCw, ShieldCheck, Cpu, Pencil, EyeOff, Eye, Globe, CheckCircle, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 interface UserItem {
