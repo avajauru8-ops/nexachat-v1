@@ -191,6 +191,15 @@ export default function AdminDashboardClient({ currentUser }: Props) {
     } finally { setIsCreatingUser(false); }
   };
 
+  const openEditUserModal = (user: UserItem) => {
+    setEditingUserId(user.id);
+    setEditingUserName(user.name);
+    setEditingUserEmail(user.email);
+    setEditingUserRole(user.role.includes('Admin') ? 'Administrador' : 'Usuário');
+    setEditingUserPassword('');
+    setShowEditUserModal(true);
+  };
+
   const handleUpdateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsUpdatingUser(true);
@@ -204,6 +213,21 @@ export default function AdminDashboardClient({ currentUser }: Props) {
       setShowEditUserModal(false);
       fetchUsers();
     } finally { setIsUpdatingUser(false); }
+  };
+
+  const handleChangeRole = async (userId: string, role: string) => {
+    const toastId = toast.loading('Atualizando permissões...');
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, role })
+      });
+      if (res.ok) {
+        toast.success('Papel do usuário atualizado!');
+        fetchUsers();
+      } else toast.error('Erro ao alterar papel.');
+    } catch { toast.error('Erro de servidor.'); }
   };
 
   const executeDeleteUser = async () => {
@@ -255,6 +279,15 @@ export default function AdminDashboardClient({ currentUser }: Props) {
     setShowCreatePlanModal(false);
     fetchPlans();
     setIsCreatingPlan(false);
+  };
+
+  const openEditPlanModal = (plan: PlanItem) => {
+    setEditingPlanId(plan.id);
+    setEditingPlanName(plan.name);
+    setEditingPlanPrice(String(plan.price));
+    setEditingPlanLimit(String(plan.message_limit));
+    setEditingPlanFeatures(Array.isArray(plan.features) ? plan.features.join(', ') : String(plan.features || ''));
+    setShowEditPlanModal(true);
   };
 
   const handleUpdatePlan = async (e: React.FormEvent) => {
