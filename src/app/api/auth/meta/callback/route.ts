@@ -27,7 +27,7 @@ export async function GET(request: Request) {
   const redirectUri = 'https://nexachat-v1.vercel.app/api/auth/meta/callback';
 
   if (!clientId || !clientSecret) {
-    console.error('META_APP_ID ou META_APP_SECRET não definidos nas variáveis de ambiente.');
+    console.error('META_APP_ID ou META_APP_SECRET não definidos.');
     return NextResponse.redirect(new URL('/integrations?error=Server_Config_Error', request.url));
   }
 
@@ -59,109 +59,87 @@ export async function GET(request: Request) {
       await serviceSupabase.from('instagram_accounts').upsert({
         workspace_id: workspace.id,
         ig_user_id: igUserId,
-        page_id: 'perfil_demonstracao_ig',
+        page_id: 'native_ig_login',
         access_token: 'mock_token_abc123',
         status: 'active'
       }, { onConflict: 'ig_user_id' });
       return NextResponse.redirect(new URL('/integrations?success=true', request.url));
     }
 
-    // 1. Trocar o código de autorização pelo token de acesso curto do usuário
-    const fbTokenUrl = `https://graph.facebook.com/v22.0/oauth/access_token?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&client_secret=${clientSecret}&code=${code}`;
-    
-    console.log('--- FB TOKEN EXCHANGE ---');
-    const fbRes = await fetch(fbTokenUrl);
-    const fbData = await fbRes.json();
-    
-    if (fbData.error) {
-      console.error('Erro na troca do código pelo token FB:', fbData.error);
-      return NextResponse.redirect(new URL(`/integrations?error=${encodeURIComponent(fbData.error.message || 'FB_Token_Error')}`, request.url));
+    // 1. Instagram API Direct Access Token Exchange
+    const igTokenUrl = 'https://api.instagram.com/oauth/access_token';
+    const form = new URLSearchParams();
+    form.append('client_id', clientId);
+    form.append('client_secret', clientSecret);
+    form.append('grant_type', 'authorization_code');
+    form.append('redirect_uri', redirectUri);
+    if (code) form.append('code', code);
+
+    const igRes = await fetch(igTokenUrl, { method: 'POST', body: form });
+    const igData = await igRes.json();
+
+    if (igData.error_type || igData.error_message || !igData.access_token) {
+      console.error('Erro na troca de código com o Instagram:', igData);
+      const err = igData.error_message || igData.error_type || 'Token_Exchange_Failed';
+      return NextResponse.redirect(new URL(`/integrations?error=${encodeURIComponent(err)}`, request.url));
     }
     
-    const userAccessToken = fbData.access_token;
-    if (!userAccessToken) {
-      return NextResponse.redirect(new URL('/integrations?error=No_Access_Token_Returned', request.url));
+    const shortLivedToken = igData.access_token;
+    const igUserId = String(igData.user_id);
+    
+    if (!igUserId) {
+      return NextResponse.redirect(new URL('/integrations?error=No_Instagram_Account_Linked', request.url));
     }
 
-    // 2. Obter token de longo prazo (long-lived)
-    let longLivedToken = userAccessToken;
+    // 2. Trocar por Long-Lived Token do Instagram (Dura 60 dias)
+    let longLivedToken = shortLivedToken;
     try {
-      const longTokenUrl = `https://graph.facebook.com/v22.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${clientId}&client_secret=${clientSecret}&fb_exchange_token=${userAccessToken}`;
+      const longTokenUrl = `https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret=${clientSecret}&access_token=${shortLivedToken}`;
       const longTokenRes = await fetch(longTokenUrl);
       const longTokenData = await longTokenRes.json();
       if (longTokenData && longTokenData.access_token) {
         longLivedToken = longTokenData.access_token;
       }
     } catch (e) {
-      console.warn('Aviso ao trocar token por long-lived:', e);
+      console.warn('Aviso ao trocar token por long-lived IG:', e);
     }
 
-    // 3. Buscar as Páginas do Facebook vinculadas ao usuário
-    const accountsUrl = `https://graph.facebook.com/v22.0/me/accounts?access_token=${longLivedToken}`;
-    const accountsRes = await fetch(accountsUrl);
-    const accountsData = await accountsRes.json();
-
-    if (accountsData.error || !accountsData.data || accountsData.data.length === 0) {
-      console.error('Nenhuma Página do Facebook encontrada ou erro:', accountsData);
-      return NextResponse.redirect(new URL('/integrations?error=No_Facebook_Pages_Found', request.url));
-    }
-
-    let igUserId = '';
-    let linkedPageId = '';
-    let pageAccessToken = '';
+    // 3. Obter detalhes do usuário (username)
     let igUsername = '';
-
-    // Procurar por uma página que tenha uma conta do Instagram Business vinculada
-    for (const page of accountsData.data) {
-      const pageId = page.id;
-      const pageToken = page.access_token;
-
-      const pageDetailsUrl = `https://graph.facebook.com/v22.0/${pageId}?fields=instagram_business_account&access_token=${pageToken}`;
-      const pageDetailsRes = await fetch(pageDetailsUrl);
-      const pageDetailsData = await pageDetailsRes.json();
-
-      if (pageDetailsData.instagram_business_account && pageDetailsData.instagram_business_account.id) {
-        igUserId = pageDetailsData.instagram_business_account.id;
-        linkedPageId = pageId;
-        pageAccessToken = pageToken;
-
-        // Tentar obter o username do Instagram para exibir no painel
-        try {
-          const igDetailsRes = await fetch(`https://graph.facebook.com/v22.0/${igUserId}?fields=username&access_token=${pageToken}`);
-          const igDetailsData = await igDetailsRes.json();
-          if (igDetailsData.username) {
-            igUsername = igDetailsData.username;
-          }
-        } catch (e) {
-          console.warn('Não foi possível obter o username do IG:', e);
-        }
-
-        break;
-      }
-    }
-
-    if (!igUserId || !pageAccessToken) {
-      return NextResponse.redirect(new URL('/integrations?error=No_Instagram_Business_Account_Linked_To_Page', request.url));
-    }
-
-    // 4. Inscrever o Webhook no aplicativo para a Página vinculada
     try {
+      const profileUrl = `https://graph.instagram.com/v22.0/${igUserId}?fields=username&access_token=${longLivedToken}`;
+      const profileRes = await fetch(profileUrl);
+      const profileData = await profileRes.json();
+      if (profileData && profileData.username) {
+        igUsername = profileData.username;
+      }
+    } catch (e) {
+      console.warn('Não foi possível obter username:', e);
+    }
+
+    // 4. Inscrever Webhooks na API de mensagens direta do Instagram
+    // No Instagram Native Login, os webhooks são configurados na dashboard,
+    // mas a ativação do webhook field também pode ser feita via API na conta do usuário, 
+    // embora geralmente seja automático quando o aplicativo é autorizado.
+    try {
+      // Instagram Native Accounts subscribe to webhooks differently, or automatically.
+      // We will attempt to subscribe to messages directly on the IG user object if supported.
       const subRes = await fetch(
-        `https://graph.facebook.com/v22.0/${linkedPageId}/subscribed_apps?subscribed_fields=messages,messaging_postbacks,messaging_optins&access_token=${pageAccessToken}`,
+        `https://graph.instagram.com/v22.0/${igUserId}/subscribed_apps?subscribed_fields=messages,messaging_postbacks,messaging_optins&access_token=${longLivedToken}`,
         { method: 'POST' }
       );
       const subData = await subRes.json();
-      console.log("FB Webhook Subscription:", subData);
+      console.log("IG Webhook Subscription:", subData);
     } catch (e) {
-      console.error("Erro ao assinar webhook:", e);
+      console.error("Erro ao assinar webhook no IG nativo:", e);
     }
 
-    // 5. Salvar as informações no banco de dados (usando o pageAccessToken que é necessário para as requisições Graph)
+    // 5. Salvar a conta no Supabase usando o Token Nativo do Instagram
     const { error: dbError } = await serviceSupabase.from('instagram_accounts').upsert({
       workspace_id: workspace.id,
       ig_user_id: igUserId,
-      page_id: linkedPageId,
-      access_token: pageAccessToken, // É importante usar o token da Página para mandar mensagens!
+      page_id: 'native_ig_login', // Flag indicando que não usa Page ID do FB
+      access_token: longLivedToken,
       username: igUsername || igUserId,
       status: 'active'
     }, { onConflict: 'ig_user_id' });
