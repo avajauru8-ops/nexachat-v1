@@ -40,9 +40,9 @@ export async function updateSession(request: NextRequest) {
     url.pathname = '/auth/login'
     const redirectResponse = NextResponse.redirect(url)
     
-    // Repassa os cookies que podem ter sido gerados/atualizados pelo Supabase
-    supabaseResponse.cookies.getAll().forEach((cookie) => {
-      redirectResponse.cookies.set(cookie.name, cookie.value)
+    const setCookieHeaders = supabaseResponse.headers.getSetCookie ? supabaseResponse.headers.getSetCookie() : []
+    setCookieHeaders.forEach((cookie) => {
+      redirectResponse.headers.append('Set-Cookie', cookie)
     })
     return redirectResponse
   }
@@ -53,9 +53,9 @@ export async function updateSession(request: NextRequest) {
     url.pathname = '/admin'
     const redirectResponse = NextResponse.redirect(url)
     
-    // Repassa os cookies que podem ter sido gerados/atualizados pelo Supabase
-    supabaseResponse.cookies.getAll().forEach((cookie) => {
-      redirectResponse.cookies.set(cookie.name, cookie.value)
+    const setCookieHeaders = supabaseResponse.headers.getSetCookie ? supabaseResponse.headers.getSetCookie() : []
+    setCookieHeaders.forEach((cookie) => {
+      redirectResponse.headers.append('Set-Cookie', cookie)
     })
     return redirectResponse
   }
