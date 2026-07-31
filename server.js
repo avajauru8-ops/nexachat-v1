@@ -6,6 +6,8 @@ const { Server } = require('socket.io');
 require('dotenv').config({ path: '.env.local' });
 const { createClient } = require('@supabase/supabase-js');
 
+process.env.INNGEST_DEV = '1';
+
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = 'localhost';
 const port = process.env.PORT || 3000;

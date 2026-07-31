@@ -46,5 +46,6 @@ export type Events = {
 };
 
 export const inngest = new Inngest({
-  id: 'nexachat-app'
+  id: 'nexachat-app',
+  eventKey: process.env.INNGEST_EVENT_KEY || 'local'
 });

@@ -25,6 +25,14 @@ export const executeFlow = inngest.createFunction(
         .select('graph_json, flow_data, instagram_account_id, instagram_accounts(access_token)')
         .eq('id', flowId)
         .maybeSingle();
+      
+      if (data && (data as any).execution_count !== undefined) {
+        await supabase
+          .from('flows')
+          .update({ execution_count: ((data as any).execution_count || 0) + 1 })
+          .eq('id', flowId);
+      }
+      
       return data;
     });
 

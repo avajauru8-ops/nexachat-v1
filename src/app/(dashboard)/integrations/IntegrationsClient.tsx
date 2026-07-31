@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { Sparkles, Bot, Save, Globe, Key, ShieldCheck, RefreshCw, X, ShieldAlert, Copy, Check } from 'lucide-react';
+import { Sparkles, Save, Globe, Key, ShieldCheck, RefreshCw, X } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 
 interface ConnectedAccount {
@@ -254,7 +254,11 @@ export default function IntegrationsClient({ connectedAccount: initialConnectedA
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setServerWebhookUrl(`${window.location.origin}/api/webhooks/instagram`);
+      // Update server webhook URL only if not already set to avoid unnecessary re-renders
+      setServerWebhookUrl(prev => {
+        const newUrl = `${window.location.origin}/api/webhooks/instagram`;
+        return prev === newUrl ? prev : newUrl;
+      });
     }
   }, []);
 

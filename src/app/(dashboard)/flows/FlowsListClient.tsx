@@ -295,7 +295,7 @@ export function FlowsListClient({ initialFlows }: Props) {
                       </td>
 
                       <td className="px-4 py-4 font-semibold text-gray-800 text-sm">
-                        {isPublished ? '12 execuções' : '0'}
+                        {flow.execution_count} execuções
                       </td>
 
                       <td className="px-4 py-4 text-sm text-gray-500">

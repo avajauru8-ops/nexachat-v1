@@ -14,11 +14,19 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
   const [messages, setMessages] = useState<Record<string, unknown>[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
+  const [now, setNow] = useState(Date.now());
+
   const supabase = createClient();
 
   useEffect(() => {
     activeChatIdRef.current = activeChatId;
   }, [activeChatId]);
+
+  // Update "now" every minute for time calculations
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     conversationsRef.current = conversations;
@@ -245,10 +253,10 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
     return date.toLocaleDateString([], { day: '2-digit', month: 'short' });
   };
 
-  const get24hWindowInfo = (expiresAt?: string) => {
+  const get24hWindowInfo = (expiresAt?: string, nowVal?: number) => {
     if (!expiresAt) return { active: true, text: 'Janela 24h ativa' };
     const expiry = new Date(expiresAt).getTime();
-    const diff = expiry - Date.now();
+    const diff = expiry - (nowVal ?? Date.now());
     if (diff <= 0) {
       return { active: false, text: 'Janela 24h Expirada' };
     }
@@ -257,7 +265,7 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
     return { active: true, text: `Janela 24h: ${hoursLeft}h ${minsLeft}m` };
   };
 
-  const windowInfo = get24hWindowInfo(activeChat?.window_expires_at as string);
+  const windowInfo = get24hWindowInfo(activeChat?.window_expires_at as string, now);
 
   return (
     <div className="flex h-[calc(100vh-64px)] -m-6 bg-white overflow-hidden">

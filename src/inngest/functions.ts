@@ -193,7 +193,7 @@ export const processWebhookEvent = inngest.createFunction(
             if (conversation.status === 'bot' || conversation.status === 'bot_active') {
               const { data: flows } = await supabase
                 .from('flows')
-                .select('id, graph_json, flow_data, triggers, trigger_type')
+                .select('id, graph_json, flow_data, triggers')
                 .eq('workspace_id', activeWorkspaceId)
                 .in('status', ['published', 'active']);
 
