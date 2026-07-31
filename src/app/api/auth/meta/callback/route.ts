@@ -20,11 +20,8 @@ export async function GET(request: Request) {
   // Buscar credenciais da Meta salvas no Banco de Dados
   const { appId: clientId, appSecret: clientSecret } = await getMetaCredentials();
 
-  // Garantir que a URL de callback seja exatamente a mesma gerada no /api/auth/meta
-  const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || 'localhost:3000';
-  const proto = request.headers.get('x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https');
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `${proto}://${host}`;
-  const redirectUri = `${baseUrl}/api/auth/meta/callback`;
+  const currentUrl = new URL(request.url);
+  const redirectUri = `${currentUrl.origin}/api/auth/meta/callback`;
 
   if (!clientId || !clientSecret) {
     console.error('META_APP_ID ou META_APP_SECRET não definidos nas variáveis de ambiente.');
