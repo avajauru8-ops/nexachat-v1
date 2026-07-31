@@ -150,10 +150,27 @@ export async function GET(request: Request) {
 
     // Inscrever conta nos Webhooks de mensagens
     try {
-      await fetch(
-        `https://graph.facebook.com/v22.0/${igUserId}/subscribed_apps?subscribed_fields=messages,comments,mentions&access_token=${longLivedToken}`,
-        { method: 'POST' }
-      );
+      const isFbToken = longLivedToken.startsWith('EAA');
+      if (isFbToken) {
+        // Facebook Page token -> subscribe to graph.facebook.com/{page_id}
+        // NOTE: For Meta Graph API, the Page ID is required to subscribe to webhooks, but we don't have the exact Page ID in scope easily if we overrode it.
+        // Actually, earlier in the code we had the page access token.
+        // Let's use the /me/subscribed_apps endpoint which uses the Page Token implicitly!
+        const subRes = await fetch(
+          `https://graph.facebook.com/v22.0/me/subscribed_apps?subscribed_fields=messages,messaging_postbacks,messaging_optins&access_token=${longLivedToken}`,
+          { method: 'POST' }
+        );
+        const subData = await subRes.json();
+        console.log("FB Webhook Subscription:", subData);
+      } else {
+        // Instagram Direct token -> subscribe to graph.instagram.com/{ig_user_id}
+        const subRes = await fetch(
+          `https://graph.instagram.com/v22.0/${igUserId}/subscribed_apps?subscribed_fields=messages,comments,mentions&access_token=${longLivedToken}`,
+          { method: 'POST' }
+        );
+        const subData = await subRes.json();
+        console.log("IG Webhook Subscription:", subData);
+      }
     } catch (e) {
       console.warn('Aviso ao inscrever webhook:', e);
     }
