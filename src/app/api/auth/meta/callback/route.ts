@@ -88,6 +88,14 @@ export async function GET(request: Request) {
     form.append('redirect_uri', redirectUri);
     if (code) form.append('code', code);
 
+    console.log('--- INSTAGRAM TOKEN EXCHANGE ---');
+    console.log('Sending to:', igTokenUrl);
+    console.log('client_id:', clientId);
+    console.log('redirect_uri:', redirectUri);
+    console.log('code:', code);
+    console.log('code length:', code ? code.length : 0);
+    console.log('--------------------------------');
+
     const igRes = await fetch(igTokenUrl, { method: 'POST', body: form });
     const igData = await igRes.json();
 
