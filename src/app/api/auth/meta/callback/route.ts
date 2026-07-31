@@ -140,7 +140,6 @@ export async function GET(request: Request) {
       ig_user_id: igUserId,
       page_id: 'native_ig_login', // Flag indicando que não usa Page ID do FB
       access_token: longLivedToken,
-      username: igUsername || igUserId,
       status: 'active'
     }, { onConflict: 'ig_user_id' });
 
