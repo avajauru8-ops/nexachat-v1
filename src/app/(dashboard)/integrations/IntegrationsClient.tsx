@@ -331,10 +331,10 @@ export default function IntegrationsClient({ connectedAccount: initialConnectedA
             {connectedAccount ? (
               <>
                 <button
-                  onClick={() => handleOAuthConnect('facebook')}
+                  onClick={() => handleOAuthConnect('instagram')}
                   className="w-full py-2.5 text-blue-600 border border-blue-200 bg-blue-50 rounded-xl text-xs font-bold hover:bg-blue-100 transition-colors flex items-center justify-center gap-2"
                 >
-                  <RefreshCw className="w-3.5 h-3.5" /> Reconectar via Facebook/Meta
+                  <RefreshCw className="w-3.5 h-3.5" /> Reconectar via Instagram
                 </button>
                 <button
                   onClick={handleDisconnect}
@@ -354,10 +354,10 @@ export default function IntegrationsClient({ connectedAccount: initialConnectedA
                 </button>
                 <div className="grid grid-cols-2 gap-2">
                   <button
-                    onClick={() => handleOAuthConnect('facebook')}
+                    onClick={() => handleOAuthConnect('instagram')}
                     className="w-full py-2 border border-gray-300 hover:border-gray-400 text-gray-700 bg-gray-50 hover:bg-white rounded-xl text-[11px] font-semibold transition-colors text-center"
                   >
-                    Meta OAuth
+                    Meta OAuth (Instagram)
                   </button>
                   <button
                     onClick={() => window.location.href = '/api/auth/meta?mock=true'}
