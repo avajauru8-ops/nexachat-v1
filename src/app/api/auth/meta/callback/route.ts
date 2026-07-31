@@ -23,7 +23,7 @@ export async function GET(request: Request) {
   // Buscar credenciais da Meta salvas no Banco de Dados
   const { appId: clientId, appSecret: clientSecret } = await getMetaCredentials();
 
-  const redirectUri = 'https://nexachat-v1.vercel.app/api/auth/meta/callback';
+  const redirectUri = `${new URL(request.url).origin}/api/auth/meta/callback`;
 
   if (!clientId || !clientSecret) {
     console.error('META_APP_ID ou META_APP_SECRET não definidos nas variáveis de ambiente.');
