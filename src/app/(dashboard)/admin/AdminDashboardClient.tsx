@@ -48,6 +48,13 @@ export default function AdminDashboardClient({ currentUser }: Props) {
     return (tabParam as any) || 'dashboard';
   });
 
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && tabParam !== activeTab) {
+      setActiveTab(tabParam as any);
+    }
+  }, [searchParams]);
+
   const [users, setUsers] = useState<UserItem[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
