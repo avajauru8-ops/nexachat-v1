@@ -5,7 +5,10 @@ import { getMetaCredentials } from '@/utils/metaCredentials';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const code = searchParams.get('code');
+  let code = searchParams.get('code');
+  if (code && code.endsWith('#_')) {
+    code = code.slice(0, -2);
+  }
   const errorReason = searchParams.get('error_reason') || searchParams.get('error_description');
 
   if (errorReason) {
