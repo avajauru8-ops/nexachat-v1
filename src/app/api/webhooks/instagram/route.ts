@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import { inngest } from '@/inngest/client';
+import { waitUntil } from '@vercel/functions';
+import { processMetaPayload } from '@/utils/webhookProcessor';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
@@ -122,7 +124,7 @@ export async function POST(request: Request) {
         console.error('[Webhook] Erro ao gravar evento em events_log:', logError);
       }
 
-      // 4. Enfileirar no Inngest para processamento assíncrono fora da requisição HTTP
+      // 4. Enfileirar no Inngest (Se tiver key configurada)
       try {
         await inngest.send({
           name: 'instagram/event.received',
@@ -136,6 +138,14 @@ export async function POST(request: Request) {
       } catch (inngestErr) {
         console.error('[Webhook] Falha ao disparar evento no Inngest:', inngestErr);
       }
+
+      // 4.1 Processamento Síncrono de Fundo usando @vercel/functions waitUntil
+      // Isso garante que mesmo sem o Inngest pago configurado, a mensagem chegará no Inbox.
+      waitUntil(
+        processMetaPayload(body, workspaceId).catch(err => {
+          console.error('[Webhook] Erro no processamento de fundo Vercel:', err);
+        })
+      );
 
       // 5. Retorno imediato para a Meta (< 1 segundo)
       return new NextResponse('EVENT_RECEIVED', { status: 200 });
