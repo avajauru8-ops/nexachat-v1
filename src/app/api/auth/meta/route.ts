@@ -8,8 +8,7 @@ export async function GET(request: Request) {
   // Buscar credenciais diretamente do Banco de Dados Supabase (tabela system_settings)
   const { appId } = await getMetaCredentials();
 
-  const currentUrl = new URL(request.url);
-  const redirectUri = `${currentUrl.origin}/api/auth/meta/callback`;
+  const redirectUri = 'https://nexachat-v1.vercel.app/api/auth/meta/callback';
 
   // Se for solicitado modo simulador/mock ou se o App ID for inválido/placeholder, usa a conexão de demonstração
   if (
