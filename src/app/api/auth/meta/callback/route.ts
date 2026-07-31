@@ -76,59 +76,29 @@ export async function GET(request: Request) {
     // -----------------------------------------
     let userAccessToken = '';
     let igUserId = '';
-    let username = '';
+    const username = '';
 
-    // Tentar primeiro via Facebook OAuth Access Token Exchange (Padrão Graph API v22.0)
-    const fbTokenUrl = `https://graph.facebook.com/v22.0/oauth/access_token?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&client_secret=${clientSecret}&code=${code}`;
-    const fbRes = await fetch(fbTokenUrl);
-    const fbData = await fbRes.json();
 
-    if (fbData && fbData.access_token) {
-      userAccessToken = fbData.access_token;
+      // Instagram API Direct Access Token Exchange
+    const igTokenUrl = 'https://api.instagram.com/oauth/access_token';
+    const form = new URLSearchParams();
+    form.append('client_id', clientId);
+    form.append('client_secret', clientSecret);
+    form.append('grant_type', 'authorization_code');
+    form.append('redirect_uri', redirectUri);
+    if (code) form.append('code', code);
 
-      // Buscar Páginas do Facebook vinculadas para encontrar a conta de Instagram Business
-      try {
-        const pagesUrl = `https://graph.facebook.com/v22.0/me/accounts?fields=id,name,access_token,instagram_business_account{id,username,name,profile_picture_url}&access_token=${userAccessToken}`;
-        const pagesRes = await fetch(pagesUrl);
-        const pagesData = await pagesRes.json();
+    const igRes = await fetch(igTokenUrl, { method: 'POST', body: form });
+    const igData = await igRes.json();
 
-        if (pagesData && pagesData.data && pagesData.data.length > 0) {
-          for (const page of pagesData.data) {
-            if (page.instagram_business_account) {
-              igUserId = page.instagram_business_account.id;
-              username = page.instagram_business_account.username || page.instagram_business_account.name || '';
-              if (page.access_token) {
-                userAccessToken = page.access_token; // Usar Page Access Token de longa duração
-              }
-              break;
-            }
-          }
-        }
-      } catch (e) {
-        console.warn('Aviso ao buscar contas de Instagram conectadas:', e);
-      }
-    } else {
-      // Fallback para Instagram API Direct Access Token Exchange
-      const igTokenUrl = 'https://api.instagram.com/oauth/access_token';
-      const form = new URLSearchParams();
-      form.append('client_id', clientId);
-      form.append('client_secret', clientSecret);
-      form.append('grant_type', 'authorization_code');
-      form.append('redirect_uri', redirectUri);
-      form.append('code', code);
-
-      const igRes = await fetch(igTokenUrl, { method: 'POST', body: form });
-      const igData = await igRes.json();
-
-      if (igData.error_type || igData.error_message) {
-        console.error('Erro na troca de código com a Meta:', igData);
-        const err = igData.error_message || igData.error_type || 'Token_Exchange_Failed';
-        return NextResponse.redirect(new URL(`/integrations?error=${encodeURIComponent(err)}`, request.url));
-      }
-
+    if (igData.error_type || igData.error_message || !igData.access_token) {
+      console.error('Erro na troca de código com a Meta:', igData);
+      const err = igData.error_message || igData.error_type || 'Token_Exchange_Failed';
+      return NextResponse.redirect(new URL(`/integrations?error=${encodeURIComponent(err)}`, request.url));
+    }
       userAccessToken = igData.access_token;
       igUserId = String(igData.user_id);
-    }
+    
 
     if (!igUserId) {
       return NextResponse.redirect(new URL('/integrations?error=No_Instagram_Account_Linked', request.url));
