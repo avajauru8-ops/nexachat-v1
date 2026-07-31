@@ -45,8 +45,8 @@ export default function IntegrationsClient({ connectedAccount: initialConnectedA
 
   // Estados EXCLUSIVOS DE ADMINISTRADOR: Credenciais Oficiais da API Meta Instagram
   const [isAdmin, setIsAdmin] = useState(true); // Exibe por padrão ou valida via Supabase
-  const [metaAppId, setMetaAppId] = useState('1762123168122342');
-  const [metaAppSecret, setMetaAppSecret] = useState('717ea4b8e025223a6e314725369d76a5');
+  const [metaAppId, setMetaAppId] = useState('4360411140866985');
+  const [metaAppSecret, setMetaAppSecret] = useState('822e4e7a91e3d8803a85bae1018cb670');
   const [metaVerifyToken, setMetaVerifyToken] = useState('nexachat_webhook_secret_2026');
   const [isSavingMetaAdmin, setIsSavingMetaAdmin] = useState(false);
   const [copiedWebhookUrl, setCopiedWebhookUrl] = useState(false);

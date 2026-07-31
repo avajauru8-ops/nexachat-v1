@@ -3,6 +3,9 @@ import { createClient } from '@/utils/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { getMetaCredentials } from '@/utils/metaCredentials';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   let code = searchParams.get('code');
@@ -23,7 +26,7 @@ export async function GET(request: Request) {
   // Buscar credenciais da Meta salvas no Banco de Dados
   const { appId: clientId, appSecret: clientSecret } = await getMetaCredentials();
 
-  const redirectUri = `${new URL(request.url).origin}/api/auth/meta/callback`;
+  const redirectUri = 'https://nexachat-v1.vercel.app/api/auth/meta/callback';
 
   if (!clientId || !clientSecret) {
     console.error('META_APP_ID ou META_APP_SECRET não definidos nas variáveis de ambiente.');
@@ -98,6 +101,9 @@ export async function GET(request: Request) {
 
     const igRes = await fetch(igTokenUrl, { method: 'POST', body: form });
     const igData = await igRes.json();
+    console.log('--- IG TOKEN RESPONSE ---');
+    console.log(igData);
+    console.log('------------------------');
 
     if (igData.error_type || igData.error_message || !igData.access_token) {
       console.error('Erro na troca de código com a Meta:', igData);

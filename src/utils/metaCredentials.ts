@@ -28,15 +28,15 @@ export async function getMetaCredentials(): Promise<MetaCredentials> {
     }
 
     return {
-      appId: settingsMap['META_APP_ID'] || process.env.META_APP_ID || '1762123168122342',
-      appSecret: settingsMap['META_APP_SECRET'] || process.env.META_APP_SECRET || '717ea4b8e025223a6e314725369d76a5',
+      appId: settingsMap['META_APP_ID'] || process.env.META_APP_ID || '4360411140866985',
+      appSecret: settingsMap['META_APP_SECRET'] || process.env.META_APP_SECRET || '822e4e7a91e3d8803a85bae1018cb670',
       verifyToken: settingsMap['META_VERIFY_TOKEN'] || process.env.META_VERIFY_TOKEN || 'nexachat_webhook_secret_2026'
     };
   } catch (e) {
     console.warn('Aviso ao buscar credenciais da Meta no banco de dados:', e);
     return {
-      appId: process.env.META_APP_ID || '1762123168122342',
-      appSecret: process.env.META_APP_SECRET || '717ea4b8e025223a6e314725369d76a5',
+      appId: process.env.META_APP_ID || '4360411140866985',
+      appSecret: process.env.META_APP_SECRET || '822e4e7a91e3d8803a85bae1018cb670',
       verifyToken: process.env.META_VERIFY_TOKEN || 'nexachat_webhook_secret_2026'
     };
   }
