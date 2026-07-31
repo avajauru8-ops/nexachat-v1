@@ -25,7 +25,10 @@ export async function GET(request: Request) {
   let authUrl = '';
 
   if (type === 'instagram') {
-    authUrl = `https://www.instagram.com/oauth/authorize?enable_fb_login=0&force_authentication=1&client_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments&response_type=code`;
+    // IMPORTANTE: Para a API de Mensagens do Instagram (Graph API), a Meta EXIGE o uso do Facebook Login.
+    // As contas do Instagram Business são vinculadas a Páginas do Facebook, e a permissão 'instagram_business_manage_messages' (ou instagram_manage_messages)
+    // só pode ser solicitada através da tela de consentimento do Facebook.
+    authUrl = `https://www.facebook.com/v22.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=instagram_manage_messages,instagram_basic,pages_manage_metadata,pages_read_engagement,pages_show_list&response_type=code`;
   } else {
     const scopes = [
       'instagram_basic',

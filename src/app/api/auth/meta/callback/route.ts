@@ -23,9 +23,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL('/integrations?error=No_code_provided', request.url));
   }
 
-  // Buscar credenciais da Meta salvas no Banco de Dados
   const { appId: clientId, appSecret: clientSecret } = await getMetaCredentials();
-
   const redirectUri = 'https://nexachat-v1.vercel.app/api/auth/meta/callback';
 
   if (!clientId || !clientSecret) {
@@ -56,13 +54,8 @@ export async function GET(request: Request) {
       return NextResponse.redirect(new URL('/integrations?error=No_Workspace_Found', request.url));
     }
 
-    // -----------------------------------------
-    // MODO SIMULADOR / TESTE
-    // -----------------------------------------
     if (code === 'mock_success') {
-      console.log('--- Conectando conta demonstrativa via Simulador NexaChat ---');
       const igUserId = 'ig_mock_' + Math.floor(Math.random() * 1000000);
-      
       await serviceSupabase.from('instagram_accounts').upsert({
         workspace_id: workspace.id,
         ig_user_id: igUserId,
@@ -70,55 +63,27 @@ export async function GET(request: Request) {
         access_token: 'mock_token_abc123',
         status: 'active'
       }, { onConflict: 'ig_user_id' });
-
       return NextResponse.redirect(new URL('/integrations?success=true', request.url));
     }
 
-    // -----------------------------------------
-    // TROCA DE CÓDIGO META GRAPH API / INSTAGRAM
-    // -----------------------------------------
-    let userAccessToken = '';
-    let igUserId = '';
-    const username = '';
-
-
-      // Instagram API Direct Access Token Exchange
-    const igTokenUrl = 'https://api.instagram.com/oauth/access_token';
-    const form = new URLSearchParams();
-    form.append('client_id', clientId);
-    form.append('client_secret', clientSecret);
-    form.append('grant_type', 'authorization_code');
-    form.append('redirect_uri', redirectUri);
-    if (code) form.append('code', code);
-
-    console.log('--- INSTAGRAM TOKEN EXCHANGE ---');
-    console.log('Sending to:', igTokenUrl);
-    console.log('client_id:', clientId);
-    console.log('redirect_uri:', redirectUri);
-    console.log('code:', code);
-    console.log('code length:', code ? code.length : 0);
-    console.log('--------------------------------');
-
-    const igRes = await fetch(igTokenUrl, { method: 'POST', body: form });
-    const igData = await igRes.json();
-    console.log('--- IG TOKEN RESPONSE ---');
-    console.log(igData);
-    console.log('------------------------');
-
-    if (igData.error_type || igData.error_message || !igData.access_token) {
-      console.error('Erro na troca de código com a Meta:', igData);
-      const err = igData.error_message || igData.error_type || 'Token_Exchange_Failed';
-      return NextResponse.redirect(new URL(`/integrations?error=${encodeURIComponent(err)}`, request.url));
-    }
-      userAccessToken = igData.access_token;
-      igUserId = String(igData.user_id);
+    // 1. Trocar o código de autorização pelo token de acesso curto do usuário
+    const fbTokenUrl = `https://graph.facebook.com/v22.0/oauth/access_token?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&client_secret=${clientSecret}&code=${code}`;
     
-
-    if (!igUserId) {
-      return NextResponse.redirect(new URL('/integrations?error=No_Instagram_Account_Linked', request.url));
+    console.log('--- FB TOKEN EXCHANGE ---');
+    const fbRes = await fetch(fbTokenUrl);
+    const fbData = await fbRes.json();
+    
+    if (fbData.error) {
+      console.error('Erro na troca do código pelo token FB:', fbData.error);
+      return NextResponse.redirect(new URL(`/integrations?error=${encodeURIComponent(fbData.error.message || 'FB_Token_Error')}`, request.url));
+    }
+    
+    const userAccessToken = fbData.access_token;
+    if (!userAccessToken) {
+      return NextResponse.redirect(new URL('/integrations?error=No_Access_Token_Returned', request.url));
     }
 
-    // Trocar por Long-Lived Token se necessário
+    // 2. Obter token de longo prazo (long-lived)
     let longLivedToken = userAccessToken;
     try {
       const longTokenUrl = `https://graph.facebook.com/v22.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${clientId}&client_secret=${clientSecret}&fb_exchange_token=${userAccessToken}`;
@@ -131,52 +96,84 @@ export async function GET(request: Request) {
       console.warn('Aviso ao trocar token por long-lived:', e);
     }
 
-    // Inscrever conta nos Webhooks de mensagens
-    try {
-      const isFbToken = longLivedToken.startsWith('EAA');
-      if (isFbToken) {
-        // Facebook Page token -> subscribe to graph.facebook.com/{page_id}
-        // NOTE: For Meta Graph API, the Page ID is required to subscribe to webhooks, but we don't have the exact Page ID in scope easily if we overrode it.
-        // Actually, earlier in the code we had the page access token.
-        // Let's use the /me/subscribed_apps endpoint which uses the Page Token implicitly!
-        const subRes = await fetch(
-          `https://graph.facebook.com/v22.0/me/subscribed_apps?subscribed_fields=messages,messaging_postbacks,messaging_optins&access_token=${longLivedToken}`,
-          { method: 'POST' }
-        );
-        const subData = await subRes.json();
-        console.log("FB Webhook Subscription:", subData);
-      } else {
-        // Instagram Direct token -> subscribe to graph.instagram.com/{ig_user_id}
-        const subRes = await fetch(
-          `https://graph.instagram.com/v22.0/${igUserId}/subscribed_apps?subscribed_fields=messages,comments,mentions&access_token=${longLivedToken}`,
-          { method: 'POST' }
-        );
-        const subData = await subRes.json();
-        console.log("IG Webhook Subscription:", subData);
-      }
-    } catch (e) {
-      console.warn('Aviso ao inscrever webhook:', e);
+    // 3. Buscar as Páginas do Facebook vinculadas ao usuário
+    const accountsUrl = `https://graph.facebook.com/v22.0/me/accounts?access_token=${longLivedToken}`;
+    const accountsRes = await fetch(accountsUrl);
+    const accountsData = await accountsRes.json();
+
+    if (accountsData.error || !accountsData.data || accountsData.data.length === 0) {
+      console.error('Nenhuma Página do Facebook encontrada ou erro:', accountsData);
+      return NextResponse.redirect(new URL('/integrations?error=No_Facebook_Pages_Found', request.url));
     }
 
-    // Salvar no Supabase
-    const { error: upsertErr } = await serviceSupabase
-      .from('instagram_accounts')
-      .upsert({
-        workspace_id: workspace.id,
-        ig_user_id: igUserId,
-        page_id: username || igUserId,
-        access_token: longLivedToken,
-        status: 'active'
-      }, { onConflict: 'ig_user_id' });
+    let igUserId = '';
+    let linkedPageId = '';
+    let pageAccessToken = '';
+    let igUsername = '';
 
-    if (upsertErr) {
-      console.error('Erro ao salvar no banco:', upsertErr);
-      return NextResponse.redirect(new URL('/integrations?error=Save_Account_Failed', request.url));
+    // Procurar por uma página que tenha uma conta do Instagram Business vinculada
+    for (const page of accountsData.data) {
+      const pageId = page.id;
+      const pageToken = page.access_token;
+
+      const pageDetailsUrl = `https://graph.facebook.com/v22.0/${pageId}?fields=instagram_business_account&access_token=${pageToken}`;
+      const pageDetailsRes = await fetch(pageDetailsUrl);
+      const pageDetailsData = await pageDetailsRes.json();
+
+      if (pageDetailsData.instagram_business_account && pageDetailsData.instagram_business_account.id) {
+        igUserId = pageDetailsData.instagram_business_account.id;
+        linkedPageId = pageId;
+        pageAccessToken = pageToken;
+
+        // Tentar obter o username do Instagram para exibir no painel
+        try {
+          const igDetailsRes = await fetch(`https://graph.facebook.com/v22.0/${igUserId}?fields=username&access_token=${pageToken}`);
+          const igDetailsData = await igDetailsRes.json();
+          if (igDetailsData.username) {
+            igUsername = igDetailsData.username;
+          }
+        } catch (e) {
+          console.warn('Não foi possível obter o username do IG:', e);
+        }
+
+        break;
+      }
+    }
+
+    if (!igUserId || !pageAccessToken) {
+      return NextResponse.redirect(new URL('/integrations?error=No_Instagram_Business_Account_Linked_To_Page', request.url));
+    }
+
+    // 4. Inscrever o Webhook no aplicativo para a Página vinculada
+    try {
+      const subRes = await fetch(
+        `https://graph.facebook.com/v22.0/${linkedPageId}/subscribed_apps?subscribed_fields=messages,messaging_postbacks,messaging_optins&access_token=${pageAccessToken}`,
+        { method: 'POST' }
+      );
+      const subData = await subRes.json();
+      console.log("FB Webhook Subscription:", subData);
+    } catch (e) {
+      console.error("Erro ao assinar webhook:", e);
+    }
+
+    // 5. Salvar as informações no banco de dados (usando o pageAccessToken que é necessário para as requisições Graph)
+    const { error: dbError } = await serviceSupabase.from('instagram_accounts').upsert({
+      workspace_id: workspace.id,
+      ig_user_id: igUserId,
+      page_id: linkedPageId,
+      access_token: pageAccessToken, // É importante usar o token da Página para mandar mensagens!
+      username: igUsername || igUserId,
+      status: 'active'
+    }, { onConflict: 'ig_user_id' });
+
+    if (dbError) {
+      console.error('Erro ao salvar no Supabase:', dbError);
+      return NextResponse.redirect(new URL('/integrations?error=Database_Save_Error', request.url));
     }
 
     return NextResponse.redirect(new URL('/integrations?success=true', request.url));
   } catch (error) {
-    console.error('Erro no callback Meta:', error);
-    return NextResponse.redirect(new URL('/integrations?error=Internal_Error', request.url));
+    console.error('Erro no callback Meta OAuth:', error);
+    return NextResponse.redirect(new URL('/integrations?error=Internal_Server_Error', request.url));
   }
 }
