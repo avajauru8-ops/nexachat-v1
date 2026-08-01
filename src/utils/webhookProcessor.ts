@@ -5,6 +5,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function processMetaPayload(payload: any, initialWorkspaceId?: string | null) {
   if (!payload?.entry) return;
 
@@ -186,7 +187,7 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
           console.log(`[Processamento Sync] Disparado evento AI para a conversa: ${conversation.id}`);
         } else if (conversation.status === 'bot' || conversation.status === 'bot_active') {
           let flowId = conversation.active_flow_id;
-          let nodeId = conversation.flow_cursor?.currentNodeId || null;
+          const nodeId = conversation.flow_cursor?.currentNodeId || null;
 
           if (!flowId) {
             // Buscar todos os fluxos ativos deste workspace
@@ -205,15 +206,15 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
                   const keywords: string[] = [];
                   
                   // Check new format (triggers.keyword)
-                  if (flow.triggers && (flow.triggers as any).keyword) {
-                    const kw = (flow.triggers as any).keyword;
+                  if (flow.triggers && (flow.triggers as Record<string, unknown>).keyword) {
+                    const kw = (flow.triggers as Record<string, unknown>).keyword;
                     if (Array.isArray(kw)) keywords.push(...kw);
                     else keywords.push(String(kw));
                   }
                   
                   // Check old format (trigger_config.keywords)
-                  if (flow.trigger_config && (flow.trigger_config as any).keywords) {
-                    keywords.push(...(flow.trigger_config as any).keywords);
+                  if (flow.trigger_config && (flow.trigger_config as Record<string, unknown>).keywords) {
+                    keywords.push(...((flow.trigger_config as Record<string, unknown>).keywords as string[]));
                   }
 
                   const match = keywords.find((kw: string) => incomingText.includes(kw.trim().toLowerCase()));
@@ -236,19 +237,42 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
           }
 
           if (flowId) {
-            await inngest.send({
-              name: 'flow/execute',
-              data: {
-                workspaceId: activeWorkspaceId,
-                contactId: contact.id,
-                conversationId: conversation.id,
-                recipientId: recipientId,
-                senderId: senderId,
-                flowId: flowId,
-                nodeId: nodeId
+            try {
+              if (process.env.INNGEST_EVENT_KEY) {
+                await inngest.send({
+                  name: 'flow/execute',
+                  data: {
+                    workspaceId: activeWorkspaceId,
+                    contactId: contact.id,
+                    conversationId: conversation.id,
+                    recipientId: recipientId,
+                    senderId: senderId,
+                    flowId: flowId,
+                    nodeId: nodeId
+                  }
+                });
+                console.log(`[Processamento Sync] Disparado evento FLOW (${flowId}) para a conversa: ${conversation.id}`);
+              } else {
+                throw new Error("INNGEST_EVENT_KEY ausente");
               }
-            });
-            console.log(`[Processamento Sync] Disparado evento FLOW (${flowId}) para a conversa: ${conversation.id}`);
+            } catch (inngestErr) {
+              console.warn(`[Processamento Sync] Fallback para execução síncrona devido a falha no Inngest: ${inngestErr}`);
+              const { executeFlowDirect } = await import('@/utils/flowEngineDirect');
+              try {
+                // Await is necessary so waitUntil keeps the function alive
+                await executeFlowDirect({
+                  workspaceId: activeWorkspaceId,
+                  contactId: contact.id,
+                  conversationId: conversation.id,
+                  recipientId: recipientId,
+                  senderId: senderId,
+                  flowId: flowId,
+                  nodeId: nodeId
+                });
+              } catch (e) {
+                console.error("[Flow Engine Direct] Erro no fallback:", e);
+              }
+            }
           }
         }
       }
