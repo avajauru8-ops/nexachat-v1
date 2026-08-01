@@ -130,7 +130,7 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
               const { data: newConv } = await supabase
                 .from('conversations')
                 .select(`
-                  id, status, last_interaction_at, window_expires_at, created_at, updated_at,
+                  id, status, last_interaction_at, window_expires_at, created_at, updated_at, unread_count,
                   contacts ( id, name, ig_scoped_id, profile_picture ),
                   messages ( content, message_type, timestamp )
                 `)
@@ -144,10 +144,12 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
                   : 'Nova conversa';
                 const contactName = (newConv.contacts as unknown as Record<string, unknown>)?.name || 'Lead';
                 toast.success(`💬 Nova conversa de ${contactName}`);
-                setConversations(prev => [{ ...newConv, lastMessage, unread_count: 1 }, ...prev]);
+                setConversations(prev => {
+                  if (prev.some(c => c.id === newConv.id)) return prev;
+                  return [{ ...newConv, lastMessage, unread_count: (newConv.unread_count || 0) + 1 }, ...prev];
+                });
               }
             } catch { /* ignore */ }
-          }
         }
       )
       .on(

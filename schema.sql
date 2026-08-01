@@ -97,8 +97,10 @@ CREATE TABLE conversations (
     status TEXT CHECK (status IN ('bot_active', 'paused_for_human', 'closed')) DEFAULT 'bot_active',
     last_interaction_at TIMESTAMPTZ DEFAULT NOW(),
     window_expires_at TIMESTAMPTZ, -- last_interaction_at + 24h
+    unread_count INT DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(workspace_id, contact_id)
 );
 
 -- Mensagens individuais (Histórico do Chat)

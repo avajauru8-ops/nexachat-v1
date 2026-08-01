@@ -70,7 +70,18 @@ ALTER TABLE conversations
 ADD COLUMN IF NOT EXISTS assigned_agent_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
 ADD COLUMN IF NOT EXISTS active_flow_id UUID REFERENCES flows(id) ON DELETE SET NULL,
 ADD COLUMN IF NOT EXISTS flow_cursor JSONB,
+ADD COLUMN IF NOT EXISTS unread_count INT DEFAULT 0,
 ADD COLUMN IF NOT EXISTS last_message_at TIMESTAMPTZ DEFAULT NOW();
+
+-- Garantir que não haja conversas duplicadas (1 por lead por workspace)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'unique_workspace_contact_conversation') THEN
+        -- Remove duplicatas antes de adicionar a restrição (mantém a mais recente)
+        DELETE FROM conversations a USING conversations b WHERE a.workspace_id = b.workspace_id AND a.contact_id = b.contact_id AND a.created_at < b.created_at;
+        ALTER TABLE conversations ADD CONSTRAINT unique_workspace_contact_conversation UNIQUE (workspace_id, contact_id);
+    END IF;
+END $$;
 
 -- 9. Atualizações em Mensagens
 ALTER TABLE messages 

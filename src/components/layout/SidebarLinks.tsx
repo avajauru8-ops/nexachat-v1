@@ -40,10 +40,11 @@ export function SidebarLinks({ workspaceId, initialUnreadCount }: { workspaceId?
         'postgres_changes',
         { event: '*', schema: 'public', table: 'conversations' },
         () => {
-           supabase
+          supabase
             .from('conversations')
             .select('id', { count: 'exact', head: true })
             .eq('workspace_id', workspaceId)
+            .gt('unread_count', 0)
             .then(({ count }) => {
                if (count !== null) setUnreadCount(count);
             });

@@ -115,7 +115,7 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
         // Identificar ou Criar Conversa
         let { data: conversation } = await supabase
           .from('conversations')
-          .select('id, status, window_expires_at, active_flow_id, flow_cursor')
+          .select('id, status, window_expires_at, active_flow_id, flow_cursor, unread_count')
           .eq('workspace_id', activeWorkspaceId)
           .eq('contact_id', contact.id)
           .maybeSingle();
@@ -130,9 +130,10 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
               contact_id: contact.id,
               status: 'bot',
               last_interaction_at: new Date().toISOString(),
-              window_expires_at: windowExpiresAt
+              window_expires_at: windowExpiresAt,
+              unread_count: 1
             })
-            .select('id, status, window_expires_at, active_flow_id, flow_cursor')
+            .select('id, status, window_expires_at, active_flow_id, flow_cursor, unread_count')
             .single();
           conversation = newConv;
         } else {
@@ -140,7 +141,8 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
             .from('conversations')
             .update({
               last_interaction_at: new Date().toISOString(),
-              window_expires_at: windowExpiresAt
+              window_expires_at: windowExpiresAt,
+              unread_count: (conversation.unread_count || 0) + 1
             })
             .eq('id', conversation.id);
         }
