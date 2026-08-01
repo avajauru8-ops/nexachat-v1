@@ -522,10 +522,30 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
                             ? 'bg-[#f0f2f5] text-gray-900 rounded-2xl rounded-bl-sm shadow-sm' 
                             : 'bg-[#e7f3ff] text-[#0064e0] rounded-2xl rounded-br-sm shadow-sm'
                         }`}>
-                          {msg.message_type === 'image' && msg.media_url ? (
+                          {msg.message_type === 'image' && Boolean(msg.media_url) && (
                             <img src={msg.media_url as string} alt="Mídia" className="max-w-full rounded-lg mb-2 cursor-pointer hover:opacity-90 border border-transparent" onClick={() => window.open(msg.media_url as string, '_blank')} />
-                          ) : null}
-                          <p className="break-words whitespace-pre-wrap">{(msg.content as string) || (msg.message_type !== 'image' ? <span className="text-gray-400 italic">Mensagem vazia ou sem suporte</span> : '')}</p>
+                          )}
+                          {msg.message_type === 'video' && Boolean(msg.media_url) && (
+                            <video src={msg.media_url as string} controls className="max-w-full rounded-lg mb-2 bg-black" />
+                          )}
+                          {msg.message_type === 'audio' && Boolean(msg.media_url) && (
+                            <audio src={msg.media_url as string} controls className="max-w-[250px] mb-2" />
+                          )}
+                          {msg.message_type === 'share' && Boolean(msg.media_url) && (
+                            <a href={msg.media_url as string} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-3 bg-white border border-gray-200 rounded-lg mb-2 hover:bg-gray-50 transition-colors">
+                                <span className="text-blue-600 font-semibold underline text-sm break-all">🔗 Ver link compartilhado</span>
+                            </a>
+                          )}
+                          {msg.message_type === 'story_mention' && Boolean(msg.media_url) && (
+                            <a href={msg.media_url as string} target="_blank" rel="noopener noreferrer" className="flex flex-col gap-1 p-3 bg-white border border-gray-200 rounded-lg mb-2 hover:bg-gray-50 transition-colors">
+                                <span className="text-pink-600 font-semibold text-sm">📸 Mencionou você num Story</span>
+                                <span className="text-blue-600 underline text-xs break-all">Ver no Instagram</span>
+                            </a>
+                          )}
+                          {Boolean(msg.content) && <p className="break-words whitespace-pre-wrap">{msg.content as string}</p>}
+                          {!msg.content && !['image', 'video', 'audio', 'share', 'story_mention'].includes(msg.message_type as string) && (
+                            <span className="text-gray-400 italic">Mensagem vazia ou tipo não suportado ({msg.message_type as string})</span>
+                          )}
                         </div>
                       </div>
                     </div>

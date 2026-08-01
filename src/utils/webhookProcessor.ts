@@ -16,6 +16,8 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
       for (const webhookEvent of entry.messaging) {
         const senderId = webhookEvent.sender?.id;
         const recipientId = webhookEvent.recipient?.id || entryId;
+        if (!webhookEvent.message && !webhookEvent.postback) continue;
+
         const msgObj = webhookEvent.message || {};
         const isEcho = Boolean(msgObj.is_echo);
 
@@ -31,6 +33,8 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
           else if (attachment.type === 'image') messageType = 'image';
           else if (attachment.type === 'video') messageType = 'video';
           else if (attachment.type === 'audio') messageType = 'audio';
+          else if (attachment.type === 'share') messageType = 'share';
+          
           if (attachment.payload?.url) mediaUrl = attachment.payload.url;
         }
 
