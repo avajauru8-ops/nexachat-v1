@@ -17,7 +17,8 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
   const [now, setNow] = useState<number | null>(null);
 
   useEffect(() => {
-    setNow(Date.now());
+    const timer = setTimeout(() => setNow(Date.now()), 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const supabase = createClient();
