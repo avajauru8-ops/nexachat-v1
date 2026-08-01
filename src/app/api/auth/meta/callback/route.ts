@@ -104,30 +104,26 @@ export async function GET(request: Request) {
       console.warn('Aviso ao trocar token por long-lived IG:', e);
     }
 
-    // 3. Obter detalhes do usuário (username)
-    let igUsername = '';
+    // 3. Obter detalhes do usuário via /me (padrão oauth-hub-zdg)
+    let finalIgUserId = igUserId;
+    let finalUsername = '';
     try {
-      const profileUrl = `https://graph.instagram.com/v22.0/${igUserId}?fields=username&access_token=${longLivedToken}`;
+      const profileUrl = `https://graph.instagram.com/v22.0/me?fields=id,user_id,username,name&access_token=${longLivedToken}`;
       const profileRes = await fetch(profileUrl);
       const profileData = await profileRes.json();
-      if (profileData && profileData.username) {
-        igUsername = profileData.username;
+      if (profileData) {
+        if (profileData.user_id) finalIgUserId = String(profileData.user_id);
+        else if (profileData.id) finalIgUserId = String(profileData.id);
+        finalUsername = profileData.username || profileData.name || `instagram_${finalIgUserId}`;
       }
     } catch (e) {
-      console.warn('Não foi possível obter username:', e);
+      console.warn('Não foi possível obter profile /me:', e);
     }
 
-    // 4. Inscrever Webhooks na API de mensagens direta do Instagram
-    // No Instagram Native Login, os webhooks são configurados na dashboard,
-    // mas a ativação do webhook field também pode ser feita via API na conta do usuário, 
-    // embora geralmente seja automático quando o aplicativo é autorizado.
+    // 4. Inscrever Webhooks na API de mensagens direta do Instagram via /me/subscribed_apps
     try {
-      // Instagram Native Accounts subscribe to webhooks differently, or automatically.
-      // We will attempt to subscribe to messages directly on the IG user object if supported.
-      const subRes = await fetch(
-        `https://graph.instagram.com/v22.0/${igUserId}/subscribed_apps?subscribed_fields=messages,messaging_postbacks,messaging_optins&access_token=${longLivedToken}`,
-        { method: 'POST' }
-      );
+      const subUrl = `https://graph.instagram.com/v22.0/me/subscribed_apps?subscribed_fields=messages,messaging_postbacks,messaging_optins,comments,message_reactions&access_token=${longLivedToken}`;
+      const subRes = await fetch(subUrl, { method: 'POST' });
       const subData = await subRes.json();
       console.log("IG Webhook Subscription:", subData);
     } catch (e) {
@@ -137,7 +133,7 @@ export async function GET(request: Request) {
     // 5. Salvar a conta no Supabase usando o Token Nativo do Instagram
     const { error: dbError } = await serviceSupabase.from('instagram_accounts').upsert({
       workspace_id: workspace.id,
-      ig_user_id: igUserId,
+      ig_user_id: finalIgUserId,
       page_id: 'native_ig_login', // Flag indicando que não usa Page ID do FB
       access_token: longLivedToken,
       status: 'active'
