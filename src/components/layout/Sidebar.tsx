@@ -52,8 +52,9 @@ export async function Sidebar() {
         .from('instagram_accounts')
         .select('ig_user_id, page_id, access_token')
         .eq('workspace_id', workspace.id)
+        .eq('status', 'active')
         .limit(1)
-        .single();
+        .maybeSingle();
         
       if (account) {
         let dbUsername = account.page_id && account.page_id !== 'ig_login_direct' ? account.page_id : account.ig_user_id;

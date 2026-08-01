@@ -56,6 +56,7 @@ export async function POST(request: Request) {
         .from('instagram_accounts')
         .select('access_token')
         .eq('workspace_id', contact.workspace_id)
+        .eq('status', 'active')
         .limit(1)
         .maybeSingle();
       accessToken = igAccount?.access_token || null;
