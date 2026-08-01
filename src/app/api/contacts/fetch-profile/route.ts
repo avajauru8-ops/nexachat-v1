@@ -76,7 +76,10 @@ export async function POST(request: Request) {
     // 3. Buscar perfil real do Instagram via Meta Graph API v22.0
     const igScopedId = contact.ig_scoped_id;
     const fields = 'name,username,profile_picture_url,follower_count,is_verified_user,biography';
-    const graphUrl = `https://graph.instagram.com/v22.0/${igScopedId}?fields=${fields}&access_token=${accessToken}`;
+    
+    const isMetaToken = accessToken.startsWith('EAA');
+    const domain = isMetaToken ? 'graph.facebook.com' : 'graph.instagram.com';
+    const graphUrl = `https://${domain}/v22.0/${igScopedId}?fields=${fields}&access_token=${accessToken}`;
 
     let igProfile: Record<string, any> | null = null;
 

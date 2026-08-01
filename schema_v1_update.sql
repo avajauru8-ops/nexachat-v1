@@ -75,7 +75,11 @@ ADD COLUMN IF NOT EXISTS last_message_at TIMESTAMPTZ DEFAULT NOW();
 -- 9. Atualizações em Mensagens
 ALTER TABLE messages 
 ADD COLUMN IF NOT EXISTS direction TEXT DEFAULT 'inbound', -- inbound | outbound
-ADD COLUMN IF NOT EXISTS meta_message_id TEXT;
+ADD COLUMN IF NOT EXISTS meta_message_id TEXT,
+ADD COLUMN IF NOT EXISTS media_url TEXT;
+
+ALTER TABLE messages DROP CONSTRAINT IF EXISTS messages_sender_type_check;
+ALTER TABLE messages ADD CONSTRAINT messages_sender_type_check CHECK (sender_type IN ('user', 'bot', 'human_agent', 'ai'));
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_messages_meta_id ON messages (meta_message_id) WHERE meta_message_id IS NOT NULL;
 

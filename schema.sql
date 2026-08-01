@@ -105,9 +105,10 @@ CREATE TABLE conversations (
 CREATE TABLE messages (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
-    sender_type TEXT CHECK (sender_type IN ('user', 'bot', 'human_agent')) NOT NULL,
+    sender_type TEXT CHECK (sender_type IN ('user', 'bot', 'human_agent', 'ai')) NOT NULL,
     message_type TEXT CHECK (message_type IN ('text', 'image', 'quick_reply', 'story_mention')) NOT NULL,
     content TEXT,
+    media_url TEXT,
     timestamp TIMESTAMPTZ DEFAULT NOW()
 );
 

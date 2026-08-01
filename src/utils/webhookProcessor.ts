@@ -73,7 +73,9 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
           let contactProfilePic: string | null = null;
           try {
             if (account.access_token) {
-              const profileRes = await fetch(`https://graph.instagram.com/v22.0/${senderId}?fields=name,username,profile_picture_url&access_token=${account.access_token}`);
+              const isMetaToken = account.access_token.startsWith('EAA');
+              const domain = isMetaToken ? 'graph.facebook.com' : 'graph.instagram.com';
+              const profileRes = await fetch(`https://${domain}/v22.0/${senderId}?fields=name,username,profile_picture_url&access_token=${account.access_token}`);
               const profileData = await profileRes.json();
               if (profileData.name || profileData.username) {
                 contactName = profileData.name || profileData.username;

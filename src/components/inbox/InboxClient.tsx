@@ -423,6 +423,14 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
                       {windowInfo.active ? <Clock className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
                       {windowInfo.text}
                     </span>
+
+                    {/* Badge Ao Vivo */}
+                    {(activeChat.status === 'human' || activeChat.status === 'paused_for_human') && (
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1 bg-red-50 text-red-600 border border-red-200 animate-pulse">
+                        <span className="w-2 h-2 rounded-full bg-red-600"></span>
+                        AO VIVO
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
