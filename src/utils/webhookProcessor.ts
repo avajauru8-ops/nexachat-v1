@@ -199,11 +199,11 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
             if (activeFlows && activeFlows.length > 0) {
               const incomingText = (messageText || '').trim().toLowerCase();
               
-              // Mapear palavras-chave exatas
+              // Mapear palavras-chave (se a mensagem contém a palavra-chave)
               for (const flow of activeFlows) {
                 if (flow.trigger_type === 'dm_keyword' && flow.trigger_config) {
                   const keywords: string[] = (flow.trigger_config as any).keywords || [];
-                  const match = keywords.find((kw: string) => kw.trim().toLowerCase() === incomingText);
+                  const match = keywords.find((kw: string) => incomingText.includes(kw.trim().toLowerCase()));
                   
                   if (match) {
                     flowId = flow.id;

@@ -58,6 +58,11 @@ export const executeFlow = inngest.createFunction(
 
     if (!pageAccessToken) return { message: 'Access Token do Instagram não encontrado' };
 
+    if (!currentNodeId && nodes.length > 0) {
+      const startNode = nodes.find((n: any) => n.type === 'triggerNode' || n.type === 'start');
+      currentNodeId = startNode ? startNode.id : nodes[0].id;
+    }
+
     // Loop de Travessia do Grafo de Nós do React Flow
     while (currentNodeId && iteration < 50) {
       const loopNodeId = currentNodeId;
@@ -281,7 +286,7 @@ export const executeFlow = inngest.createFunction(
     await step.run('clear-flow-cursor', async () => {
       await supabase
         .from('conversations')
-        .update({ flow_cursor: null })
+        .update({ flow_cursor: null, active_flow_id: null })
         .eq('id', conversationId);
     });
 
