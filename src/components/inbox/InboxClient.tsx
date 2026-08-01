@@ -519,13 +519,13 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
                         
                         <div className={`max-w-[70%] px-4 py-3 text-[14px] leading-relaxed ${
                           isUser 
-                            ? 'bg-white border border-gray-100 text-gray-800 rounded-2xl rounded-bl-sm shadow-sm' 
-                            : 'bg-white border border-gray-100 text-gray-800 rounded-2xl rounded-br-sm shadow-sm'
+                            ? 'bg-[#f0f2f5] text-gray-900 rounded-2xl rounded-bl-sm shadow-sm' 
+                            : 'bg-[#e7f3ff] text-[#0064e0] rounded-2xl rounded-br-sm shadow-sm'
                         }`}>
                           {msg.message_type === 'image' && msg.media_url ? (
-                            <img src={msg.media_url as string} alt="Mídia" className="max-w-full rounded-lg mb-2 cursor-pointer hover:opacity-90 border border-gray-100" onClick={() => window.open(msg.media_url as string, '_blank')} />
+                            <img src={msg.media_url as string} alt="Mídia" className="max-w-full rounded-lg mb-2 cursor-pointer hover:opacity-90 border border-transparent" onClick={() => window.open(msg.media_url as string, '_blank')} />
                           ) : null}
-                          <p className="break-words whitespace-pre-wrap">{msg.content as string}</p>
+                          <p className="break-words whitespace-pre-wrap">{(msg.content as string) || (msg.message_type !== 'image' ? <span className="text-gray-400 italic">Mensagem vazia ou sem suporte</span> : '')}</p>
                         </div>
                       </div>
                     </div>
