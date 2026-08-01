@@ -91,6 +91,7 @@ export function AudienceTable({ contacts }: { contacts: Contact[] }) {
   const displayUsername = igProfile?.username || leadData.username;
   const displayFollowers = igProfile?.follower_count || leadData.follower_count;
   const displayVerified = igProfile?.is_verified ?? leadData.is_verified;
+  const displayBio = igProfile?.biography || leadData.biography;
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
