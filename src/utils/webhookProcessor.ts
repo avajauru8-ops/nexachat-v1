@@ -75,7 +75,7 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
             if (account.access_token) {
               const isMetaToken = account.access_token.startsWith('EAA');
               const domain = isMetaToken ? 'graph.facebook.com' : 'graph.instagram.com';
-              const profileRes = await fetch(`https://${domain}/v22.0/${senderId}?fields=name,username,profile_picture_url&access_token=${account.access_token}`);
+              const profileRes = await fetch(`https://${domain}/v22.0/${senderId}?fields=name,username,profile_pic&access_token=${account.access_token}`);
               const profileData = await profileRes.json();
               if (profileData.name || profileData.username) {
                 contactName = profileData.name || profileData.username;
@@ -83,8 +83,8 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
               if (profileData.username) {
                 contactUsername = profileData.username;
               }
-              if (profileData.profile_picture_url) {
-                contactProfilePic = profileData.profile_picture_url;
+              if (profileData.profile_pic) {
+                contactProfilePic = profileData.profile_pic;
               }
             }
           } catch { /* ignora se falhar */ }
