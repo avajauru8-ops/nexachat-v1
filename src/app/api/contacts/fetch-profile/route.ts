@@ -75,7 +75,7 @@ export async function POST(request: Request) {
 
     // 3. Buscar perfil real do Instagram via Meta Graph API v22.0
     const igScopedId = contact.ig_scoped_id;
-    const fields = 'name,username,profile_pic,follower_count,is_verified_user,biography';
+    const fields = 'name,username,profile_pic,follower_count,is_verified_user';
     
     const isMetaToken = accessToken.startsWith('EAA');
     const domain = isMetaToken ? 'graph.facebook.com' : 'graph.instagram.com';
@@ -94,11 +94,17 @@ export async function POST(request: Request) {
           profile_picture_url: graphData.profile_pic || null,
           follower_count: graphData.follower_count || null,
           is_verified: graphData.is_verified_user || false,
-          biography: graphData.biography || null,
         };
 
         // 4. Atualizar dados do contato no banco com os dados reais
         const updatePayload: Record<string, any> = {};
+        const customFields = {
+          ...((contact as any).custom_fields || {}),
+          username: igProfile.username,
+          follower_count: igProfile.follower_count,
+          is_verified: igProfile.is_verified
+        };
+        
         if (igProfile.name && igProfile.name !== contact.name) {
           updatePayload.name = igProfile.name;
         }
@@ -108,6 +114,7 @@ export async function POST(request: Request) {
         if (igProfile.username) {
           updatePayload.username = igProfile.username;
         }
+        updatePayload.custom_fields = customFields;
 
         if (Object.keys(updatePayload).length > 0) {
           await serviceSupabase
