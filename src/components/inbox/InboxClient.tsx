@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Search, User, MessageCircle, Paperclip, Smile, Mic, Image as ImageIcon, CheckCircle2, Clock, MoreHorizontal, Check, RefreshCw, Bot, Sparkles, AlertTriangle, Trash2, ChevronDown, Filter, Square, Tag, Workflow, Star } from 'lucide-react';
+import { MessageCircle, Paperclip, Smile, Mic, Image as ImageIcon, Clock, MoreHorizontal, Check, RefreshCw, Bot, Trash2, ChevronDown, Filter, Square, Tag, Workflow, Star } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { toast } from 'react-hot-toast';
 
@@ -14,7 +14,11 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
   const [messages, setMessages] = useState<Record<string, unknown>[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState<number | null>(null);
+
+  useEffect(() => {
+    setNow(Date.now());
+  }, []);
 
   const supabase = createClient();
 
@@ -168,31 +172,6 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
     };
   }, [workspaceId, supabase]);
 
-  const handleUpdateStatus = async (newStatus: string) => {
-    if (!activeChatId) return;
-    try {
-      const { error } = await supabase
-        .from('conversations')
-        .update({ status: newStatus })
-        .eq('id', activeChatId);
-
-      if (error) {
-        toast.error('Erro ao atualizar status da conversa');
-      } else {
-        const labels: Record<string, string> = {
-          human: 'Atendimento Humano ativado',
-          bot: 'Modo Robô (Automação) ativado',
-          ai: 'Agente de IA ativado',
-          closed: 'Conversa encerrada'
-        };
-        toast.success(labels[newStatus] || 'Status atualizado');
-        setConversations(prev => prev.map(c => c.id === activeChatId ? { ...c, status: newStatus } : c));
-      }
-    } catch {
-      toast.error('Falha ao comunicar com o banco');
-    }
-  };
-
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !activeChatId) return;
     const msg = newMessage;
@@ -318,11 +297,11 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
     return date.toLocaleDateString([], { day: '2-digit', month: 'short' });
   };
 
-  const get24hWindowInfo = (expiresAt?: string, nowVal?: number) => {
+  const get24hWindowInfo = (expiresAt?: string, nowVal?: number | null) => {
     if (!expiresAt) return { active: true, text: 'Janela 24h ativa' };
     const expiry = new Date(expiresAt).getTime();
-    const diff = expiry - (nowVal ?? Date.now());
-    if (diff <= 0) {
+    const diff = expiry - (nowVal || 0);
+    if (nowVal && diff <= 0) {
       return { active: false, text: 'Janela 24h Expirada' };
     }
     const hoursLeft = Math.floor(diff / (1000 * 60 * 60));
@@ -486,7 +465,7 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
                 {messages.map((msg, idx) => {
                   const isUser = msg.sender_type === 'user';
                   
-                  const msgDate = new Date(msg.timestamp as string || Date.now());
+                  const msgDate = new Date(msg.timestamp as string || (now || 0));
                   const isFirstOfDay = idx === 0 || new Date(messages[idx-1].timestamp as string).toDateString() !== msgDate.toDateString();
                   
                   return (
