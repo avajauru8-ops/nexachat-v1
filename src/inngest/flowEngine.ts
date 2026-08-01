@@ -100,23 +100,17 @@ export const executeFlow = inngest.createFunction(
             const responseText = (node.data?.text as string) || 'Mensagem do Fluxo';
 
             // Chama a API interna para manter uma única fonte de verdade e lógica
-            const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://nexachat-v1.vercel.app';
-            const apiUrl = `${appUrl}/api/messages/send`;
+            const { sendMessageToMeta } = await import('@/services/messagingService');
 
-            const res = await fetch(apiUrl, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
+            try {
+              await sendMessageToMeta({
                 conversationId,
                 content: messageType === 'text' ? responseText : null,
                 mediaUrl: mediaUrl || null,
                 messageType
-              })
-            });
-
-            if (!res.ok) {
-              const err = await res.json().catch(() => ({}));
-              console.error('[Flow Engine] Erro ao chamar API interna de envio:', err);
+              });
+            } catch (err: any) {
+              console.error('[Flow Engine] Erro ao chamar serviço interno de envio:', err.message || err);
             }
           });
         } else {
