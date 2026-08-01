@@ -23,13 +23,13 @@ export default async function IntegrationsPage() {
     if (workspace) {
       const { data: account } = await serviceSupabase
         .from('instagram_accounts')
-        .select('id, ig_user_id, page_id, status, access_token, created_at')
+        .select('id, ig_user_id, ig_username, page_id, status, access_token, created_at')
         .eq('workspace_id', workspace.id)
         .single();
 
       if (account) {
-        // Se page_id contiver o username salvo no banco, usa ele
-        let username = account.page_id && account.page_id !== 'ig_login_direct' ? account.page_id : account.ig_user_id;
+        // Se ig_username existir, usa ele. Senão usa page_id ou ig_user_id como fallback.
+        let username = account.ig_username || (account.page_id && account.page_id !== 'ig_login_direct' && account.page_id !== 'native_ig_login' ? account.page_id : account.ig_user_id);
         let profilePictureUrl = null;
 
         try {

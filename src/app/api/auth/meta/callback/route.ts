@@ -121,10 +121,12 @@ export async function GET(request: Request) {
     }
 
     // 4. Inscrever Webhooks na API de mensagens direta do Instagram via /me/subscribed_apps
+    let webhookSubscribed = false;
     try {
       const subUrl = `https://graph.instagram.com/v22.0/me/subscribed_apps?subscribed_fields=messages,messaging_postbacks,messaging_optins,comments,message_reactions&access_token=${longLivedToken}`;
       const subRes = await fetch(subUrl, { method: 'POST' });
       const subData = await subRes.json();
+      if (subData?.success) webhookSubscribed = true;
       console.log("IG Webhook Subscription:", subData);
     } catch (e) {
       console.error("Erro ao assinar webhook no IG nativo:", e);
@@ -136,6 +138,8 @@ export async function GET(request: Request) {
       ig_user_id: finalIgUserId,
       page_id: 'native_ig_login', // Flag indicando que não usa Page ID do FB
       access_token: longLivedToken,
+      ig_username: finalUsername,
+      webhook_subscribed: webhookSubscribed,
       status: 'active'
     }, { onConflict: 'ig_user_id' });
 
