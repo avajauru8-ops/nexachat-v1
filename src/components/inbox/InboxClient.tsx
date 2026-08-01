@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Search, User, MessageCircle, Paperclip, Smile, Mic, Image as ImageIcon, CheckCircle2, Clock, MoreHorizontal, Check, RefreshCw, Bot, Sparkles, AlertTriangle } from 'lucide-react';
+import { Search, User, MessageCircle, Paperclip, Smile, Mic, Image as ImageIcon, CheckCircle2, Clock, MoreHorizontal, Check, RefreshCw, Bot, Sparkles, AlertTriangle, Trash2 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { toast } from 'react-hot-toast';
 
@@ -227,6 +227,30 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
     }
   };
 
+  const handleDeleteConversation = async () => {
+    if (!activeChatId) return;
+    if (!confirm('Tem certeza que deseja excluir esta conversa inteira? Essa ação é irreversível.')) return;
+    
+    try {
+      const res = await fetch('/api/conversations/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversationId: activeChatId })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error('Erro ao excluir: ' + (data.error || 'Desconhecido'));
+      } else {
+        toast.success('Conversa excluída com sucesso');
+        setConversations(prev => prev.filter(c => c.id !== activeChatId));
+        setActiveChatId(null);
+        setMessages([]);
+      }
+    } catch (e: unknown) {
+      toast.error('Erro de comunicação: ' + (e instanceof Error ? e.message : String(e)));
+    }
+  };
+
   const fetchConversationsList = () => {
     supabase
       .from('conversations')
@@ -440,6 +464,16 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
 
               {/* Botões de Ação para Handoff e Status */}
               <div className="flex items-center gap-2">
+                <button
+                  onClick={handleDeleteConversation}
+                  className="px-2 py-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                  title="Excluir conversa permanentemente"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+
+                <div className="w-px h-5 bg-gray-200 mx-1"></div>
+
                 <button
                   onClick={() => handleUpdateStatus('human')}
                   className={`px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition-colors ${
