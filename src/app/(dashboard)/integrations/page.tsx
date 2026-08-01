@@ -25,7 +25,10 @@ export default async function IntegrationsPage() {
         .from('instagram_accounts')
         .select('id, ig_user_id, ig_username, page_id, status, access_token, created_at')
         .eq('workspace_id', workspace.id)
-        .single();
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
       if (account) {
         // Se ig_username existir, usa ele. Senão usa page_id ou ig_user_id como fallback.

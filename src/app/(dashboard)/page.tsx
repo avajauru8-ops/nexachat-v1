@@ -39,7 +39,7 @@ export default async function DashboardPage() {
       supabase.from('messages').select('id', { count: 'exact', head: true }).eq('sender_type', 'user').gte('timestamp', sevenDaysAgo),
       supabase.from('messages').select('id', { count: 'exact', head: true }).eq('sender_type', 'user').gte('timestamp', fourteenDaysAgo).lt('timestamp', sevenDaysAgo),
       supabase.from('flows').select('id', { count: 'exact', head: true }).eq('workspace_id', workspace.id).eq('status', 'active'),
-      supabase.from('instagram_accounts').select('ig_user_id, page_id, status, access_token').eq('workspace_id', workspace.id)
+      supabase.from('instagram_accounts').select('ig_user_id, page_id, status, access_token').eq('workspace_id', workspace.id).eq('status', 'active')
     ]);
     
     totalLeads = leadsCount || 0;

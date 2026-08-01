@@ -56,7 +56,7 @@ export async function GET(request: Request) {
     }
 
     if (code === 'mock_success') {
-      const igUserId = 'ig_mock_' + Math.floor(Math.random() * 1000000);
+      const igUserId = 'ig_mock_default_id';
       await serviceSupabase.from('instagram_accounts').upsert({
         workspace_id: workspace.id,
         ig_user_id: igUserId,

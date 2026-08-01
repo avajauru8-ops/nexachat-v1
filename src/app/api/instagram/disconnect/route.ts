@@ -27,10 +27,11 @@ export async function DELETE() {
       return NextResponse.json({ error: 'Workspace não encontrado' }, { status: 404 });
     }
 
-    // Remove a conta do Instagram do banco
+    // Em vez de deletar fisicamente, mudamos o status para disconnected
+    // para não quebrar as relações com as automações (flows) que já existem.
     const { error } = await serviceSupabase
       .from('instagram_accounts')
-      .delete()
+      .update({ status: 'disconnected', access_token: '' })
       .eq('workspace_id', workspace.id);
 
     if (error) {
