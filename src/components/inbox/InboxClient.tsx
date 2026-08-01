@@ -150,6 +150,7 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
                 });
               }
             } catch { /* ignore */ }
+          }
         }
       )
       .on(
