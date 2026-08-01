@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Search, User, MessageCircle, Paperclip, Smile, Mic, Image as ImageIcon, CheckCircle2, Clock, MoreHorizontal, Check, RefreshCw, Bot, Sparkles, AlertTriangle, Trash2 } from 'lucide-react';
+import { Search, User, MessageCircle, Paperclip, Smile, Mic, Image as ImageIcon, CheckCircle2, Clock, MoreHorizontal, Check, RefreshCw, Bot, Sparkles, AlertTriangle, Trash2, ChevronDown, Filter, Square, Tag, Workflow, Star } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { toast } from 'react-hot-toast';
 
@@ -333,43 +333,59 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
   const windowInfo = get24hWindowInfo(activeChat?.window_expires_at as string, now);
 
   return (
-    <div className="flex h-[calc(100vh-64px)] -m-6 bg-white overflow-hidden">
+    <div className="flex h-[calc(100vh-64px)] -m-6 bg-[#f4f6f8] overflow-hidden text-sm font-sans">
       
       {/* Coluna 1: Pastas da Inbox */}
-      <div className="w-60 border-r border-gray-200 bg-[#f9fafb] flex flex-col hidden lg:flex">
-        <div className="p-4">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Caixa de Entrada</h2>
-          <div className="space-y-1">
-            <button className="w-full flex items-center justify-between px-3 py-2 bg-gray-200/60 text-gray-900 rounded-lg text-sm font-medium">
-              Todas as conversas
-              <span className="bg-white px-2 py-0.5 rounded text-xs text-gray-500 font-bold">{conversations.length}</span>
-            </button>
+      <div className="w-[220px] border-r border-[#e5e7eb] bg-[#f8f9fa] flex flex-col hidden lg:flex shrink-0 py-4">
+        <div className="px-3 mb-2 flex items-center justify-between bg-[#e5e7eb] py-2 mx-2 rounded cursor-pointer">
+          <div className="flex items-center gap-2 font-medium text-gray-800">
+            <MessageCircle className="w-4 h-4 text-gray-500" />
+            Todas as conversas
           </div>
+          <span className="text-gray-500 font-medium text-xs">{conversations.length}</span>
+        </div>
+        <div className="px-5 py-2 flex items-center gap-2 text-gray-600 hover:bg-gray-100 cursor-pointer">
+          <Clock className="w-4 h-4" />
+          Lembretes
+        </div>
+        
+        <div className="mt-4 px-5 py-1 text-xs font-semibold text-gray-400 flex items-center justify-between cursor-pointer group">
+          <div className="flex items-center gap-1">
+             <ChevronDown className="w-3 h-3 group-hover:text-gray-600" /> Legendas
+          </div>
+          <span className="text-gray-400 group-hover:text-gray-600">+</span>
+        </div>
+
+        <div className="mt-2 px-5 py-1 text-xs font-semibold text-gray-400 flex items-center gap-1 cursor-pointer">
+          <div className="w-4 h-4 flex items-center justify-center">
+            <span className="w-2 h-2 rounded-full bg-red-400"></span>
+          </div>
+          Favorites
         </div>
       </div>
 
       {/* Coluna 2: Lista de Conversas */}
-      <div className="w-80 border-r border-gray-200 flex flex-col bg-white shrink-0 relative">
-        <div className="p-3 border-b border-gray-200 flex flex-col gap-3">
-          <div className="flex items-center justify-between mb-1">
-            <h3 className="font-semibold text-gray-800 text-sm">Mensagens</h3>
-            <button 
-              onClick={handleSyncApi}
-              disabled={isSyncing}
-              className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 rounded text-xs font-medium hover:bg-blue-100 disabled:opacity-50 transition-colors"
-              title="Puxar mensagens recentes do Instagram"
-            >
-              <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
-              Sincronizar
-            </button>
+      <div className="w-[360px] border-r border-[#e5e7eb] flex flex-col bg-white shrink-0 relative">
+        <div className="flex flex-col border-b border-[#e5e7eb]">
+          <div className="flex items-center gap-2 px-3 py-2 border-b border-[#e5e7eb]">
+            <Square className="w-4 h-4 text-gray-400" />
+            <div className="flex items-center border border-gray-200 rounded px-2 py-1 gap-1 text-xs text-gray-600 font-medium cursor-pointer">
+              <MessageCircle className="w-3 h-3" /> Conversas Abertas <ChevronDown className="w-3 h-3" />
+            </div>
+            <div className="border border-gray-200 rounded px-2 py-1 text-xs text-gray-600 font-medium cursor-pointer">
+              Não Lidas
+            </div>
           </div>
-          <div className="flex items-center bg-gray-100 rounded-md px-3 py-1.5 border border-transparent focus-within:border-blue-500 focus-within:bg-white transition-colors">
-            <Search className="w-4 h-4 text-gray-400 mr-2" />
-            <input 
-              type="text" 
-              placeholder="Pesquisar em conversas..." 
-              className="bg-transparent border-none outline-none text-sm w-full text-gray-800 placeholder-gray-500"
-            />
+          <div className="flex items-center gap-2 px-3 py-2 text-xs text-gray-600">
+            <div className="flex items-center gap-1 cursor-pointer hover:text-gray-900">
+              Classificar: Mais Recentes <ChevronDown className="w-3 h-3" />
+            </div>
+            <div className="flex items-center gap-1 cursor-pointer hover:text-gray-900">
+              Todos Os Canais <ChevronDown className="w-3 h-3" />
+            </div>
+            <div className="flex items-center gap-1 cursor-pointer text-gray-500 hover:text-gray-900 ml-auto border border-gray-200 rounded px-2 py-1">
+              <Filter className="w-3 h-3" /> Filtro
+            </div>
           </div>
         </div>
 
@@ -387,41 +403,34 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
                     setConversations(prev => prev.map(c => c.id === chat.id ? { ...c, unread_count: 0 } : c));
                   }
                 }}
-                className={`p-3 cursor-pointer hover:bg-gray-50 border-b border-gray-100 flex gap-3 relative transition-colors ${activeChatId === chat.id ? 'bg-[#f4f6fa]' : ''}`}
+                className={`p-3 cursor-pointer border-b border-gray-100 flex gap-3 relative transition-colors ${activeChatId === chat.id ? 'bg-[#f4f6fa]' : 'hover:bg-gray-50'}`}
               >
                 <div className="relative">
                   {(chat.contacts as Record<string, unknown>)?.profile_picture ? (
-                    <img src={(chat.contacts as Record<string, unknown>).profile_picture as string} alt="Contact" className="w-12 h-12 rounded-full object-cover flex-shrink-0 border border-gray-200" />
+                    <img src={(chat.contacts as Record<string, unknown>).profile_picture as string} alt="Contact" className="w-12 h-12 rounded-full object-cover flex-shrink-0" />
                   ) : (
-                    <div className="w-12 h-12 rounded-full bg-indigo-100 flex-shrink-0 flex items-center justify-center text-indigo-700 font-bold border border-gray-200">
+                    <div className="w-12 h-12 rounded-full bg-indigo-100 flex-shrink-0 flex items-center justify-center text-indigo-700 font-bold">
                       {((chat.contacts as Record<string, unknown>)?.name as string)?.charAt(0) || '@'}
                     </div>
                   )}
-                  {isHuman && (
-                    <div className="absolute -bottom-1 -right-1 bg-yellow-500 p-1 rounded-full border border-white" title="Atendimento Humano">
-                      <User className="w-3 h-3 text-white" />
-                    </div>
-                  )}
-                  {isAi && (
-                    <div className="absolute -bottom-1 -right-1 bg-purple-600 p-1 rounded-full border border-white" title="Agente de IA">
-                      <Sparkles className="w-3 h-3 text-white" />
-                    </div>
-                  )}
+                  <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/e/e7/Instagram_logo_2016.svg" className="w-4 h-4 rounded-full" alt="ig" />
+                  </div>
                 </div>
 
                 <div className="flex-1 min-w-0 flex flex-col justify-center">
-                  <div className="flex justify-between items-baseline mb-0.5">
-                    <p className="font-semibold text-gray-900 text-sm truncate">
+                  <div className="flex justify-between items-baseline mb-1">
+                    <p className={`font-semibold text-sm truncate ${Number(chat.unread_count || 0) > 0 ? 'text-black' : 'text-gray-800'}`}>
                       {(chat.contacts as Record<string, unknown>)?.name as string || (chat.contacts as Record<string, unknown>)?.ig_scoped_id as string}
                     </p>
-                    <span className="text-[11px] text-gray-500 flex-shrink-0 ml-2">
+                    <span className={`text-[11px] flex-shrink-0 ml-2 ${Number(chat.unread_count || 0) > 0 ? 'text-blue-600 font-bold' : 'text-gray-400'}`}>
                       {formatTime(chat.updated_at as string || chat.created_at as string)}
                     </span>
                   </div>
                   
                   <div className="flex items-center gap-1">
-                    <p className={`text-sm truncate ${Number(chat.unread_count || 0) > 0 ? 'font-bold text-gray-900' : 'text-gray-500'}`}>
-                      {(chat.lastMessage as string) || 'Nova conversa'}
+                    <p className={`text-xs truncate ${Number(chat.unread_count || 0) > 0 ? 'font-bold text-gray-900' : 'text-gray-500'}`}>
+                      {isAi ? '🤖 bot' : isHuman ? '👤 Humano: ' : '🤖 bot'}{((chat.lastMessage as string) && (chat.lastMessage as string) !== 'Nova conversa') ? `: ${chat.lastMessage}` : ''}
                     </p>
                   </div>
                 </div>
@@ -432,149 +441,116 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
       </div>
 
       {/* Coluna 3: Painel Central de Chat */}
-      <div className="flex-1 flex flex-col bg-white relative min-w-0 border-r border-gray-200">
+      <div className="flex-1 flex flex-col bg-white relative min-w-0 border-l border-gray-200">
         {activeChat ? (
           <>
             {/* Chat Header */}
-            <div className="h-16 border-b border-gray-200 flex items-center justify-between px-6 bg-white shrink-0">
-              <div className="flex items-center gap-4">
+            <div className="h-[72px] border-b border-[#e5e7eb] flex items-center justify-between px-6 bg-white shrink-0">
+              <div className="flex items-center gap-3">
+                {(activeChat.contacts as Record<string, unknown>)?.profile_picture ? (
+                  <img src={(activeChat.contacts as Record<string, unknown>).profile_picture as string} alt="Contact" className="w-10 h-10 rounded-full object-cover" />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold">
+                    {((activeChat.contacts as Record<string, unknown>)?.name as string)?.charAt(0) || '@'}
+                  </div>
+                )}
                 <div className="flex flex-col">
-                  <div className="flex items-center gap-2">
-                    <h2 className="font-bold text-gray-900 text-lg">
-                      {(activeChat.contacts as Record<string, unknown>)?.name as string || (activeChat.contacts as Record<string, unknown>)?.ig_scoped_id as string}
-                    </h2>
-                    {/* Badge da Janela de 24 horas */}
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 ${
-                      windowInfo.active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
-                    }`}>
-                      {windowInfo.active ? <Clock className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
-                      {windowInfo.text}
-                    </span>
-
-                    {/* Badge Ao Vivo */}
-                    {(activeChat.status === 'human' || activeChat.status === 'paused_for_human') && (
-                      <span className="text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1 bg-red-50 text-red-600 border border-red-200 animate-pulse">
-                        <span className="w-2 h-2 rounded-full bg-red-600"></span>
-                        AO VIVO
-                      </span>
-                    )}
+                  <h2 className="font-semibold text-gray-900 text-[15px]">
+                    {(activeChat.contacts as Record<string, unknown>)?.name as string || (activeChat.contacts as Record<string, unknown>)?.ig_scoped_id as string}
+                  </h2>
+                  <div className="text-[11px] text-gray-500 flex items-center gap-1 cursor-pointer hover:text-gray-700">
+                    Não atribuído <ChevronDown className="w-3 h-3" />
                   </div>
                 </div>
               </div>
 
-              {/* Botões de Ação para Handoff e Status */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleDeleteConversation}
-                  className="px-2 py-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                  title="Excluir conversa permanentemente"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-
-                <div className="w-px h-5 bg-gray-200 mx-1"></div>
-
-                <button
-                  onClick={() => handleUpdateStatus('human')}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition-colors ${
-                    activeChat.status === 'human' || activeChat.status === 'paused_for_human'
-                      ? 'bg-yellow-500 text-white shadow-sm'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                  title="Assumir conversa para atendimento humano"
-                >
-                  <User className="w-3.5 h-3.5" />
-                  Assumir (Humano)
-                </button>
-
-                <button
-                  onClick={() => handleUpdateStatus('ai')}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition-colors ${
-                    activeChat.status === 'ai'
-                      ? 'bg-purple-600 text-white shadow-sm'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                  title="Ativar Agente de IA"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  Agente IA
-                </button>
-
-                <button
-                  onClick={() => handleUpdateStatus('bot')}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition-colors ${
-                    activeChat.status === 'bot' || activeChat.status === 'bot_active'
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                  title="Devolver conversa para o robô de fluxos"
-                >
-                  <Bot className="w-3.5 h-3.5" />
-                  Modo Robô
-                </button>
+              <div className="flex items-center gap-4 text-gray-400">
+                <Tag className="w-5 h-5 cursor-pointer hover:text-gray-600" />
+                <Clock className="w-5 h-5 cursor-pointer hover:text-gray-600" />
+                <Check className="w-5 h-5 cursor-pointer hover:text-gray-600" />
+                <Trash2 onClick={handleDeleteConversation} className="w-5 h-5 cursor-pointer hover:text-red-500" />
+                <MoreHorizontal className="w-5 h-5 cursor-pointer hover:text-gray-600" />
               </div>
-            </div>
-
-            {/* Sub-header IG */}
-            <div className="px-6 py-2 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-pink-600"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
-                <span className="text-xs font-medium text-gray-600">Instagram Direct</span>
-              </div>
-              <span className="text-xs text-gray-500 font-semibold">
-                Status atual: <span className="uppercase text-blue-600">{String(activeChat.status)}</span>
-              </span>
             </div>
 
             {/* Chat Area */}
-            <div className="flex-1 overflow-y-auto p-6 bg-white flex flex-col gap-4">
-              {messages.map((msg, idx) => {
-                const isUser = msg.sender_type === 'user';
-                const isAi = msg.sender_type === 'ai';
-                return (
-                  <div key={(msg.id as string) || idx} className={`flex ${isUser ? 'justify-start' : 'justify-end'} mb-1`}>
-                    {isUser && (
-                      <div className="mr-2 flex-shrink-0 self-end mb-1">
-                        {(activeChat.contacts as Record<string, unknown>)?.profile_picture ? (
-                          <img src={(activeChat.contacts as Record<string, unknown>).profile_picture as string} alt="Contact" className="w-8 h-8 rounded-full object-cover" />
-                        ) : (
-                          <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 text-xs font-bold">
-                            {((activeChat.contacts as Record<string, unknown>)?.name as string)?.charAt(0) || '@'}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    <div className={`max-w-[65%] px-4 py-2.5 shadow-sm text-sm ${
-                      isUser 
-                        ? 'bg-[#f0f2f5] text-gray-900 rounded-2xl rounded-bl-sm' 
-                        : isAi
-                        ? 'bg-purple-50 text-purple-900 border border-purple-200 rounded-2xl rounded-br-sm'
-                        : 'bg-[#e7f3ff] text-[#0064e0] rounded-2xl rounded-br-sm'
-                    }`}>
-                      {isAi && (
-                        <div className="flex items-center gap-1 text-[11px] font-bold text-purple-600 mb-1">
-                          <Sparkles className="w-3 h-3" /> Resposta da IA
+            <div className="flex-1 overflow-y-auto bg-[#fafafa] flex flex-col relative">
+              <div className="sticky top-0 z-10 flex items-center gap-2 px-6 py-3 bg-white border-b border-[#e5e7eb] shadow-sm">
+                <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500 flex items-center justify-center shrink-0">
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/e/e7/Instagram_logo_2016.svg" className="w-4 h-4 invert" alt="ig" />
+                </div>
+                <span className="text-sm font-semibold text-gray-800">Instagram</span>
+              </div>
+
+              <div className="px-6 pb-6 pt-4 flex flex-col gap-6">
+                {messages.map((msg, idx) => {
+                  const isUser = msg.sender_type === 'user';
+                  
+                  const msgDate = new Date(msg.timestamp as string || Date.now());
+                  const isFirstOfDay = idx === 0 || new Date(messages[idx-1].timestamp as string).toDateString() !== msgDate.toDateString();
+                  
+                  return (
+                    <div key={(msg.id as string) || idx} className="flex flex-col">
+                      {isFirstOfDay && (
+                        <div className="flex justify-center mb-6">
+                          <span className="text-[11px] text-gray-400 font-medium">
+                            {msgDate.toLocaleDateString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' })}
+                          </span>
                         </div>
                       )}
-                      {msg.message_type === 'image' && msg.media_url ? (
-                        <img src={msg.media_url as string} alt="Mídia" className="max-w-full rounded-lg mb-2 cursor-pointer hover:opacity-90" onClick={() => window.open(msg.media_url as string, '_blank')} />
-                      ) : null}
-                      <p className="break-words whitespace-pre-wrap">{msg.content as string}</p>
+                      
+                      <div className={`flex items-end gap-3 ${isUser ? 'flex-row' : 'flex-row-reverse'}`}>
+                        {isUser && (
+                          <div className="flex-shrink-0">
+                            {(activeChat.contacts as Record<string, unknown>)?.profile_picture ? (
+                              <img src={(activeChat.contacts as Record<string, unknown>).profile_picture as string} alt="Contact" className="w-8 h-8 rounded-full object-cover shadow-sm" />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 text-xs font-bold shadow-sm">
+                                {((activeChat.contacts as Record<string, unknown>)?.name as string)?.charAt(0) || '@'}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {!isUser && (
+                          <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden">
+                            <Bot className="w-5 h-5 text-white opacity-80" />
+                          </div>
+                        )}
+                        
+                        <div className={`max-w-[70%] px-4 py-3 text-[14px] leading-relaxed ${
+                          isUser 
+                            ? 'bg-white border border-gray-100 text-gray-800 rounded-2xl rounded-bl-sm shadow-sm' 
+                            : 'bg-white border border-gray-100 text-gray-800 rounded-2xl rounded-br-sm shadow-sm'
+                        }`}>
+                          {msg.message_type === 'image' && msg.media_url ? (
+                            <img src={msg.media_url as string} alt="Mídia" className="max-w-full rounded-lg mb-2 cursor-pointer hover:opacity-90 border border-gray-100" onClick={() => window.open(msg.media_url as string, '_blank')} />
+                          ) : null}
+                          <p className="break-words whitespace-pre-wrap">{msg.content as string}</p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+                
+                {/* System Message Divider Example */}
+                {!windowInfo.active && (
+                   <div className="flex items-center justify-center gap-2 my-2 opacity-50">
+                     <div className="h-px bg-gray-300 w-12"></div>
+                     <span className="text-[11px] text-gray-500">Janela 24h Expirada</span>
+                     <div className="h-px bg-gray-300 w-12"></div>
+                   </div>
+                )}
+              </div>
             </div>
 
             {/* Composer Area */}
-            <div className="bg-white border-t border-gray-200">
-              {!windowInfo.active && (
-                <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 text-xs text-amber-800 flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                  <span>A janela de 24h da Meta expirou. O contato deve enviar uma nova mensagem antes de você responder via API.</span>
-                </div>
-              )}
-              <div className="p-4">
+            <div className="bg-white border-t border-[#e5e7eb] flex flex-col z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.02)]">
+              <div className="flex items-center gap-6 px-6 py-3 border-b border-[#e5e7eb]">
+                <button className="text-sm font-bold text-gray-900 border-b-2 border-black pb-1 -mb-[13px]">Responder</button>
+                <button className="text-sm font-medium text-gray-500 pb-1 -mb-[13px] hover:text-gray-900 transition-colors">Observação</button>
+              </div>
+              
+              <div className="p-4 flex flex-col min-h-[140px] justify-between">
                 <textarea 
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
@@ -585,31 +561,54 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
                     }
                   }}
                   placeholder="Responda aqui..." 
-                  className="w-full resize-none border-none outline-none text-sm text-gray-800 placeholder-gray-400 min-h-[60px]"
+                  className="w-full resize-none border-none outline-none text-sm text-gray-800 placeholder-gray-400 bg-transparent min-h-[50px] overflow-hidden"
                 />
-                <div className="flex items-center justify-between mt-2">
-                  <div className="flex items-center gap-1 text-gray-400">
-                    <button className="p-2 hover:bg-gray-100 rounded-full transition-colors"><Smile className="w-5 h-5" /></button>
-                    <button className="p-2 hover:bg-gray-100 rounded-full transition-colors"><ImageIcon className="w-5 h-5" /></button>
+                
+                <div className="flex items-center justify-between mt-4">
+                  <div className="flex items-center gap-4 text-gray-400">
+                    <Smile className="w-5 h-5 cursor-pointer hover:text-gray-600 transition-colors" />
+                    <ImageIcon className="w-5 h-5 cursor-pointer hover:text-gray-600 transition-colors" />
+                    <Paperclip className="w-5 h-5 cursor-pointer hover:text-gray-600 transition-colors" />
+                    <Mic className="w-5 h-5 cursor-pointer hover:text-gray-600 transition-colors" />
+                    
+                    <div className="relative group flex flex-col items-center">
+                      <div className="absolute -top-8 bg-gray-900 text-white text-[11px] font-semibold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                        Automação
+                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                      </div>
+                      <Workflow className="w-5 h-5 cursor-pointer hover:text-blue-600 transition-colors" />
+                    </div>
+                    
+                    <Star className="w-5 h-5 cursor-pointer hover:text-yellow-500 transition-colors" />
                   </div>
-                  <button 
-                    onClick={handleSendMessage}
-                    disabled={!newMessage.trim()}
-                    className="px-4 py-2 bg-[#0064e0] text-white text-sm font-semibold rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                  >
-                    Enviar Mensagem
-                  </button>
+                  
+                  <div className="flex items-center gap-3">
+                    <button 
+                      onClick={handleSyncApi}
+                      disabled={isSyncing}
+                      className="w-10 h-10 flex items-center justify-center bg-[#a6c8fa] hover:bg-blue-500 text-white rounded-md transition-colors disabled:bg-[#d0e1ff]"
+                      title="Sincronizar Mensagens"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                    </button>
+                    <button 
+                      onClick={handleSendMessage}
+                      disabled={!newMessage.trim()}
+                      className="px-8 py-2.5 bg-[#a6c8fa] hover:bg-blue-600 text-white text-[13px] font-bold rounded-md transition-colors disabled:bg-[#d0e1ff] disabled:cursor-not-allowed"
+                    >
+                      Enviar Para O Instagram
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           </>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center bg-[#f9fafb]">
-            <div className="w-24 h-24 rounded-full bg-white shadow-sm flex items-center justify-center mb-6">
-              <MessageCircle className="w-10 h-10 text-gray-300" />
+          <div className="flex-1 flex flex-col items-center justify-center bg-[#f8f9fa]">
+            <div className="w-20 h-20 rounded-full bg-white shadow-sm flex items-center justify-center mb-4 border border-gray-100">
+              <MessageCircle className="w-8 h-8 text-gray-300" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Caixa de Entrada Vazia</h3>
-            <p className="text-gray-500">Selecione uma conversa ao lado para começar.</p>
+            <h3 className="text-lg font-medium text-gray-500">Selecione uma conversa para iniciar</h3>
           </div>
         )}
       </div>

@@ -185,17 +185,36 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
           let nodeId = conversation.flow_cursor?.currentNodeId || null;
 
           if (!flowId) {
-            // Caso não tenha fluxo ativo preso no cursor, buscar o fluxo padrão ativo do workspace
-            const { data: defaultFlow } = await supabase
+            // Buscar todos os fluxos ativos deste workspace
+            const { data: activeFlows } = await supabase
               .from('flows')
-              .select('id')
+              .select('id, trigger_type, trigger_config')
               .eq('workspace_id', activeWorkspaceId)
-              .eq('is_active', true)
-              .limit(1)
-              .maybeSingle();
+              .eq('status', 'active');
             
-            if (defaultFlow) {
-               flowId = defaultFlow.id;
+            if (activeFlows && activeFlows.length > 0) {
+              const incomingText = (messageText || '').trim().toLowerCase();
+              
+              // Mapear palavras-chave exatas
+              for (const flow of activeFlows) {
+                if (flow.trigger_type === 'dm_keyword' && flow.trigger_config) {
+                  const keywords: string[] = (flow.trigger_config as any).keywords || [];
+                  const match = keywords.find((kw: string) => kw.trim().toLowerCase() === incomingText);
+                  
+                  if (match) {
+                    flowId = flow.id;
+                    break;
+                  }
+                }
+              }
+            }
+
+            // Atualizar conversation com o novo active_flow_id caso tenha encontrado
+            if (flowId) {
+              await supabase
+                .from('conversations')
+                .update({ active_flow_id: flowId })
+                .eq('id', conversation.id);
             }
           }
 
