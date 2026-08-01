@@ -189,6 +189,12 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
           let flowId = conversation.active_flow_id;
           const nodeId = conversation.flow_cursor?.currentNodeId || null;
 
+          // Se não há um cursor ativo, significa que a automação anterior terminou ou travou.
+          // Devemos limpar o flowId para forçar a avaliação de novas palavras-chave.
+          if (!nodeId) {
+            flowId = null;
+          }
+
           if (!flowId) {
             // Buscar todos os fluxos ativos deste workspace
             const { data: activeFlows } = await supabase
@@ -217,7 +223,10 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
                     keywords.push(...((flow.trigger_config as Record<string, unknown>).keywords as string[]));
                   }
 
-                  const match = keywords.find((kw: string) => incomingText.includes(kw.trim().toLowerCase()));
+                  const match = keywords.find((kw: string) => {
+                    const normalized = kw.trim().toLowerCase();
+                    return normalized.length > 0 && incomingText.includes(normalized);
+                  });
                   
                   if (match) {
                     flowId = flow.id;
