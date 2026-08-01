@@ -99,42 +99,24 @@ export const executeFlow = inngest.createFunction(
             const mediaUrl = node.data?.mediaUrl as string | undefined;
             const responseText = (node.data?.text as string) || 'Mensagem do Fluxo';
 
-            const metaUrl = `https://graph.instagram.com/v22.0/me/messages`;
+            // Chama a API interna para manter uma única fonte de verdade e lógica
+            const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://nexachat-v1.vercel.app';
+            const apiUrl = `${appUrl}/api/messages/send`;
 
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const metaBody: any = { recipient: { id: senderId } };
-
-            if (messageType !== 'text' && mediaUrl) {
-              metaBody.message = {
-                attachment: {
-                  type: messageType,
-                  payload: { url: mediaUrl }
-                }
-              };
-            } else {
-              metaBody.message = { text: responseText };
-            }
-
-            const metaRes = await fetch(metaUrl, {
+            const res = await fetch(apiUrl, {
               method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${pageAccessToken}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify(metaBody)
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                conversationId,
+                content: messageType === 'text' ? responseText : null,
+                mediaUrl: mediaUrl || null,
+                messageType
+              })
             });
 
-            if (metaRes.ok) {
-              await supabase.from('messages').insert({
-                conversation_id: conversationId,
-                sender_type: 'bot',
-                message_type: messageType,
-                content: messageType === 'text' ? responseText : null,
-                media_url: mediaUrl || null
-              });
-              await supabase.from('conversations').update({ last_interaction_at: new Date().toISOString() }).eq('id', conversationId);
-            } else {
-              console.error('[Flow Engine] Erro ao enviar mensagem Graph API:', await metaRes.json());
+            if (!res.ok) {
+              const err = await res.json().catch(() => ({}));
+              console.error('[Flow Engine] Erro ao chamar API interna de envio:', err);
             }
           });
         } else {
