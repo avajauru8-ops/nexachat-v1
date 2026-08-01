@@ -192,17 +192,30 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
             // Buscar todos os fluxos ativos deste workspace
             const { data: activeFlows } = await supabase
               .from('flows')
-              .select('id, trigger_type, trigger_config')
+              .select('id, trigger_type, trigger_config, triggers')
               .eq('workspace_id', activeWorkspaceId)
-              .eq('status', 'active');
+              .in('status', ['active', 'published']); // Alguns podem estar salvos como 'published'
             
             if (activeFlows && activeFlows.length > 0) {
               const incomingText = (messageText || '').trim().toLowerCase();
               
               // Mapear palavras-chave (se a mensagem contém a palavra-chave)
               for (const flow of activeFlows) {
-                if (flow.trigger_type === 'dm_keyword' && flow.trigger_config) {
-                  const keywords: string[] = (flow.trigger_config as any).keywords || [];
+                if (flow.trigger_type === 'dm_keyword') {
+                  const keywords: string[] = [];
+                  
+                  // Check new format (triggers.keyword)
+                  if (flow.triggers && (flow.triggers as any).keyword) {
+                    const kw = (flow.triggers as any).keyword;
+                    if (Array.isArray(kw)) keywords.push(...kw);
+                    else keywords.push(String(kw));
+                  }
+                  
+                  // Check old format (trigger_config.keywords)
+                  if (flow.trigger_config && (flow.trigger_config as any).keywords) {
+                    keywords.push(...(flow.trigger_config as any).keywords);
+                  }
+
                   const match = keywords.find((kw: string) => incomingText.includes(kw.trim().toLowerCase()));
                   
                   if (match) {
