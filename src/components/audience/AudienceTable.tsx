@@ -12,6 +12,7 @@ interface Contact {
   profile_picture?: string;
   created_at: string;
   contact_tags?: any;
+  custom_fields?: Record<string, any>;
 }
 
 interface IgProfile {
@@ -61,6 +62,7 @@ export function AudienceTable({ contacts }: { contacts: Contact[] }) {
           ...prev,
           name: data.contact?.name || prev.name,
           profile_picture: data.contact?.profile_picture || prev.profile_picture,
+          custom_fields: data.contact?.custom_fields || prev.custom_fields,
         } : prev);
 
         if (data.ig_profile) {
@@ -83,10 +85,12 @@ export function AudienceTable({ contacts }: { contacts: Contact[] }) {
 
   const displayName = selectedLead?.name || 'Lead Anônimo';
   const displayAvatar = igProfile?.profile_picture_url || selectedLead?.profile_picture;
-  const displayUsername = igProfile?.username;
-  const displayBio = igProfile?.biography;
-  const displayFollowers = igProfile?.follower_count;
-  const displayVerified = igProfile?.is_verified;
+  
+  // Usar dados recém-carregados ou fazer fallback para o que está no banco (custom_fields)
+  const leadData = (selectedLead as any)?.custom_fields || {};
+  const displayUsername = igProfile?.username || leadData.username;
+  const displayFollowers = igProfile?.follower_count || leadData.follower_count;
+  const displayVerified = igProfile?.is_verified ?? leadData.is_verified;
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">

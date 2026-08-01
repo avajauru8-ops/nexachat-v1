@@ -31,6 +31,7 @@ export default async function AudiencePage() {
       name, 
       profile_picture, 
       created_at,
+      custom_fields,
       contact_tags (
         tag_id,
         tags (
