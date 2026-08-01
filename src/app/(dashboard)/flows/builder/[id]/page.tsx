@@ -13,8 +13,16 @@ export default async function FlowBuilderPage({ params }: { params: Promise<{ id
   if (user) {
     const { data: workspaces } = await supabase.from('workspaces').select('id').eq('user_id', user.id).single()
     if (workspaces) {
-      const { data: igAccounts } = await supabase.from('instagram_accounts').select('id, page_id, ig_user_id').eq('workspace_id', workspaces.id)
-      if (igAccounts) accounts = igAccounts
+      const { data: igAccounts } = await supabase.from('instagram_accounts').select('id, page_id, ig_user_id, ig_username').eq('workspace_id', workspaces.id)
+      if (igAccounts) {
+        // Filter out duplicate ig_user_id if any exist due to lack of DB constraints
+        const seen = new Set();
+        accounts = igAccounts.filter(acc => {
+          if (seen.has(acc.ig_user_id)) return false;
+          seen.add(acc.ig_user_id);
+          return true;
+        });
+      }
     }
   }
 

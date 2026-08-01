@@ -211,7 +211,7 @@ export function FlowBuilderClient({
                   <option value="">Selecione a DM...</option>
                   {instagramAccounts.map((acc: any) => (
                     <option key={acc.id as string} value={acc.id as string}>
-                      @{acc.page_id !== 'ig_login_direct' && acc.page_id ? acc.page_id : acc.ig_user_id}
+                      @{acc.ig_username || (acc.page_id !== 'native_ig_login' && acc.page_id !== 'ig_login_direct' && acc.page_id ? acc.page_id : acc.ig_user_id)}
                     </option>
                   ))}
                 </select>
