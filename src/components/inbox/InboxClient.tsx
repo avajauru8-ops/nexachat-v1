@@ -224,6 +224,34 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
     }
   };
 
+  const fetchConversationsList = () => {
+    supabase
+      .from('conversations')
+      .select(`
+        id, status, last_interaction_at, window_expires_at, created_at, updated_at,
+        contacts ( id, name, ig_scoped_id, profile_picture ),
+        messages ( content, message_type, timestamp )
+      `)
+      .eq('workspace_id', workspaceId)
+      .order('last_interaction_at', { ascending: false })
+      .order('timestamp', { ascending: false, foreignTable: 'messages' })
+      .limit(1, { foreignTable: 'messages' })
+      .then(({ data }) => {
+        if (data) {
+          const formattedData = data.map(c => {
+            const msgs = c.messages as Record<string, unknown>[];
+            let lastMessage = 'Nova conversa';
+            if (msgs && msgs.length > 0) {
+              const msg = msgs[0];
+              lastMessage = msg.message_type === 'image' ? '📷 Foto' : msg.message_type === 'video' ? '🎥 Vídeo' : msg.message_type === 'audio' ? '🎵 Áudio' : (msg.content as string);
+            }
+            return { ...c, lastMessage };
+          });
+          setConversations(formattedData);
+        }
+      });
+  };
+
   const handleSyncApi = async () => {
     setIsSyncing(true);
     const toastId = toast.loading('Buscando dados no Instagram...');
@@ -234,7 +262,17 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
         toast.error('Erro: ' + (data.error || 'Falha ao sincronizar'), { id: toastId });
       } else {
         toast.success(`Sincronizado! ${data.synced} conversas atualizadas.`, { id: toastId });
-        setTimeout(() => window.location.reload(), 1500);
+        fetchConversationsList();
+        if (activeChatId) {
+           supabase
+            .from('messages')
+            .select('*')
+            .eq('conversation_id', activeChatId)
+            .order('timestamp', { ascending: true })
+            .then(({ data: msgs }) => {
+              if (msgs) setMessages(msgs);
+            });
+        }
       }
     } catch {
       toast.error('Erro de conexão ao sincronizar', { id: toastId });

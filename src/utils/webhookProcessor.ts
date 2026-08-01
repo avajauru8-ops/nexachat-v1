@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { inngest } from '@/inngest/client';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
@@ -112,7 +113,7 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
         // Identificar ou Criar Conversa
         let { data: conversation } = await supabase
           .from('conversations')
-          .select('id, status, window_expires_at')
+          .select('id, status, window_expires_at, active_flow_id, flow_cursor')
           .eq('workspace_id', activeWorkspaceId)
           .eq('contact_id', contact.id)
           .maybeSingle();
@@ -129,7 +130,7 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
               last_interaction_at: new Date().toISOString(),
               window_expires_at: windowExpiresAt
             })
-            .select('id, status, window_expires_at')
+            .select('id, status, window_expires_at, active_flow_id, flow_cursor')
             .single();
           conversation = newConv;
         } else {
@@ -161,8 +162,55 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
 
         console.log(`[Processamento Sync] Mensagem salva com sucesso: ${newMessage?.id}`);
 
-        // Aqui entraria a execução de Fluxos de Automação se necessário!
-        // No momento, apenas garantindo que chega na Caixa de Entrada (Inbox)
+        // --- EXECUTAR AUTOMAÇÃO (IA OU FLUXO) ---
+        if (conversation.status === 'ai') {
+          await inngest.send({
+            name: 'ai/process',
+            data: {
+              workspaceId: activeWorkspaceId,
+              conversationId: conversation.id,
+              contactId: contact.id,
+              senderId: senderId,
+              recipientId: recipientId,
+              userMessageText: messageText
+            }
+          });
+          console.log(`[Processamento Sync] Disparado evento AI para a conversa: ${conversation.id}`);
+        } else if (conversation.status === 'bot' || conversation.status === 'bot_active') {
+          let flowId = conversation.active_flow_id;
+          let nodeId = conversation.flow_cursor?.currentNodeId || null;
+
+          if (!flowId) {
+            // Caso não tenha fluxo ativo preso no cursor, buscar o fluxo padrão ativo do workspace
+            const { data: defaultFlow } = await supabase
+              .from('flows')
+              .select('id')
+              .eq('workspace_id', activeWorkspaceId)
+              .eq('is_active', true)
+              .limit(1)
+              .maybeSingle();
+            
+            if (defaultFlow) {
+               flowId = defaultFlow.id;
+            }
+          }
+
+          if (flowId) {
+            await inngest.send({
+              name: 'flow/execute',
+              data: {
+                workspaceId: activeWorkspaceId,
+                contactId: contact.id,
+                conversationId: conversation.id,
+                recipientId: recipientId,
+                senderId: senderId,
+                flowId: flowId,
+                nodeId: nodeId
+              }
+            });
+            console.log(`[Processamento Sync] Disparado evento FLOW (${flowId}) para a conversa: ${conversation.id}`);
+          }
+        }
       }
     }
   }
