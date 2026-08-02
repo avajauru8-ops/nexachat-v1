@@ -136,6 +136,12 @@ export async function POST(request: Request) {
         profile_picture: igProfile?.profile_picture_url || contact.profile_picture,
         name: igProfile?.name || contact.name,
         username: igProfile?.username || contact.username,
+        custom_fields: {
+          ...((contact as any).custom_fields || {}),
+          username: igProfile?.username || contact.username,
+          follower_count: igProfile?.follower_count,
+          is_verified: igProfile?.is_verified,
+        }
       },
       ig_profile: igProfile,
     });

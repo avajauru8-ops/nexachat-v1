@@ -89,7 +89,7 @@ export function AudienceTable({ contacts }: { contacts: Contact[] }) {
   // Usar dados recém-carregados ou fazer fallback para o que está no banco (custom_fields)
   const leadData = (selectedLead as any)?.custom_fields || {};
   const displayUsername = igProfile?.username || leadData.username;
-  const displayFollowers = igProfile?.follower_count || leadData.follower_count;
+  const displayFollowers = igProfile?.follower_count ?? leadData.follower_count;
   const displayVerified = igProfile?.is_verified ?? leadData.is_verified;
   const displayBio = igProfile?.biography || leadData.biography;
 
@@ -294,7 +294,7 @@ export function AudienceTable({ contacts }: { contacts: Contact[] }) {
                 <div className="bg-white p-3.5 rounded-2xl border border-gray-200 text-center space-y-1">
                   <ShieldCheck className="w-4 h-4 text-emerald-600 mx-auto" />
                   <p className="text-xs font-extrabold text-gray-900">
-                    {displayVerified ? '✅ Sim' : '—'}
+                    {displayVerified === true ? '✅ Sim' : displayVerified === false ? '❌ Não' : '—'}
                   </p>
                   <span className="text-[10px] font-bold text-gray-500">Verificado</span>
                 </div>
