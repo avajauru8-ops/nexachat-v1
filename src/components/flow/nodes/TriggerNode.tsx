@@ -1,5 +1,6 @@
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
-import { Zap, X, MessageSquare, Camera, MessageCircle, UserPlus, Sparkles } from 'lucide-react';
+import { Zap, X, MessageSquare, Camera, MessageCircle, UserPlus, Sparkles, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 export function TriggerNode({ id, data, selected }: NodeProps) {
   const { setNodes, setEdges, updateNodeData } = useReactFlow();
@@ -13,6 +14,32 @@ export function TriggerNode({ id, data, selected }: NodeProps) {
 
   const handleTypeChange = (newType: string) => {
     updateNodeData(id, { triggerType: newType, trigger_type: newType });
+  };
+
+  const [mediaList, setMediaList] = useState<any[]>([]);
+  const [loadingMedia, setLoadingMedia] = useState(false);
+  const [showMediaSelector, setShowMediaSelector] = useState(false);
+
+  useEffect(() => {
+    if (currentType === 'comment_keyword' && showMediaSelector && mediaList.length === 0) {
+      fetchMedia();
+    }
+  }, [currentType, showMediaSelector]);
+
+  const fetchMedia = async () => {
+    setLoadingMedia(true);
+    try {
+      // workspaceId is generally available in the URL or we can let the API find it
+      const res = await fetch('/api/instagram/media');
+      const result = await res.json();
+      if (result.success) {
+        setMediaList(result.data);
+      }
+    } catch (e) {
+      console.error('Error fetching media', e);
+    } finally {
+      setLoadingMedia(false);
+    }
   };
 
   return (
@@ -79,7 +106,89 @@ export function TriggerNode({ id, data, selected }: NodeProps) {
               <MessageCircle className="w-3.5 h-3.5 text-orange-600" />
               <span>O usuário comenta em um Post/Reels</span>
             </div>
-            <p className="text-[11px] text-gray-500">Gatilho ativado se o comentário contiver:</p>
+            
+            {/* Seletor de Post/Reels */}
+            <div className="mt-2 p-2 bg-white rounded-lg border border-orange-200">
+              <label className="text-[10px] font-bold text-orange-800 uppercase block mb-1">Qual Post ou Reels?</label>
+              
+              {!data.specificMediaId || data.specificMediaId === 'all' ? (
+                <button 
+                  onClick={() => setShowMediaSelector(!showMediaSelector)}
+                  className="w-full text-left px-2 py-1.5 bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-md text-xs font-semibold text-orange-900 transition-colors flex items-center justify-between"
+                >
+                  <span>Qualquer Post/Reels</span>
+                  <ImageIcon className="w-3.5 h-3.5 text-orange-600" />
+                </button>
+              ) : (
+                <div className="flex items-center justify-between bg-orange-100/50 p-1.5 rounded-md border border-orange-300">
+                  <div className="flex items-center gap-2 truncate">
+                    {data.specificMediaUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={data.specificMediaUrl as string} alt="thumb" className="w-6 h-6 rounded-sm object-cover" />
+                    ) : (
+                      <ImageIcon className="w-4 h-4 text-orange-600" />
+                    )}
+                    <span className="text-[10px] font-bold text-orange-900 truncate">
+                      Selecionado: {(data.specificMediaCaption as string)?.substring(0, 20) || (data.specificMediaId as string)}
+                    </span>
+                  </div>
+                  <button 
+                    onClick={() => updateNodeData(id, { specificMediaId: 'all', specificMediaUrl: null, specificMediaCaption: null })}
+                    className="p-1 hover:bg-orange-200 rounded-md transition-colors"
+                    title="Remover seleção"
+                  >
+                    <X className="w-3 h-3 text-orange-700" />
+                  </button>
+                </div>
+              )}
+
+              {/* Lista de Seleção de Media */}
+              {showMediaSelector && (!data.specificMediaId || data.specificMediaId === 'all') && (
+                <div className="mt-2 max-h-40 overflow-y-auto bg-white border border-gray-200 rounded-md shadow-inner custom-scrollbar">
+                  {loadingMedia ? (
+                    <div className="flex justify-center p-4">
+                      <Loader2 className="w-4 h-4 text-orange-500 animate-spin" />
+                    </div>
+                  ) : mediaList.length === 0 ? (
+                    <div className="p-3 text-center text-[10px] text-gray-500">Nenhuma publicação encontrada</div>
+                  ) : (
+                    <div className="flex flex-col">
+                      {mediaList.map((media) => (
+                        <button
+                          key={media.id}
+                          onClick={() => {
+                            updateNodeData(id, { 
+                              specificMediaId: media.id, 
+                              specificMediaUrl: media.thumbnail_url || media.media_url,
+                              specificMediaCaption: media.caption
+                            });
+                            setShowMediaSelector(false);
+                          }}
+                          className="flex items-start gap-2 p-2 hover:bg-orange-50 border-b border-gray-100 transition-colors text-left"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img 
+                            src={media.thumbnail_url || media.media_url} 
+                            alt="thumb" 
+                            className="w-8 h-8 rounded object-cover flex-shrink-0 bg-gray-100"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <span className="text-[9px] font-black uppercase text-orange-600 tracking-wider">
+                              {media.media_type === 'VIDEO' ? 'REELS' : 'POST'}
+                            </span>
+                            <p className="text-[10px] text-gray-700 truncate font-medium">
+                              {media.caption || 'Sem legenda'}
+                            </p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <p className="text-[11px] text-gray-500 mt-2">Gatilho ativado se o comentário contiver:</p>
             <input 
               type="text" 
               value={(data.keyword as string) || ''} 

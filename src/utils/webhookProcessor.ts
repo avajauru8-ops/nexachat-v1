@@ -12,7 +12,8 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 function matchActiveFlow(
   activeFlows: any[],
   triggerType: string,
-  incomingText: string = ''
+  incomingText: string = '',
+  mediaId: string | null = null
 ): string | null {
   if (!activeFlows || activeFlows.length === 0) return null;
 
@@ -20,6 +21,15 @@ function matchActiveFlow(
 
   for (const flow of activeFlows) {
     if (flow.trigger_type === triggerType) {
+      
+      // Checagem de mídia específica (para comentários)
+      if (triggerType === 'comment_keyword' && mediaId) {
+        const specificMediaId = (flow.trigger_config as Record<string, unknown>)?.specificMediaId as string | undefined;
+        if (specificMediaId && specificMediaId !== 'all' && specificMediaId !== mediaId) {
+          continue; // Ignora este fluxo, pois o comentário foi em um post diferente
+        }
+      }
+
       // Se o gatilho não exige palavra-chave específica (ex: welcome_dm, ou comment_keyword genérico)
       let hasKeywordLogic = false;
       const keywords: string[] = [];
@@ -390,7 +400,8 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
             .eq('workspace_id', activeWorkspaceId)
             .in('status', ['active', 'published']);
 
-          const matchedFlowId = matchActiveFlow(activeFlows || [], 'comment_keyword', commentText);
+          const mediaId = change.value.media?.id || null;
+          const matchedFlowId = matchActiveFlow(activeFlows || [], 'comment_keyword', commentText, mediaId);
 
           if (matchedFlowId) {
             const { contact, conversation } = await getOrCreateContactAndConversation(activeWorkspaceId, account, senderId);
