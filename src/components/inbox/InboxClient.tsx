@@ -62,6 +62,18 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
             return { ...c, lastMessage };
           });
           setConversations(formattedData);
+
+          // Verificar se há um contactId na URL para selecionar automaticamente
+          if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const targetContactId = params.get('contactId');
+            if (targetContactId) {
+              const matchingConv = formattedData.find((c: any) => c.contacts?.id === targetContactId);
+              if (matchingConv) {
+                setActiveChatId(matchingConv.id);
+              }
+            }
+          }
         }
       });
   }, [workspaceId, supabase]);

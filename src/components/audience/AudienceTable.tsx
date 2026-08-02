@@ -343,7 +343,7 @@ export function AudienceTable({ contacts }: { contacts: Contact[] }) {
               </div>
 
               <Link
-                href="/inbox"
+                href={`/inbox?contactId=${selectedLead.id}`}
                 className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-2 shadow-xs"
               >
                 <MessageSquare className="w-4 h-4" /> Abrir no Inbox
