@@ -51,7 +51,7 @@ export function CommentReplyNode({ id, data, selected }: NodeProps) {
           value={(data.publicReply as string) || ''}
           onChange={(e) => updateNodeData(id, { publicReply: e.target.value })}
           placeholder="Ex: Te mandei os detalhes no Direct! 🚀"
-          className="w-full text-sm resize-none rounded-xl bg-white border border-gray-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all outline-none p-3 min-h-[80px]"
+          className="w-full text-sm text-gray-900 font-medium placeholder:text-gray-400 resize-none rounded-xl bg-white border border-gray-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all outline-none p-3 min-h-[80px]"
         />
         <div className="bg-orange-50 border border-orange-100 rounded-lg p-2 mt-1">
            <p className="text-[10px] text-orange-800 leading-tight">
