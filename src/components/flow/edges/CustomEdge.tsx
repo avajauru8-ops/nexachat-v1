@@ -1,4 +1,5 @@
-import { BaseEdge, EdgeProps, getBezierPath } from '@xyflow/react';
+import { BaseEdge, EdgeProps, getBezierPath, EdgeLabelRenderer, useReactFlow } from '@xyflow/react';
+import { X } from 'lucide-react';
 
 export function CustomEdge({
   id,
@@ -11,7 +12,9 @@ export function CustomEdge({
   style = {},
   markerEnd
 }: EdgeProps) {
-  const [edgePath] = getBezierPath({
+  const { setEdges } = useReactFlow();
+
+  const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
     sourceY,
     sourcePosition,
@@ -19,6 +22,10 @@ export function CustomEdge({
     targetY,
     targetPosition
   });
+
+  const onEdgeClick = () => {
+    setEdges((edges) => edges.filter((edge) => edge.id !== id));
+  };
 
   return (
     <>
@@ -56,6 +63,26 @@ export function CustomEdge({
         strokeLinecap="round"
         style={{ filter: 'drop-shadow(0 0 5px #00ffff)' }}
       />
+
+      {/* Botão de Excluir */}
+      <EdgeLabelRenderer>
+        <div
+          style={{
+            position: 'absolute',
+            transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
+            pointerEvents: 'all',
+          }}
+          className="nodrag nopan"
+        >
+          <button
+            onClick={onEdgeClick}
+            className="w-5 h-5 bg-white hover:bg-red-500 hover:text-white text-gray-400 hover:border-red-500 rounded-full flex items-center justify-center border border-gray-200 transition-colors cursor-pointer shadow-sm"
+            title="Remover conexão"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      </EdgeLabelRenderer>
     </>
   );
 }
