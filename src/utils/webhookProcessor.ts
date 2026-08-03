@@ -378,7 +378,7 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
     // --- 2. PROCESSAMENTO DE EVENTOS DIVERSOS (CHANGES) COMO COMENTÁRIOS ---
     if (entry.changes && Array.isArray(entry.changes)) {
       for (const change of entry.changes) {
-        if (change.value?.item === 'comment') {
+        if (change.field === 'comments') {
           const senderId = change.value.from?.id;
           const commentText = (change.value.text || '').trim();
           const recipientId = entryId;
