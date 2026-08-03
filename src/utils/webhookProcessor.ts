@@ -65,6 +65,21 @@ function matchActiveFlow(
   return null;
 }
 
+async function logFlowExecution(workspaceId: string, flowId: string, contact: any, triggerType: string, keywordMatched: string = '') {
+  try {
+    const leadUsername = contact.custom_fields?.username || contact.name || 'Lead';
+    await supabase.from('flow_logs').insert({
+      workspace_id: workspaceId,
+      flow_id: flowId,
+      lead_username: leadUsername,
+      trigger_type: triggerType,
+      keyword_matched: keywordMatched
+    });
+  } catch (err) {
+    console.error("Error logging flow execution", err);
+  }
+}
+
 /**
  * Cria ou recupera o contato e a conversa associada para o evento atual
  */
@@ -76,7 +91,7 @@ async function getOrCreateContactAndConversation(
   // Identificar ou Criar Contato
   let { data: contact } = await supabase
     .from('contacts')
-    .select('id, name')
+    .select('id, name, custom_fields')
     .eq('workspace_id', activeWorkspaceId)
     .eq('ig_scoped_id', senderId)
     .maybeSingle();
@@ -116,7 +131,7 @@ async function getOrCreateContactAndConversation(
     const { data: newC } = await supabase
       .from('contacts')
       .insert(insertPayload)
-      .select('id, name')
+      .select('id, name, custom_fields')
       .single();
     contact = newC;
   }
@@ -162,6 +177,7 @@ async function getOrCreateContactAndConversation(
     if (welcomeFlowId && conversation) {
       conversation.active_flow_id = welcomeFlowId;
       await supabase.from('conversations').update({ active_flow_id: welcomeFlowId }).eq('id', conversation.id);
+      await logFlowExecution(activeWorkspaceId, welcomeFlowId, contact, 'welcome_dm', '');
     }
   } else {
     await supabase
@@ -306,15 +322,14 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
               
               if (matchedFlowId) {
                 flowId = matchedFlowId;
-              }
-            }
+                
+                await supabase
+                  .from('conversations')
+                  .update({ active_flow_id: flowId })
+                  .eq('id', conversation.id);
 
-            // Atualizar conversation com o novo active_flow_id caso tenha encontrado
-            if (flowId) {
-              await supabase
-                .from('conversations')
-                .update({ active_flow_id: flowId })
-                .eq('id', conversation.id);
+                await logFlowExecution(activeWorkspaceId, flowId, contact, currentTriggerType, incomingText);
+              }
             }
           }
 
@@ -412,6 +427,8 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
               .from('conversations')
               .update({ active_flow_id: matchedFlowId, flow_cursor: null })
               .eq('id', conversation.id);
+            
+            await logFlowExecution(activeWorkspaceId, matchedFlowId, contact, 'comment_keyword', commentText);
 
             try {
               if (process.env.INNGEST_EVENT_KEY) {
