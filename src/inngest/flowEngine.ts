@@ -222,6 +222,33 @@ export const executeFlow = inngest.createFunction(
             content: '🤖 Assistente virtual de Inteligência Artificial assumiu o atendimento.'
           });
         });
+
+        // Trigger AI immediately
+        await step.run(`trigger-ai-${loopNodeId}-${iteration}`, async () => {
+          const { data: lastMsg } = await supabase
+            .from('messages')
+            .select('content')
+            .eq('conversation_id', conversationId)
+            .eq('sender_type', 'user')
+            .order('timestamp', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (process.env.INNGEST_EVENT_KEY || process.env.NODE_ENV === 'development') {
+            await inngest.send({
+              name: 'ai/process',
+              data: {
+                workspaceId,
+                conversationId,
+                contactId,
+                senderId: event.data.senderId,
+                recipientId: event.data.recipientId,
+                userMessageText: lastMsg?.content || ''
+              }
+            });
+          }
+        });
+
         break; // Interrompe a automação de nós rígidos para passar o controle à IA
       }
 
