@@ -94,15 +94,29 @@ export const processAiAgent = inngest.createFunction(
 
     // 5. Chamada ao Provedor de LLM (OpenAI ou Gemini)
     const aiResponseText = await step.run('generate-llm-response', async () => {
-      const apiKey = process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY;
+      // Fetch keys from admin_settings
+      const { data: adminSettings } = await supabase
+        .from('admin_settings')
+        .select('key, value')
+        .in('key', ['GEMINI_API_KEY', 'OPENAI_API_KEY']);
+        
+      const settingsMap = (adminSettings || []).reduce((acc: any, curr: any) => {
+        acc[curr.key] = curr.value;
+        return acc;
+      }, {});
+
+      const dbGeminiKey = settingsMap['GEMINI_API_KEY'];
+      const dbOpenaiKey = settingsMap['OPENAI_API_KEY'];
+
+      const apiKey = process.env.OPENAI_API_KEY || dbOpenaiKey || process.env.GEMINI_API_KEY || dbGeminiKey;
 
       if (!apiKey) {
         return `Obrigado pela mensagem! No momento estou operando em modo demonstrativo. Como posso te ajudar?`;
       }
 
       try {
-        if (aiConfig.llm_provider === 'gemini' || process.env.GEMINI_API_KEY) {
-          const geminiKey = process.env.GEMINI_API_KEY || apiKey;
+        if (aiConfig.llm_provider === 'gemini' || (!aiConfig.llm_provider && (process.env.GEMINI_API_KEY || dbGeminiKey))) {
+          const geminiKey = process.env.GEMINI_API_KEY || dbGeminiKey || apiKey;
           const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -120,7 +134,7 @@ export const processAiAgent = inngest.createFunction(
           return geminiData.candidates?.[0]?.content?.parts?.[0]?.text || 'Desculpe, não consegui processar a resposta no momento.';
         } else {
           // OpenAI Call
-          const openaiKey = process.env.OPENAI_API_KEY || apiKey;
+          const openaiKey = process.env.OPENAI_API_KEY || dbOpenaiKey || apiKey;
           const res = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
