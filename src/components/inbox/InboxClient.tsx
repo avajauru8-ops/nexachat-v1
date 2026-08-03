@@ -11,6 +11,7 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const activeChatIdRef = useRef<string | null>(null);
   const conversationsRef = useRef<Record<string, unknown>[]>([]);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const [messages, setMessages] = useState<Record<string, unknown>[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
@@ -26,6 +27,13 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
   useEffect(() => {
     activeChatIdRef.current = activeChatId;
   }, [activeChatId]);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
 
   // Update "now" every minute for time calculations
   useEffect(() => {
@@ -538,7 +546,7 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
                           {msg.message_type === 'audio' && Boolean(msg.media_url) && (
                             <audio src={msg.media_url as string} controls className="max-w-[250px] mb-2" />
                           )}
-                          {msg.message_type === 'share' && Boolean(msg.media_url) && (
+                          {(msg.message_type === 'share' || (msg.message_type === 'text' && Boolean(msg.media_url))) && (
                             <a href={msg.media_url as string} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-3 bg-white border border-gray-200 rounded-lg mb-2 hover:bg-gray-50 transition-colors">
                                 <span className="text-blue-600 font-semibold underline text-sm break-all">🔗 Ver link compartilhado</span>
                             </a>
@@ -550,7 +558,7 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
                             </a>
                           )}
                           {Boolean(msg.content) && <p className="break-words whitespace-pre-wrap">{msg.content as string}</p>}
-                          {!msg.content && !['image', 'video', 'audio', 'share', 'story_mention'].includes(msg.message_type as string) && (
+                          {!msg.content && !msg.media_url && !['image', 'video', 'audio', 'share', 'story_mention'].includes(msg.message_type as string) && (
                             <span className="text-gray-400 italic">Mensagem vazia ou tipo não suportado ({msg.message_type as string})</span>
                           )}
                         </div>
@@ -567,6 +575,8 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
                      <div className="h-px bg-gray-300 w-12"></div>
                    </div>
                 )}
+                
+                <div ref={messagesEndRef} />
               </div>
             </div>
 
