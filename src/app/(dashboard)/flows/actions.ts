@@ -47,14 +47,13 @@ export async function saveFlow(
           name: name,
           flow_data: flowData,
           triggers: triggers,
+          trigger_type: ((triggers as Record<string, any>)?.triggerType === 'keyword' ? 'dm_keyword' : (triggers as Record<string, any>)?.triggerType) || 'dm_keyword',
           status: status
         })
         .select('id')
         .single()
         
       if (error) return { success: false, error: error.message || 'Erro ao criar fluxo no banco de dados' }
-
-      // Removed flow_versions insertion as table does not exist
 
       return { success: true, id: data.id }
     } else {
@@ -64,6 +63,7 @@ export async function saveFlow(
           name: name,
           flow_data: flowData,
           triggers: triggers,
+          trigger_type: ((triggers as Record<string, any>)?.triggerType === 'keyword' ? 'dm_keyword' : (triggers as Record<string, any>)?.triggerType) || 'dm_keyword',
           status: status,
           instagram_account_id: targetAccountId,
           updated_at: new Date().toISOString()
