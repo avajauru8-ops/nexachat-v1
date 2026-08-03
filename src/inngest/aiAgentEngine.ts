@@ -94,13 +94,13 @@ export const processAiAgent = inngest.createFunction(
 
     // 5. Chamada ao Provedor de LLM (OpenAI ou Gemini)
     const aiResponseText = await step.run('generate-llm-response', async () => {
-      // Fetch keys from admin_settings
-      const { data: adminSettings } = await supabase
-        .from('admin_settings')
+      // Fetch keys from system_settings
+      const { data: systemSettings } = await supabase
+        .from('system_settings')
         .select('key, value')
         .in('key', ['GEMINI_API_KEY', 'OPENAI_API_KEY']);
         
-      const settingsMap = (adminSettings || []).reduce((acc: any, curr: any) => {
+      const settingsMap = (systemSettings || []).reduce((acc: any, curr: any) => {
         acc[curr.key] = curr.value;
         return acc;
       }, {});
@@ -117,7 +117,7 @@ export const processAiAgent = inngest.createFunction(
       try {
         if (aiConfig.llm_provider === 'gemini' || (!aiConfig.llm_provider && (process.env.GEMINI_API_KEY || dbGeminiKey))) {
           const geminiKey = process.env.GEMINI_API_KEY || dbGeminiKey || apiKey;
-          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${geminiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
