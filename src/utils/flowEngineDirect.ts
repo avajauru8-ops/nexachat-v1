@@ -15,7 +15,7 @@ export async function executeFlowDirect(data: {
   nodeId: string | null;
   commentId?: string;
 }) {
-  const { workspaceId, contactId, conversationId, flowId, nodeId, commentId } = data;
+  const { workspaceId, contactId, conversationId, flowId, nodeId, commentId, senderId } = data;
 
   let currentNodeId: string | null = nodeId;
   let iteration = 0;
