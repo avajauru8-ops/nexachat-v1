@@ -547,9 +547,21 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
                             <audio src={msg.media_url as string} controls className="max-w-[250px] mb-2" />
                           )}
                           {(msg.message_type === 'share' || (msg.message_type === 'text' && Boolean(msg.media_url))) && (
-                            <a href={msg.media_url as string} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-3 bg-white border border-gray-200 rounded-lg mb-2 hover:bg-gray-50 transition-colors">
-                                <span className="text-blue-600 font-semibold underline text-sm break-all">🔗 Ver link compartilhado</span>
-                            </a>
+                            <div className="mb-2">
+                              {((msg.media_url as string) || '').includes('instagram.com/p/') || ((msg.media_url as string) || '').includes('instagram.com/reel/') ? (
+                                <iframe 
+                                  src={`${((msg.media_url as string).split('?')[0].replace(/\/$/, ''))}/embed`}
+                                  className="w-[280px] h-[480px] rounded-lg bg-white border border-gray-200"
+                                  frameBorder="0"
+                                  scrolling="no"
+                                  allow="encrypted-media"
+                                ></iframe>
+                              ) : (
+                                <a href={msg.media_url as string} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                                    <span className="text-blue-600 font-semibold underline text-sm break-all">🔗 Ver link compartilhado</span>
+                                </a>
+                              )}
+                            </div>
                           )}
                           {msg.message_type === 'story_mention' && Boolean(msg.media_url) && (
                             <a href={msg.media_url as string} target="_blank" rel="noopener noreferrer" className="flex flex-col gap-1 p-3 bg-white border border-gray-200 rounded-lg mb-2 hover:bg-gray-50 transition-colors">
