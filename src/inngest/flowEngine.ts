@@ -12,7 +12,7 @@ export const executeFlow = inngest.createFunction(
   async ({ event, step }: { event: any; step: any }) => {
     const { 
       workspaceId, contactId, conversationId, 
-      recipientId, senderId, flowId, nodeId, commentId 
+      flowId, nodeId, commentId 
     } = event.data;
 
     let currentNodeId: string | null = nodeId;
@@ -26,10 +26,10 @@ export const executeFlow = inngest.createFunction(
         .eq('id', flowId)
         .maybeSingle();
       
-      if (data && (data as any).execution_count !== undefined) {
+      if (data && 'execution_count' in data) {
         await supabase
           .from('flows')
-          .update({ execution_count: ((data as any).execution_count || 0) + 1 })
+          .update({ execution_count: ((data as Record<string, unknown>).execution_count as number || 0) + 1 })
           .eq('id', flowId);
       }
       
@@ -43,7 +43,7 @@ export const executeFlow = inngest.createFunction(
     const edges = graphData.edges || [];
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let pageAccessToken = (flow.instagram_accounts as any)?.access_token;
+    let pageAccessToken = (flow.instagram_accounts as Record<string, unknown>)?.access_token as string | undefined;
 
     if (!pageAccessToken) {
       const { data: account } = await supabase
@@ -59,7 +59,7 @@ export const executeFlow = inngest.createFunction(
     if (!pageAccessToken) return { message: 'Access Token do Instagram não encontrado' };
 
     if (!currentNodeId && nodes.length > 0) {
-      const startNode = nodes.find((n: any) => n.type === 'triggerNode' || n.type === 'start');
+      const startNode = nodes.find((n: { type: string, id: string }) => n.type === 'triggerNode' || n.type === 'start');
       currentNodeId = startNode ? startNode.id : nodes[0].id;
     }
 
@@ -67,7 +67,7 @@ export const executeFlow = inngest.createFunction(
     while (currentNodeId && iteration < 50) {
       const loopNodeId = currentNodeId;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const node = nodes.find((n: any) => n.id === loopNodeId);
+      const node = nodes.find((n: { id: string, type: string, data?: Record<string, unknown> }) => n.id === loopNodeId);
 
       if (!node) break;
 
@@ -110,8 +110,8 @@ export const executeFlow = inngest.createFunction(
                 messageType,
                 commentId: iteration === 0 ? commentId : undefined
               });
-            } catch (err: any) {
-              console.error('[Flow Engine] Erro ao chamar serviço interno de envio:', err.message || err);
+            } catch (err: unknown) {
+              console.error('[Flow Engine] Erro ao chamar serviço interno de envio:', err instanceof Error ? err.message : String(err));
             }
           });
         } else {
@@ -138,8 +138,8 @@ export const executeFlow = inngest.createFunction(
               if (result.error) {
                  console.error('[Flow Engine] Erro retornado pela Meta ao responder comentário:', result.error);
               }
-            } catch (err: any) {
-              console.error('[Flow Engine] Erro ao enviar resposta pública ao comentário:', err.message || err);
+            } catch (err: unknown) {
+              console.error('[Flow Engine] Erro ao enviar resposta pública ao comentário:', err instanceof Error ? err.message : String(err));
             }
           } else {
             console.warn(`[Flow Engine] Resposta ao comentário ignorada (commentId ou publicReply ausente)`);

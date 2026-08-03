@@ -15,7 +15,7 @@ export async function executeFlowDirect(data: {
   nodeId: string | null;
   commentId?: string;
 }) {
-  const { workspaceId, contactId, conversationId, recipientId, senderId, flowId, nodeId, commentId } = data;
+  const { workspaceId, contactId, conversationId, flowId, nodeId, commentId } = data;
 
   let currentNodeId: string | null = nodeId;
   let iteration = 0;
@@ -27,10 +27,10 @@ export async function executeFlowDirect(data: {
     .eq('id', flowId)
     .maybeSingle();
   
-  if (flow && (flow as any).execution_count !== undefined) {
+  if (flow && 'execution_count' in flow) {
     await supabase
       .from('flows')
-      .update({ execution_count: ((flow as any).execution_count || 0) + 1 })
+      .update({ execution_count: ((flow as Record<string, unknown>).execution_count as number || 0) + 1 })
       .eq('id', flowId);
   }
 
@@ -40,7 +40,7 @@ export async function executeFlowDirect(data: {
   const nodes = graphData.nodes || [];
   const edges = graphData.edges || [];
 
-  let pageAccessToken = (flow.instagram_accounts as any)?.access_token;
+  let pageAccessToken = (flow.instagram_accounts as Record<string, unknown>)?.access_token as string | undefined;
 
   if (!pageAccessToken) {
     const { data: account } = await supabase
@@ -56,14 +56,14 @@ export async function executeFlowDirect(data: {
   if (!pageAccessToken) return { message: 'Access Token do Instagram não encontrado' };
 
   if (!currentNodeId && nodes.length > 0) {
-    const startNode = nodes.find((n: any) => n.type === 'triggerNode' || n.type === 'start');
+    const startNode = nodes.find((n: { type: string, id: string }) => n.type === 'triggerNode' || n.type === 'start');
     currentNodeId = startNode ? startNode.id : nodes[0].id;
   }
 
   // Loop de Travessia do Grafo de Nós do React Flow (Limitação p/ Direct Engine)
   while (currentNodeId && iteration < 10) {
     const loopNodeId = currentNodeId;
-    const node = nodes.find((n: any) => n.id === loopNodeId);
+    const node = nodes.find((n: { id: string, type: string, data?: Record<string, unknown> }) => n.id === loopNodeId);
 
     if (!node) break;
 
@@ -77,7 +77,7 @@ export async function executeFlowDirect(data: {
       })
       .eq('id', conversationId);
 
-    let nextEdgeSourceHandle: string | null = null;
+    const nextEdgeSourceHandle: string | null = null;
 
     if (node.type === 'messageNode' || node.type === 'send_message' || node.type === 'quick_reply') {
       const guardResult = await canSendMessage(conversationId, supabase);
@@ -97,8 +97,8 @@ export async function executeFlowDirect(data: {
             messageType,
             commentId: iteration === 0 ? commentId : undefined
           });
-        } catch (err: any) {
-          console.error('[Flow Engine Direct] Erro ao enviar mensagem:', err.message || err);
+        } catch (err: unknown) {
+          console.error('[Flow Engine Direct] Erro ao enviar mensagem:', err instanceof Error ? err.message : String(err));
         }
       } else {
         console.warn(`[Flow Engine Direct] Envio de nó cancelado: ${guardResult.reason}`);
@@ -121,8 +121,8 @@ export async function executeFlowDirect(data: {
           if (result.error) {
             console.error('[Flow Engine Direct] Erro retornado pela Meta ao responder comentário:', result.error);
           }
-        } catch (err: any) {
-          console.error('[Flow Engine Direct] Erro ao enviar resposta pública ao comentário:', err.message || err);
+        } catch (err: unknown) {
+          console.error('[Flow Engine Direct] Erro ao enviar resposta pública ao comentário:', err instanceof Error ? err.message : String(err));
         }
       }
     }
@@ -183,11 +183,11 @@ export async function executeFlowDirect(data: {
       break;
     }
 
-    let outgoingEdge: any;
+    let outgoingEdge: { target: string } | undefined;
     if (nextEdgeSourceHandle) {
-      outgoingEdge = edges.find((e: any) => e.source === loopNodeId && e.sourceHandle === nextEdgeSourceHandle);
+      outgoingEdge = edges.find((e: { source: string, sourceHandle: string, target: string }) => e.source === loopNodeId && e.sourceHandle === nextEdgeSourceHandle);
     } else {
-      outgoingEdge = edges.find((e: any) => e.source === loopNodeId);
+      outgoingEdge = edges.find((e: { source: string, target: string }) => e.source === loopNodeId);
     }
 
     if (outgoingEdge) {
