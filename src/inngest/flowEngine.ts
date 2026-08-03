@@ -124,9 +124,9 @@ export const executeFlow = inngest.createFunction(
         await step.run(`node-${loopNodeId}-${iteration}-comment-reply`, async () => {
           const publicReply = node.data?.publicReply as string | undefined;
           if (publicReply && commentId && pageAccessToken) {
-            const url = `https://graph.instagram.com/v22.0/${commentId}/replies`;
+            const url = `https://graph.facebook.com/v22.0/${commentId}/replies`;
             try {
-              await fetch(url, {
+              const response = await fetch(url, {
                 method: 'POST',
                 headers: {
                   'Authorization': `Bearer ${pageAccessToken}`,
@@ -134,6 +134,10 @@ export const executeFlow = inngest.createFunction(
                 },
                 body: JSON.stringify({ message: publicReply })
               });
+              const result = await response.json();
+              if (result.error) {
+                 console.error('[Flow Engine] Erro retornado pela Meta ao responder comentário:', result.error);
+              }
             } catch (err: any) {
               console.error('[Flow Engine] Erro ao enviar resposta pública ao comentário:', err.message || err);
             }
