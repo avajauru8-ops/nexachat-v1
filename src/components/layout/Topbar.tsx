@@ -1,7 +1,8 @@
 'use client';
 
-import { Bell, Search, CheckCheck, Info, AlertTriangle, CheckCircle2, ShieldAlert, X } from 'lucide-react';
+import { Bell, Search, CheckCheck, Info, AlertTriangle, CheckCircle2, ShieldAlert, X, Menu } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
+import { useSidebar } from '@/contexts/SidebarContext';
 
 interface NotificationItem {
   id: string;
@@ -13,6 +14,7 @@ interface NotificationItem {
 }
 
 export function Topbar() {
+  const { toggle } = useSidebar();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const [isOpen, setIsOpen] = useState(false);
@@ -119,17 +121,25 @@ export function Topbar() {
   };
 
   return (
-    <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 sticky top-0 z-40 w-full">
-      <div className="flex items-center text-gray-500 bg-gray-100 rounded-lg px-3 py-2 w-96">
-        <Search className="w-5 h-5 mr-2" />
-        <input 
-          type="text" 
-          placeholder="Buscar leads, fluxos..." 
-          className="bg-transparent border-none outline-none text-sm w-full placeholder-gray-500 text-gray-800"
-        />
+    <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 md:px-6 sticky top-0 z-40 w-full">
+      <div className="flex items-center gap-3 w-full md:w-auto">
+        <button 
+          onClick={toggle}
+          className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg md:hidden"
+        >
+          <Menu className="w-6 h-6" />
+        </button>
+        <div className="flex items-center text-gray-500 bg-gray-100 rounded-lg px-3 py-2 w-full md:w-96">
+          <Search className="w-5 h-5 mr-2 shrink-0" />
+          <input 
+            type="text" 
+            placeholder="Buscar leads, fluxos..." 
+            className="bg-transparent border-none outline-none text-sm w-full placeholder-gray-500 text-gray-800"
+          />
+        </div>
       </div>
       
-      <div className="flex items-center gap-4 relative" ref={dropdownRef}>
+      <div className="flex items-center gap-4 relative shrink-0" ref={dropdownRef}>
         <button 
           onClick={() => setIsOpen(!isOpen)}
           className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors focus:outline-none"

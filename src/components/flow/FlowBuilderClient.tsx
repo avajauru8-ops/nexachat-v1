@@ -28,7 +28,7 @@ import { CrmNode } from '@/components/flow/nodes/CrmNode';
 import { saveFlow } from '@/app/(dashboard)/flows/actions';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
-import { ArrowLeft, Save, Play, Download, Upload, Sparkles, UserCheck, Globe, Clock, Filter, MessageSquare, Tag, StickyNote } from 'lucide-react';
+import { ArrowLeft, Save, Play, Download, Upload, Sparkles, UserCheck, Globe, Clock, Filter, MessageSquare, Tag, StickyNote, Plus } from 'lucide-react';
 
 import { NoteNode } from '@/components/flow/nodes/NoteNode';
 
@@ -79,6 +79,7 @@ export function FlowBuilderClient({
   const [accountId, setAccountId] = useState<string>(initialAccountId || ((instagramAccounts[0]?.id as string) || ''));
   const [isPending, startTransition] = useTransition();
   const [activeTab, setActiveTab] = useState<'visualizacao' | 'insights'>('visualizacao');
+  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
 
   const onConnect = useCallback(
     (params: Connection | Edge) => setEdges((eds) => addEdge(params, eds)),
@@ -276,16 +277,34 @@ export function FlowBuilderClient({
       {activeTab === 'visualizacao' ? (
         <div className="flex-1 flex overflow-hidden relative">
           
+          {/* Floating Button Mobile */}
+          <button 
+            onClick={() => setIsPaletteOpen(!isPaletteOpen)} 
+            className="md:hidden fixed bottom-6 right-6 p-4 bg-[#0064e0] text-white rounded-full shadow-lg z-50 flex items-center justify-center"
+          >
+            <Plus className="w-6 h-6" />
+          </button>
+
+          {/* Overlay Mobile */}
+          {isPaletteOpen && (
+            <div 
+              className="fixed inset-0 bg-black/40 z-40 md:hidden"
+              onClick={() => setIsPaletteOpen(false)}
+            />
+          )}
+
           {/* Sidebar Lateral de Blocos */}
-          <div className="w-72 bg-white border-r border-gray-200 p-5 flex flex-col gap-4 shadow-sm z-10 overflow-y-auto">
-            <div>
-              <h2 className="font-bold text-gray-900 text-sm">Paleta de Blocos</h2>
-              <p className="text-xs text-gray-500 mt-0.5">Clique em um bloco para adicioná-lo ao fluxo visual.</p>
+          <div className={`absolute md:relative z-50 md:z-10 w-72 h-full bg-white border-r border-gray-200 p-5 flex flex-col gap-4 shadow-xl md:shadow-sm overflow-y-auto transition-transform duration-300 ease-in-out ${isPaletteOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+            <div className="flex justify-between items-center md:block">
+              <div>
+                <h2 className="font-bold text-gray-900 text-sm">Paleta de Blocos</h2>
+                <p className="text-xs text-gray-500 mt-0.5 md:block hidden">Clique em um bloco para adicioná-lo ao fluxo visual.</p>
+              </div>
             </div>
 
             <div className="space-y-2">
               <button 
-                onClick={() => addNode('triggerNode')}
+                onClick={() => { addNode('triggerNode'); setIsPaletteOpen(false); }}
                 className="w-full text-left px-3.5 py-2.5 bg-indigo-50 text-indigo-800 rounded-lg border border-indigo-200 hover:bg-indigo-100 transition-colors font-semibold text-xs flex items-center gap-2 shadow-xs"
               >
                 <div className="w-2.5 h-2.5 rounded-full bg-indigo-600"></div>
@@ -293,7 +312,7 @@ export function FlowBuilderClient({
               </button>
 
               <button 
-                onClick={() => addNode('messageNode')}
+                onClick={() => { addNode('messageNode'); setIsPaletteOpen(false); }}
                 className="w-full text-left px-3.5 py-2.5 bg-emerald-50 text-emerald-800 rounded-lg border border-emerald-200 hover:bg-emerald-100 transition-colors font-semibold text-xs flex items-center gap-2 shadow-xs"
               >
                 <MessageSquare className="w-4 h-4 text-emerald-600" />
@@ -301,7 +320,7 @@ export function FlowBuilderClient({
               </button>
 
               <button 
-                onClick={() => addNode('delayNode')}
+                onClick={() => { addNode('delayNode'); setIsPaletteOpen(false); }}
                 className="w-full text-left px-3.5 py-2.5 bg-amber-50 text-amber-800 rounded-lg border border-amber-200 hover:bg-amber-100 transition-colors font-semibold text-xs flex items-center gap-2 shadow-xs"
               >
                 <Clock className="w-4 h-4 text-amber-600" />
@@ -309,7 +328,7 @@ export function FlowBuilderClient({
               </button>
 
               <button 
-                onClick={() => addNode('actionNode')}
+                onClick={() => { addNode('actionNode'); setIsPaletteOpen(false); }}
                 className="w-full text-left px-3.5 py-2.5 bg-rose-50 text-rose-800 rounded-lg border border-rose-200 hover:bg-rose-100 transition-colors font-semibold text-xs flex items-center gap-2 shadow-xs"
               >
                 <Tag className="w-4 h-4 text-rose-600" />
@@ -317,7 +336,7 @@ export function FlowBuilderClient({
               </button>
 
               <button 
-                onClick={() => addNode('conditionNode')}
+                onClick={() => { addNode('conditionNode'); setIsPaletteOpen(false); }}
                 className="w-full text-left px-3.5 py-2.5 bg-purple-50 text-purple-800 rounded-lg border border-purple-200 hover:bg-purple-100 transition-colors font-semibold text-xs flex items-center gap-2 shadow-xs"
               >
                 <Filter className="w-4 h-4 text-purple-600" />
@@ -325,7 +344,7 @@ export function FlowBuilderClient({
               </button>
 
               <button 
-                onClick={() => addNode('aiHandoffNode')}
+                onClick={() => { addNode('aiHandoffNode'); setIsPaletteOpen(false); }}
                 className="w-full text-left px-3.5 py-2.5 bg-purple-50 text-purple-900 rounded-lg border border-purple-300 hover:bg-purple-100 transition-colors font-semibold text-xs flex items-center gap-2 shadow-xs"
               >
                 <Sparkles className="w-4 h-4 text-purple-700" />
@@ -333,7 +352,7 @@ export function FlowBuilderClient({
               </button>
 
               <button 
-                onClick={() => addNode('humanHandoffNode')}
+                onClick={() => { addNode('humanHandoffNode'); setIsPaletteOpen(false); }}
                 className="w-full text-left px-3.5 py-2.5 bg-yellow-50 text-yellow-900 rounded-lg border border-yellow-300 hover:bg-yellow-100 transition-colors font-semibold text-xs flex items-center gap-2 shadow-xs"
               >
                 <UserCheck className="w-4 h-4 text-yellow-700" />
@@ -341,7 +360,7 @@ export function FlowBuilderClient({
               </button>
 
               <button 
-                onClick={() => addNode('crmNode')}
+                onClick={() => { addNode('crmNode'); setIsPaletteOpen(false); }}
                 className="w-full text-left px-3.5 py-2.5 bg-blue-50 text-blue-900 rounded-lg border border-blue-300 hover:bg-blue-100 transition-colors font-semibold text-xs flex items-center gap-2 shadow-xs"
               >
                 <Globe className="w-4 h-4 text-blue-700" />

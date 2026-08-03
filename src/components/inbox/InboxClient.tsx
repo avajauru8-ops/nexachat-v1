@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { MessageCircle, Paperclip, Smile, Mic, Image as ImageIcon, Clock, MoreHorizontal, Check, RefreshCw, Bot, Trash2, ChevronDown, Filter, Square, Tag, Workflow, Star } from 'lucide-react';
+import { ArrowLeft, Send, Search, Settings, Filter, MoreVertical, Paperclip, Smile, Image as ImageIcon, Video, Mic, CheckCheck, Clock, ChevronDown, Check, MoreHorizontal, MessageCircle, Square, Tag, Trash2, X, RefreshCw, Bot, Workflow, Star } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { toast } from 'react-hot-toast';
 
@@ -357,7 +357,7 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
       </div>
 
       {/* Coluna 2: Lista de Conversas */}
-      <div className="w-[360px] border-r border-[#e5e7eb] flex flex-col bg-white shrink-0 relative">
+      <div className={`${activeChatId ? 'hidden md:flex' : 'flex'} w-full md:w-[360px] border-r border-[#e5e7eb] flex-col bg-white shrink-0 relative`}>
         <div className="flex flex-col border-b border-[#e5e7eb]">
           <div className="flex items-center gap-2 px-3 py-2 border-b border-[#e5e7eb]">
             <Square className="w-4 h-4 text-gray-400" />
@@ -433,12 +433,18 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
       </div>
 
       {/* Coluna 3: Painel Central de Chat */}
-      <div className="flex-1 flex flex-col bg-white relative min-w-0 border-l border-gray-200">
+      <div className={`${!activeChatId ? 'hidden md:flex' : 'flex'} flex-1 flex-col bg-white relative min-w-0 md:border-l border-gray-200`}>
         {activeChat ? (
           <>
             {/* Chat Header */}
-            <div className="h-[72px] border-b border-[#e5e7eb] flex items-center justify-between px-6 bg-white shrink-0">
+            <div className="h-[72px] border-b border-[#e5e7eb] flex items-center justify-between px-4 md:px-6 bg-white shrink-0">
               <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => setActiveChatId(null)}
+                  className="p-1 -ml-2 text-gray-500 hover:bg-gray-100 rounded-full md:hidden"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
                 {(activeChat.contacts as Record<string, unknown>)?.profile_picture ? (
                   <img src={(activeChat.contacts as Record<string, unknown>).profile_picture as string} alt="Contact" className="w-10 h-10 rounded-full object-cover" />
                 ) : (

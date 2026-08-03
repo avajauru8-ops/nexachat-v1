@@ -167,7 +167,7 @@ export function FlowsListClient({ initialFlows }: Props) {
       </div>
 
       {/* Conteúdo Principal */}
-      <div className="flex-1 flex flex-col overflow-y-auto bg-white p-8">
+      <div className="flex-1 flex flex-col overflow-y-auto bg-white p-4 md:p-8">
         
         {/* Header Superior */}
         <div className="flex items-center justify-between mb-6">
@@ -220,8 +220,8 @@ export function FlowsListClient({ initialFlows }: Props) {
         </div>
 
         {/* Tabela de Fluxos */}
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-          <table className="w-full text-left border-collapse">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto shadow-sm">
+          <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="bg-[#f9fafb] border-b border-gray-200 text-gray-500 text-xs font-semibold uppercase tracking-wider">
                 <th className="pl-4 pr-2 py-3 w-10">

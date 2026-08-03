@@ -80,7 +80,7 @@ export async function Sidebar() {
   }
 
   return (
-    <aside className="w-[240px] h-screen bg-[#f8f9fa] border-r border-gray-200 flex flex-col fixed left-0 top-0 z-30">
+    <aside className="w-[256px] md:w-[240px] h-screen bg-[#f8f9fa] border-r border-gray-200 flex flex-col relative">
       
       {/* Top Logo */}
       <div className="h-16 flex items-center px-5 flex-shrink-0">
