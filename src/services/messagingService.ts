@@ -9,12 +9,14 @@ export async function sendMessageToMeta({
   conversationId,
   content,
   mediaUrl,
-  messageType
+  messageType,
+  commentId
 }: {
   conversationId: string;
   content: string | null;
   mediaUrl: string | null;
   messageType: string;
+  commentId?: string;
 }) {
   // 1. Buscar a conversation e os IDs necessários
   const { data: conversation, error: convError } = await supabaseAdmin
@@ -55,7 +57,7 @@ export async function sendMessageToMeta({
   const metaUrl = `https://graph.instagram.com/v22.0/me/messages`;
   
   const metaBody: any = {
-    recipient: { id: igScopedId }
+    recipient: commentId ? { comment_id: commentId } : { id: igScopedId }
   };
 
   if (mediaUrl) {

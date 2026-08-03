@@ -24,7 +24,7 @@ function matchActiveFlow(
       
       // Checagem de mídia específica (para comentários)
       if (triggerType === 'comment_keyword' && mediaId) {
-        const specificMediaId = (flow.trigger_config as Record<string, unknown>)?.specificMediaId as string | undefined;
+        const specificMediaId = ((flow.triggers as Record<string, unknown>)?.specificMediaId as string | undefined) || ((flow.trigger_config as Record<string, unknown>)?.specificMediaId as string | undefined);
         if (specificMediaId && specificMediaId !== 'all' && specificMediaId !== mediaId) {
           continue; // Ignora este fluxo, pois o comentário foi em um post diferente
         }
@@ -419,6 +419,27 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
           const matchedFlowId = matchActiveFlow(activeFlows || [], 'comment_keyword', commentText, mediaId);
 
           if (matchedFlowId) {
+            const matchedFlow = activeFlows?.find(f => f.id === matchedFlowId);
+            const publicReply = (matchedFlow?.triggers as Record<string, unknown>)?.publicReply as string | undefined;
+            const commentId = change.value.id;
+
+            // Envia resposta pública (se houver)
+            if (publicReply && commentId && account.access_token) {
+              const url = `https://graph.instagram.com/v22.0/${commentId}/replies`;
+              try {
+                await fetch(url, {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${account.access_token}`,
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({ message: publicReply })
+                });
+              } catch (e) {
+                console.error("[Processamento Sync] Falha ao enviar resposta pública ao comentário:", e);
+              }
+            }
+
             const { contact, conversation } = await getOrCreateContactAndConversation(activeWorkspaceId, account, senderId);
             if (!contact || !conversation) continue;
 
@@ -441,7 +462,8 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
                     recipientId: recipientId,
                     senderId: senderId,
                     flowId: matchedFlowId,
-                    nodeId: null
+                    nodeId: null,
+                    commentId: commentId
                   }
                 });
               } else {
@@ -458,7 +480,8 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
                   recipientId: recipientId,
                   senderId: senderId,
                   flowId: matchedFlowId,
-                  nodeId: null
+                  nodeId: null,
+                  commentId: commentId
                 });
               } catch (e) {
                 console.error("[Flow Engine Direct] Erro no fallback de comentário:", e);

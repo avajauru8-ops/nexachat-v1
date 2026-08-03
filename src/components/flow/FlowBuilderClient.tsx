@@ -111,12 +111,14 @@ export function FlowBuilderClient({
     startTransition(async () => {
       try {
         const triggerNode = nodes.find((n) => n.type === 'triggerNode' || n.type === 'trigger');
-        let triggers = { triggerType: 'keyword', keyword: '' };
+        let triggers: Record<string, any> = { triggerType: 'keyword', keyword: '' };
         
         if (triggerNode && triggerNode.data) {
           triggers = {
             triggerType: (triggerNode.data.triggerType as string) || 'keyword',
-            keyword: (triggerNode.data.keyword as string) || ''
+            keyword: (triggerNode.data.keyword as string) || '',
+            publicReply: triggerNode.data.publicReply as string || undefined,
+            specificMediaId: triggerNode.data.specificMediaId as string || undefined
           };
         }
 

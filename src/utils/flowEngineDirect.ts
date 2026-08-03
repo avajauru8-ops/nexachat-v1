@@ -13,8 +13,9 @@ export async function executeFlowDirect(data: {
   senderId: string;
   flowId: string;
   nodeId: string | null;
+  commentId?: string;
 }) {
-  const { workspaceId, contactId, conversationId, recipientId, senderId, flowId, nodeId } = data;
+  const { workspaceId, contactId, conversationId, recipientId, senderId, flowId, nodeId, commentId } = data;
 
   let currentNodeId: string | null = nodeId;
   let iteration = 0;
@@ -93,7 +94,8 @@ export async function executeFlowDirect(data: {
             conversationId,
             content: messageType === 'text' ? responseText : null,
             mediaUrl: mediaUrl || null,
-            messageType
+            messageType,
+            commentId: iteration === 0 ? commentId : undefined
           });
         } catch (err: any) {
           console.error('[Flow Engine Direct] Erro ao enviar mensagem:', err.message || err);

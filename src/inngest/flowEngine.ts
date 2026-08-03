@@ -12,7 +12,7 @@ export const executeFlow = inngest.createFunction(
   async ({ event, step }: { event: any; step: any }) => {
     const { 
       workspaceId, contactId, conversationId, 
-      recipientId, senderId, flowId, nodeId 
+      recipientId, senderId, flowId, nodeId, commentId 
     } = event.data;
 
     let currentNodeId: string | null = nodeId;
@@ -107,7 +107,8 @@ export const executeFlow = inngest.createFunction(
                 conversationId,
                 content: messageType === 'text' ? responseText : null,
                 mediaUrl: mediaUrl || null,
-                messageType
+                messageType,
+                commentId: iteration === 0 ? commentId : undefined
               });
             } catch (err: any) {
               console.error('[Flow Engine] Erro ao chamar serviço interno de envio:', err.message || err);
