@@ -75,15 +75,16 @@ body {
 
 /* Instagram Gradient Background */
 .bg-instagram-gradient {
-  background: linear-gradient(45deg, #FCAF45 0%, #F56040 25%, #E1306C 50%, #C13584 75%, #833AB4 100%);
+  background-image: linear-gradient(45deg, #FCAF45 0%, #F56040 25%, #E1306C 50%, #C13584 75%, #833AB4 100%);
 }
 
 /* Instagram Text Gradient */
 .text-instagram {
-  background: linear-gradient(45deg, #FCAF45 0%, #F56040 25%, #E1306C 50%, #C13584 75%, #833AB4 100%);
+  background-image: linear-gradient(45deg, #FCAF45 0%, #F56040 25%, #E1306C 50%, #C13584 75%, #833AB4 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  color: transparent;
 }
 
 /* Subtle Modern Dashboard Background */
