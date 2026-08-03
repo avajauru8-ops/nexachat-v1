@@ -42,8 +42,9 @@ export const executeFlow = inngest.createFunction(
     const nodes = graphData.nodes || [];
     const edges = graphData.edges || [];
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let pageAccessToken = (flow.instagram_accounts as Record<string, unknown>)?.access_token as string | undefined;
+    let pageAccessToken = Array.isArray(flow.instagram_accounts) 
+      ? (flow.instagram_accounts[0] as Record<string, unknown>)?.access_token as string | undefined
+      : (flow.instagram_accounts as unknown as Record<string, unknown>)?.access_token as string | undefined;
 
     if (!pageAccessToken) {
       const { data: account } = await supabase
@@ -66,7 +67,6 @@ export const executeFlow = inngest.createFunction(
     // Loop de Travessia do Grafo de Nós do React Flow
     while (currentNodeId && iteration < 50) {
       const loopNodeId = currentNodeId;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const node = nodes.find((n: { id: string, type: string, data?: Record<string, unknown> }) => n.id === loopNodeId);
 
       if (!node) break;

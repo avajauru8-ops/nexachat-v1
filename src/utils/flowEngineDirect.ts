@@ -40,7 +40,9 @@ export async function executeFlowDirect(data: {
   const nodes = graphData.nodes || [];
   const edges = graphData.edges || [];
 
-  let pageAccessToken = (flow.instagram_accounts as Record<string, unknown>)?.access_token as string | undefined;
+  let pageAccessToken = Array.isArray(flow.instagram_accounts) 
+    ? (flow.instagram_accounts[0] as Record<string, unknown>)?.access_token as string | undefined
+    : (flow.instagram_accounts as unknown as Record<string, unknown>)?.access_token as string | undefined;
 
   if (!pageAccessToken) {
     const { data: account } = await supabase
