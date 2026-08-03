@@ -490,9 +490,9 @@ export function SettingsClient({ initialUser, initialWorkspace }: Props) {
                         onChange={(e) => setTimezone(e.target.value)}
                         className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-xs font-medium text-gray-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all cursor-pointer"
                       >
-                        <option value="America/Sao_Paulo">(GMT-03:00) Brasília</option>
-                        <option value="America/Manaus">(GMT-04:00) Manaus</option>
-                        <option value="Europe/Lisbon">(GMT-00:00) Lisboa</option>
+                        {Intl.supportedValuesOf('timeZone').map(tz => (
+                          <option key={tz} value={tz}>{tz.replace(/_/g, ' ')}</option>
+                        ))}
                       </select>
                     </div>
                   </div>

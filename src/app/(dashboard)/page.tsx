@@ -173,7 +173,7 @@ export default async function DashboardPage() {
                       </div>
                       <div className="flex items-center gap-1">
                         <Play className="w-3 h-3" />
-                        {new Date(log.created_at).toLocaleString('pt-BR')}
+                        {new Date(log.created_at).toLocaleString('pt-BR', { timeZone: user?.user_metadata?.timezone || 'America/Sao_Paulo' })}
                       </div>
                     </div>
                   </div>
