@@ -43,7 +43,8 @@ export async function Sidebar() {
       const { count } = await supabase
         .from('conversations')
         .select('id', { count: 'exact', head: true })
-        .eq('workspace_id', workspace.id);
+        .eq('workspace_id', workspace.id)
+        .gt('unread_count', 0);
       
       unreadCount = count || 0;
 

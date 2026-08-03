@@ -388,11 +388,20 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
             return (
               <div 
                 key={chat.id as string}
-                onClick={() => {
+                onClick={async () => {
                   setActiveChatId(chat.id as string);
                   if (activeChatId !== chat.id) setMessages([]);
                   if (Number(chat.unread_count || 0) > 0) {
                     setConversations(prev => prev.map(c => c.id === chat.id ? { ...c, unread_count: 0 } : c));
+                    try {
+                      await fetch('/api/conversations/read', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ conversationId: chat.id })
+                      });
+                    } catch (e) {
+                      console.error('Failed to mark conversation as read', e);
+                    }
                   }
                 }}
                 className={`p-3 cursor-pointer border-b border-gray-100 flex gap-3 relative transition-colors ${activeChatId === chat.id ? 'bg-[#f4f6fa]' : 'hover:bg-gray-50'}`}
