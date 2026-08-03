@@ -280,18 +280,37 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
 
         // --- EXECUTAR AUTOMAÇÃO (IA OU FLUXO) ---
         if (conversation.status === 'ai') {
-          await inngest.send({
-            name: 'ai/process',
-            data: {
-              workspaceId: activeWorkspaceId,
-              conversationId: conversation.id,
-              contactId: contact.id,
-              senderId: senderId,
-              recipientId: recipientId,
-              userMessageText: messageText
+          try {
+            if (process.env.INNGEST_EVENT_KEY) {
+              await inngest.send({
+                name: 'ai/process',
+                data: {
+                  workspaceId: activeWorkspaceId,
+                  conversationId: conversation.id,
+                  contactId: contact.id,
+                  senderId: senderId,
+                  recipientId: recipientId,
+                  userMessageText: messageText
+                }
+              });
+              console.log(`[Processamento Sync] Disparado evento AI para a conversa: ${conversation.id}`);
+            } else {
+              throw new Error("INNGEST_EVENT_KEY ausente");
             }
-          });
-          console.log(`[Processamento Sync] Disparado evento AI para a conversa: ${conversation.id}`);
+          } catch (aiErr) {
+            console.warn(`[Processamento Sync] Fallback síncrono para AI devido a falha no Inngest: ${aiErr}`);
+            const { executeAiDirect } = await import('@/utils/aiEngineDirect');
+            try {
+              await executeAiDirect({
+                workspaceId: activeWorkspaceId,
+                conversationId: conversation.id,
+                senderId: senderId,
+                userMessageText: messageText
+              });
+            } catch (err) {
+              console.error(`[Processamento Sync] Erro no executeAiDirect:`, err);
+            }
+          }
         } else if (conversation.status === 'bot' || conversation.status === 'bot_active') {
           let flowId = conversation.active_flow_id;
           const nodeId = conversation.flow_cursor?.currentNodeId || null;

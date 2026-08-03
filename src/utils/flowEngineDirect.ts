@@ -182,6 +182,27 @@ export async function executeFlowDirect(data: {
         message_type: 'text',
         content: '🤖 Assistente virtual de Inteligência Artificial assumiu o atendimento.'
       });
+      
+      const { data: lastMsg } = await supabase
+        .from('messages')
+        .select('content')
+        .eq('conversation_id', conversationId)
+        .eq('sender_type', 'user')
+        .order('timestamp', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const { executeAiDirect } = await import('@/utils/aiEngineDirect');
+      try {
+        await executeAiDirect({
+          workspaceId,
+          conversationId,
+          senderId,
+          userMessageText: lastMsg?.content || ''
+        });
+      } catch (err) {
+        console.error(`[Flow Engine Direct] Erro no executeAiDirect:`, err);
+      }
       break;
     }
 

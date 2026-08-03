@@ -9,7 +9,7 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 export const processAiAgent = inngest.createFunction(
   { id: 'process-ai-agent-response', triggers: [{ event: 'ai/process' }] },
   async ({ event, step }) => {
-    const { workspaceId, conversationId, contactId, senderId, recipientId, userMessageText } = event.data;
+    const { workspaceId, conversationId, senderId, userMessageText } = event.data;
 
     // 1. Buscar configuração do Agente de IA para o workspace
     const aiConfig = await step.run('fetch-ai-config', async () => {
@@ -100,7 +100,7 @@ export const processAiAgent = inngest.createFunction(
         .select('key, value')
         .in('key', ['GEMINI_API_KEY', 'OPENAI_API_KEY']);
         
-      const settingsMap = (systemSettings || []).reduce((acc: any, curr: any) => {
+      const settingsMap = (systemSettings || []).reduce((acc: Record<string, string>, curr: { key: string, value: string }) => {
         acc[curr.key] = curr.value;
         return acc;
       }, {});
