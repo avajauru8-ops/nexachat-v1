@@ -549,26 +549,14 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
                           {(msg.message_type === 'share' || (msg.message_type === 'text' && Boolean(msg.media_url))) && (
                             <div className="mb-2">
                               {((msg.media_url as string) || '').includes('instagram.com/p/') || ((msg.media_url as string) || '').includes('instagram.com/reel/') ? (
-                                <div className="w-[240px] rounded-xl overflow-hidden bg-[#121212] text-white shadow-sm border border-gray-800/60 mt-1 cursor-pointer hover:opacity-95 transition-opacity" onClick={() => window.open(msg.media_url as string, '_blank')}>
-                                  {/* Header */}
-                                  <div className="flex items-center gap-2 p-3 bg-[#1a1a1a]">
-                                    <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500 flex items-center justify-center shrink-0">
-                                      <img src="https://upload.wikimedia.org/wikipedia/commons/e/e7/Instagram_logo_2016.svg" className="w-3 h-3 invert" alt="ig" />
-                                    </div>
-                                    <span className="text-xs font-medium text-gray-200">Publicação do Instagram</span>
-                                  </div>
-                                  {/* Thumbnail Area */}
-                                  <div className="h-[220px] bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center relative group">
-                                    <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors"></div>
-                                    <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md shadow-lg group-hover:scale-110 transition-transform">
-                                      <div className="w-0 h-0 border-t-[8px] border-t-transparent border-l-[14px] border-l-white border-b-[8px] border-b-transparent ml-1"></div>
-                                    </div>
-                                  </div>
-                                  {/* Footer */}
-                                  <div className="px-4 py-3 bg-[#1a1a1a] flex justify-between items-center border-t border-gray-800/50">
-                                    <span className="text-xs font-semibold text-white">Assistir vídeo</span>
-                                    <span className="text-[10px] bg-white/10 px-2 py-1 rounded-full text-gray-300 font-medium">Abrir App</span>
-                                  </div>
+                                <div className="w-[300px] sm:w-[320px] rounded-xl overflow-hidden bg-white shadow-sm border border-gray-200 mt-1">
+                                  <iframe 
+                                    src={`${((msg.media_url as string).split('?')[0].replace(/\/$/, ''))}/embed`}
+                                    className="w-full h-[450px]"
+                                    frameBorder="0"
+                                    scrolling="no"
+                                    allow="encrypted-media"
+                                  ></iframe>
                                 </div>
                               ) : (
                                 <a href={msg.media_url as string} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
