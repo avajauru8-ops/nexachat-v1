@@ -196,14 +196,11 @@ export function TriggerNode({ id, data, selected }: NodeProps) {
               placeholder="Ex: QUERO, LINK (deixe vazio p/ todos)"
               className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-900 bg-white outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 font-semibold mb-1"
             />
-            <label className="text-[10px] font-bold text-orange-800 uppercase block">Resposta pública no post (opcional):</label>
-            <input 
-              type="text" 
-              value={(data.publicReply as string) || ''} 
-              onChange={(e) => updateNodeData(id, { publicReply: e.target.value })}
-              placeholder="Ex: Te enviei os detalhes no Direct! 📥"
-              className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-900 bg-white outline-none"
-            />
+            <div className="bg-orange-100/50 p-2 rounded-lg mt-2 border border-orange-200 border-dashed">
+              <p className="text-[10px] text-orange-800 text-center font-medium">
+                💡 Dica: Conecte a saída deste gatilho a um bloco <b>Responder Comentário</b> para criar uma resposta pública automática!
+              </p>
+            </div>
           </div>
         )}
 

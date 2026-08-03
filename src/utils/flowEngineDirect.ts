@@ -104,6 +104,24 @@ export async function executeFlowDirect(data: {
         console.warn(`[Flow Engine Direct] Envio de nó cancelado: ${guardResult.reason}`);
       }
     }
+    else if (node.type === 'commentReplyNode') {
+      const publicReply = node.data?.publicReply as string | undefined;
+      if (publicReply && commentId && pageAccessToken) {
+        const url = `https://graph.instagram.com/v22.0/${commentId}/replies`;
+        try {
+          await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${pageAccessToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ message: publicReply })
+          });
+        } catch (err: any) {
+          console.error('[Flow Engine Direct] Erro ao enviar resposta pública ao comentário:', err.message || err);
+        }
+      }
+    }
     else if (node.type === 'delayNode' || node.type === 'delay') {
       console.log(`[Flow Engine Direct] Pausando execução por ser delay, Vercel Serverless não suporta delay síncrono nativamente.`);
       break; 

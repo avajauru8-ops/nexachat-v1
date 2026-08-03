@@ -31,11 +31,13 @@ import { toast } from 'react-hot-toast';
 import { ArrowLeft, Save, Play, Download, Upload, Sparkles, UserCheck, Globe, Clock, Filter, MessageSquare, Tag, StickyNote, Plus } from 'lucide-react';
 
 import { NoteNode } from '@/components/flow/nodes/NoteNode';
+import { CommentReplyNode } from '@/components/flow/nodes/CommentReplyNode';
 
 import { CustomEdge } from '@/components/flow/edges/CustomEdge';
 
 const nodeTypes = {
   triggerNode: TriggerNode,
+  commentReplyNode: CommentReplyNode,
   messageNode: MessageNode,
   delayNode: DelayNode,
   actionNode: ActionNode,
@@ -89,6 +91,7 @@ export function FlowBuilderClient({
   const addNode = (type: string) => {
     let label = 'Novo Bloco';
     if (type === 'messageNode') label = 'Mensagem do Bot';
+    if (type === 'commentReplyNode') label = 'Responder Comentário';
     if (type === 'triggerNode') label = 'Gatilho DM';
     if (type === 'delayNode') label = 'Atraso Inteligente';
     if (type === 'actionNode') label = 'Ação (Tags/Campos)';
@@ -317,6 +320,14 @@ export function FlowBuilderClient({
               >
                 <MessageSquare className="w-4 h-4 text-emerald-600" />
                 Mensagem do Bot
+              </button>
+
+              <button 
+                onClick={() => { addNode('commentReplyNode'); setIsPaletteOpen(false); }}
+                className="w-full text-left px-3.5 py-2.5 bg-orange-50 text-orange-800 rounded-lg border border-orange-200 hover:bg-orange-100 transition-colors font-semibold text-xs flex items-center gap-2 shadow-xs"
+              >
+                <MessageSquare className="w-4 h-4 text-orange-600" />
+                Responder Comentário
               </button>
 
               <button 

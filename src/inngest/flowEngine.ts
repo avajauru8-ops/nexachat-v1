@@ -118,6 +118,30 @@ export const executeFlow = inngest.createFunction(
           console.warn(`[Flow Engine] Envio de nó ${loopNodeId} cancelado: ${guardResult.reason}`);
         }
       }
+      
+      // --- RESPOSTA DE COMENTÁRIO (commentReplyNode) ---
+      else if (node.type === 'commentReplyNode') {
+        await step.run(`node-${loopNodeId}-${iteration}-comment-reply`, async () => {
+          const publicReply = node.data?.publicReply as string | undefined;
+          if (publicReply && commentId && pageAccessToken) {
+            const url = `https://graph.instagram.com/v22.0/${commentId}/replies`;
+            try {
+              await fetch(url, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${pageAccessToken}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ message: publicReply })
+              });
+            } catch (err: any) {
+              console.error('[Flow Engine] Erro ao enviar resposta pública ao comentário:', err.message || err);
+            }
+          } else {
+            console.warn(`[Flow Engine] Resposta ao comentário ignorada (commentId ou publicReply ausente)`);
+          }
+        });
+      }
 
       // --- 2. DELAY (delayNode / delay) ---
       else if (node.type === 'delayNode' || node.type === 'delay') {

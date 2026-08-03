@@ -419,26 +419,7 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
           const matchedFlowId = matchActiveFlow(activeFlows || [], 'comment_keyword', commentText, mediaId);
 
           if (matchedFlowId) {
-            const matchedFlow = activeFlows?.find(f => f.id === matchedFlowId);
-            const publicReply = (matchedFlow?.triggers as Record<string, unknown>)?.publicReply as string | undefined;
             const commentId = change.value.id;
-
-            // Envia resposta pública (se houver)
-            if (publicReply && commentId && account.access_token) {
-              const url = `https://graph.instagram.com/v22.0/${commentId}/replies`;
-              try {
-                await fetch(url, {
-                  method: 'POST',
-                  headers: {
-                    'Authorization': `Bearer ${account.access_token}`,
-                    'Content-Type': 'application/json'
-                  },
-                  body: JSON.stringify({ message: publicReply })
-                });
-              } catch (e) {
-                console.error("[Processamento Sync] Falha ao enviar resposta pública ao comentário:", e);
-              }
-            }
 
             const { contact, conversation } = await getOrCreateContactAndConversation(activeWorkspaceId, account, senderId);
             if (!contact || !conversation) continue;
