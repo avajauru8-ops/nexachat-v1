@@ -22,9 +22,9 @@ export const processAiAgent = inngest.createFunction(
 
       return data || {
         name: 'Assistente IA NexaChat',
-        system_prompt: 'Você é um assistente virtual atencioso e prestativo. Responda de forma sucinta e direta em português.',
-        llm_provider: 'openai',
-        model: 'gpt-4o-mini',
+        system_prompt: 'Você é um assistente virtual atencioso e prestativo da nossa empresa no Instagram. Responda de forma clara, educada e sucinta em português.',
+        llm_provider: 'gemini',
+        model: 'gemini-flash-latest',
         handoff_rules: { keywords: ['falar com humano', 'atendente', 'suporte humano'], max_turns: 6 }
       };
     });
@@ -108,33 +108,86 @@ export const processAiAgent = inngest.createFunction(
       const dbGeminiKey = settingsMap['GEMINI_API_KEY'];
       const dbOpenaiKey = settingsMap['OPENAI_API_KEY'];
 
-      const apiKey = process.env.OPENAI_API_KEY || dbOpenaiKey || process.env.GEMINI_API_KEY || dbGeminiKey;
+      const geminiKey = process.env.GEMINI_API_KEY || dbGeminiKey;
+      const openaiKey = process.env.OPENAI_API_KEY || dbOpenaiKey;
+      const provider = aiConfig.llm_provider || 'gemini';
 
-      if (!apiKey) {
-        return `Obrigado pela mensagem! No momento estou operando em modo demonstrativo. Como posso te ajudar?`;
+      console.log(`[AI Agent] Provedor configurado: ${provider}`);
+
+      if (!geminiKey && !openaiKey) {
+        return `Obrigado pela mensagem! Configure a chave de API da IA nas Integrações para que eu possa responder automaticamente.`;
       }
 
+      // Map of old/legacy model names to supported ones
+      const modelMap: Record<string, string> = {
+        'gemini-1.5-flash': 'gemini-flash-latest',
+        'gemini-1.5-pro': 'gemini-pro-latest',
+        'gemini-pro': 'gemini-pro-latest',
+      };
+
       try {
-        if (aiConfig.llm_provider === 'gemini' || (!aiConfig.llm_provider && (process.env.GEMINI_API_KEY || dbGeminiKey))) {
-          const geminiKey = process.env.GEMINI_API_KEY || dbGeminiKey || apiKey;
-          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${geminiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [
-                { role: 'user', parts: [{ text: `System Instruction: ${aiConfig.system_prompt}` }] },
-                ...historyMessages.map((msg: { sender_type: string; content: string }) => ({
-                  role: msg.sender_type === 'user' ? 'user' : 'model',
-                  parts: [{ text: msg.content || '' }]
-                }))
-              ]
-            })
-          });
+        if (provider === 'gemini' || (!openaiKey && geminiKey)) {
+          if (!geminiKey) {
+            return 'Chave da API Gemini não configurada. Acesse as Integrações para configurá-la.';
+          }
+
+          // Build clean Gemini request - filter bot/empty messages, strict alternating turns
+          const cleanHistory = (historyMessages as { sender_type: string; content: string }[])
+            .filter(m => (m.sender_type === 'user' || m.sender_type === 'ai') && m.content && m.content.trim().length > 0);
+
+          const geminiContents: { role: string; parts: { text: string }[] }[] = [];
+          let lastRole = '';
+
+          for (const msg of cleanHistory) {
+            const role = msg.sender_type === 'user' ? 'user' : 'model';
+            if (role === lastRole) {
+              geminiContents[geminiContents.length - 1].parts.push({ text: msg.content });
+            } else {
+              geminiContents.push({ role, parts: [{ text: msg.content }] });
+              lastRole = role;
+            }
+          }
+
+          // Ensure ends with user message
+          if (geminiContents.length === 0 || geminiContents[geminiContents.length - 1].role !== 'user') {
+            const userText = (userMessageText || '').trim();
+            if (userText) {
+              geminiContents.push({ role: 'user', parts: [{ text: userText }] });
+            }
+          }
+
+          if (geminiContents.length === 0) {
+            return 'Olá! Como posso te ajudar?';
+          }
+
+          const rawModel = aiConfig.model || 'gemini-flash-latest';
+          const resolvedModel = modelMap[rawModel] || rawModel;
+
+          const requestBody: Record<string, unknown> = { contents: geminiContents };
+          if (aiConfig.system_prompt && aiConfig.system_prompt.trim()) {
+            requestBody.system_instruction = { parts: [{ text: aiConfig.system_prompt }] };
+          }
+
+          console.log(`[AI Agent] Chamando Gemini model: ${resolvedModel} com ${geminiContents.length} turnos`);
+          const res = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${resolvedModel}:generateContent?key=${geminiKey}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(requestBody)
+            }
+          );
           const geminiData = await res.json();
+          if (geminiData.error) {
+            console.error('[AI Agent] Gemini API error:', JSON.stringify(geminiData.error));
+            return 'Desculpe, estou com dificuldades técnicas no momento.';
+          }
           return geminiData.candidates?.[0]?.content?.parts?.[0]?.text || 'Desculpe, não consegui processar a resposta no momento.';
         } else {
           // OpenAI Call
-          const openaiKey = process.env.OPENAI_API_KEY || dbOpenaiKey || apiKey;
+          if (!openaiKey) {
+            return 'Chave da API OpenAI não configurada. Acesse as Integrações para configurá-la.';
+          }
           const res = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
@@ -145,12 +198,12 @@ export const processAiAgent = inngest.createFunction(
               model: aiConfig.model || 'gpt-4o-mini',
               messages: [
                 { role: 'system', content: aiConfig.system_prompt },
-                ...historyMessages.map((msg: { sender_type: string; content: string }) => ({
+                ...(historyMessages as { sender_type: string; content: string }[]).map(msg => ({
                   role: msg.sender_type === 'user' ? 'user' : 'assistant',
                   content: msg.content || ''
                 }))
               ],
-              max_tokens: 300
+              max_tokens: 400
             })
           });
           const openaiData = await res.json();

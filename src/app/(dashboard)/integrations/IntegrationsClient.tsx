@@ -38,8 +38,8 @@ export default function IntegrationsClient({ connectedAccount: initialConnectedA
   // Estados da Configuração do Agente de IA
   const [aiName, setAiName] = useState('Assistente IA NexaChat');
   const [systemPrompt, setSystemPrompt] = useState('Você é um assistente virtual atencioso e prestativo da nossa empresa no Instagram. Responda de forma clara, educada e sucinta em português.');
-  const [llmProvider, setLlmProvider] = useState('openai');
-  const [model, setModel] = useState('gpt-4o-mini');
+  const [llmProvider, setLlmProvider] = useState('gemini');
+  const [model, setModel] = useState('gemini-flash-latest');
   const [handoffKeywords, setHandoffKeywords] = useState('falar com humano, atendente, suporte humano');
   const [crmWebhookUrl, setCrmWebhookUrl] = useState('');
 
@@ -83,8 +83,8 @@ export default function IntegrationsClient({ connectedAccount: initialConnectedA
         if (data) {
           setAiName(data.name || 'Assistente IA NexaChat');
           setSystemPrompt(data.system_prompt || '');
-          setLlmProvider(data.llm_provider || 'openai');
-          setModel(data.model || 'gpt-4o-mini');
+          setLlmProvider(data.llm_provider || 'gemini');
+          setModel(data.model || 'gemini-flash-latest');
           const keywords = data.handoff_rules?.keywords || ['falar com humano', 'atendente'];
           setHandoffKeywords(Array.isArray(keywords) ? keywords.join(', ') : String(keywords));
         }
@@ -416,7 +416,9 @@ export default function IntegrationsClient({ connectedAccount: initialConnectedA
                 >
                   <option value="gpt-4o-mini">gpt-4o-mini (Rápido e econômico)</option>
                   <option value="gpt-4o">gpt-4o (Avançado)</option>
-                  <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+                  <option value="gemini-flash-latest">gemini-flash-latest (Rápido e gratuito)</option>
+                  <option value="gemini-pro-latest">gemini-pro-latest (Mais inteligente)</option>
+                  <option value="gemini-2.5-flash">gemini-2.5-flash (Mais recente)</option>
                 </select>
               </div>
             </div>
