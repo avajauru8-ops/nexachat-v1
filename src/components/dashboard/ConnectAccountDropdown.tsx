@@ -20,19 +20,20 @@ export default function ConnectAccountDropdown() {
     <div className="relative mt-4" ref={dropdownRef}>
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full py-3 border-2 border-dashed border-gray-200 rounded-lg text-gray-500 text-sm font-medium hover:border-blue-300 hover:text-blue-600 transition-colors cursor-pointer"
+        className="w-full py-3.5 bg-instagram-gradient rounded-xl text-white text-sm font-bold shadow-lg shadow-pink-500/25 hover:opacity-90 hover:scale-[1.02] transition-all cursor-pointer flex items-center justify-center gap-2"
       >
-        + Conectar Nova Conta
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+        Conectar Nova Conta
       </button>
 
       {isOpen && (
-        <div className="absolute top-full mt-2 left-0 right-0 bg-white border border-gray-100 rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200 p-1.5">
+        <div className="absolute top-full mt-2 left-0 right-0 glass-panel rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200 p-2">
           <a
             href="/api/auth/meta?type=instagram"
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => setIsOpen(false)}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-sm font-bold text-gray-700"
+            className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/60 transition-colors text-sm font-bold text-gray-800"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"

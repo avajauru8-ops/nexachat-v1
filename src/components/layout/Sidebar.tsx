@@ -81,11 +81,11 @@ export async function Sidebar() {
   }
 
   return (
-    <aside className="w-[256px] md:w-[240px] h-screen bg-[#f8f9fa] border-r border-gray-200 flex flex-col relative">
+    <aside className="w-[256px] md:w-[240px] h-screen bg-[#fafafa] border-r border-gray-100 flex flex-col relative shadow-[2px_0_15px_rgba(0,0,0,0.02)]">
       
       {/* Top Logo */}
       <div className="h-16 flex items-center px-5 flex-shrink-0">
-        <span className="text-2xl font-black text-gray-900 tracking-tighter">NexaChat</span>
+        <span className="text-2xl font-black text-transparent bg-clip-text bg-instagram-gradient tracking-tighter">NexaChat</span>
       </div>
       
       {/* User Profile Selector (Interactive Dropdown Menu) */}

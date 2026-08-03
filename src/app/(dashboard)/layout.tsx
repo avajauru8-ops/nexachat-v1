@@ -12,7 +12,7 @@ export default function DashboardLayout({
 }) {
   return (
     <SidebarProvider>
-      <div className="flex h-screen bg-gray-50 font-sans">
+      <div className="flex h-screen bg-dashboard-mesh font-sans">
         <Suspense fallback={null}>
           <GlobalAlertModal />
         </Suspense>
@@ -21,7 +21,7 @@ export default function DashboardLayout({
         </SidebarWrapper>
         <div className="flex-1 md:ml-64 flex flex-col h-screen overflow-hidden">
           <Topbar />
-          <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-4 md:p-6">
+          <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6">
             {children}
           </main>
         </div>

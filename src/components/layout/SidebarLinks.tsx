@@ -131,19 +131,25 @@ export function SidebarLinks({ workspaceId, initialUnreadCount }: { workspaceId?
             <li key={item.name}>
               <Link
                 href={item.href}
-                className={`flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors group font-medium text-sm ${
+                className={`flex items-center justify-between px-2 py-2 rounded-2xl transition-all group font-medium text-sm ${
                   isActive 
-                    ? 'bg-gray-200/60 text-gray-900 font-bold' 
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                    ? 'bg-white shadow-sm border border-gray-100 text-gray-900 font-bold scale-[1.02]' 
+                    : 'text-gray-600 hover:bg-white hover:shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-transparent'
                 }`}
               >
                 <div className="flex items-center">
-                  <Icon className={`w-5 h-5 mr-3 ${isActive ? 'text-gray-900' : 'text-gray-500 group-hover:text-gray-900'} transition-colors`} />
+                  <div className={`flex items-center justify-center w-8 h-8 rounded-xl mr-3 transition-all ${
+                    isActive 
+                      ? 'bg-instagram-gradient text-white shadow-md shadow-pink-500/20' 
+                      : 'bg-transparent text-gray-500 group-hover:text-gray-900 group-hover:bg-gray-50'
+                  }`}>
+                    <Icon className="w-4 h-4" />
+                  </div>
                   {item.name}
                 </div>
                 
                 {item.badge && (
-                  <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                  <span className="bg-instagram-gradient text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
                     {item.badge}
                   </span>
                 )}

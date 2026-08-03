@@ -114,12 +114,12 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-800">Visão Geral</h1>
-        <div className="flex gap-2">
-          <button className="px-4 py-2 text-sm bg-white border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors font-medium">
+        <h1 className="text-3xl font-black text-gray-900 tracking-tight">Visão Geral</h1>
+        <div className="flex gap-3">
+          <button className="px-5 py-2.5 text-sm bg-white/60 backdrop-blur-md border border-white/80 rounded-xl text-gray-700 hover:bg-white transition-all font-semibold shadow-sm">
             Últimos 7 dias
           </button>
-          <button className="px-4 py-2 text-sm bg-blue-600 rounded-lg text-white hover:bg-blue-700 transition-colors font-medium">
+          <button className="px-5 py-2.5 text-sm bg-instagram-gradient rounded-xl text-white hover:opacity-90 transition-opacity font-bold shadow-md shadow-pink-500/20">
             Criar Automação
           </button>
         </div>
@@ -129,14 +129,14 @@ export default async function DashboardPage() {
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
-            <div key={stat.title} className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-between">
+            <div key={stat.title} className="glass-panel p-6 rounded-3xl flex flex-col justify-between group">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-sm font-medium text-gray-500 mb-1">{stat.title}</p>
-                  <h3 className="text-2xl font-bold text-gray-800">{stat.value}</h3>
+                  <p className="text-sm font-semibold text-gray-500 mb-1 uppercase tracking-wider">{stat.title}</p>
+                  <h3 className="text-3xl font-black text-gray-800 tracking-tight">{stat.value}</h3>
                 </div>
-                <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
-                  <Icon className="w-5 h-5" />
+                <div className="w-12 h-12 rounded-2xl bg-instagram-gradient flex items-center justify-center text-white shadow-lg shadow-pink-500/25 group-hover:scale-110 transition-transform duration-300">
+                  <Icon className="w-6 h-6" />
                 </div>
               </div>
               <div className="mt-4 flex items-center">
@@ -152,13 +152,13 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <RecentActivityClient recentLogs={recentLogs} userTimezone={user?.user_metadata?.timezone || 'America/Sao_Paulo'} />
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-          <h2 className="text-lg font-bold text-gray-800 mb-4">Contas Conectadas</h2>
-          <div className="mt-6 space-y-4">
+        <div className="glass-panel rounded-3xl p-6">
+          <h2 className="text-xl font-bold text-gray-900 tracking-tight mb-5">Contas Conectadas</h2>
+          <div className="mt-2 space-y-4">
             {connectedAccounts.length > 0 ? (
               connectedAccounts.map((account, idx) => (
-                <div key={idx} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg">
-                  <div className="flex items-center gap-3">
+                <div key={idx} className="flex items-center justify-between p-3.5 bg-white/60 border border-white rounded-2xl hover:bg-white/80 transition-colors shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+                  <div className="flex items-center gap-3.5">
                     {account.profile_picture_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={account.profile_picture_url} alt="Profile" className="w-10 h-10 rounded-full object-cover border-2 border-pink-500" />

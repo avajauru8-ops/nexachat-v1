@@ -68,3 +68,45 @@ body {
   stroke-width: 4px !important;
   stroke: #00ffff !important;
 }
+
+/* ========================================= */
+/* NexaChat Modern Theme (Instagram Styling) */
+/* ========================================= */
+
+/* Instagram Gradient Background */
+.bg-instagram-gradient {
+  background: linear-gradient(45deg, #FCAF45 0%, #F56040 25%, #E1306C 50%, #C13584 75%, #833AB4 100%);
+}
+
+/* Instagram Text Gradient */
+.text-instagram {
+  background: linear-gradient(45deg, #FCAF45 0%, #F56040 25%, #E1306C 50%, #C13584 75%, #833AB4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Subtle Modern Dashboard Background */
+.bg-dashboard-mesh {
+  background-color: #fafafa;
+  background-image: 
+    radial-gradient(at 0% 0%, hsla(28,100%,74%,0.1) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, hsla(339,78%,60%,0.08) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, hsla(284,54%,53%,0.1) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, hsla(22,100%,77%,0.1) 0px, transparent 50%);
+  background-attachment: fixed;
+}
+
+/* Glassmorphism Panel */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
+}
+
+.glass-panel:hover {
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+}
