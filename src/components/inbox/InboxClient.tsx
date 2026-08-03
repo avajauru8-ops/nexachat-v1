@@ -549,10 +549,10 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
                           {(msg.message_type === 'share' || (msg.message_type === 'text' && Boolean(msg.media_url))) && (
                             <div className="mb-2">
                               {((msg.media_url as string) || '').includes('instagram.com/p/') || ((msg.media_url as string) || '').includes('instagram.com/reel/') ? (
-                                <div className="w-[300px] sm:w-[320px] rounded-xl overflow-hidden bg-white shadow-sm border border-gray-200 mt-1">
+                                <div className="w-[300px] sm:w-[320px] rounded-xl overflow-hidden bg-white shadow-sm border border-gray-200 mt-1 h-[400px]">
                                   <iframe 
                                     src={`${((msg.media_url as string).split('?')[0].replace(/\/$/, ''))}/embed`}
-                                    className="w-full h-[450px]"
+                                    className="w-full h-[460px] -mt-[55px]"
                                     frameBorder="0"
                                     scrolling="no"
                                     allow="encrypted-media"
