@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { 
@@ -33,6 +33,13 @@ export function FlowsListClient({ initialFlows }: Props) {
   const [activeFolder, setActiveFolder] = useState('all');
   const [folders, setFolders] = useState(['Geral', 'Básico', 'Vendas']);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(4);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, triggerFilter, statusFilter, activeFolder]);
 
   const timeAgo = (dateString: string) => {
     if (!dateString) return '';
@@ -62,6 +69,11 @@ export function FlowsListClient({ initialFlows }: Props) {
 
     return isMatchSearch && isMatchStatus;
   });
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentFlows = filteredFlows.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredFlows.length / itemsPerPage);
 
   const handleTogglePublish = async (id: string, currentStatus: string) => {
     const isCurrentlyPublished = currentStatus === 'published' || currentStatus === 'active';
@@ -231,8 +243,8 @@ export function FlowsListClient({ initialFlows }: Props) {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredFlows.length > 0 ? (
-                filteredFlows.map(flow => {
+              {currentFlows.length > 0 ? (
+                currentFlows.map(flow => {
                   const keyword = (flow.triggers as Record<string, unknown>)?.keyword as string;
                   const isPublished = flow.status === 'published' || flow.status === 'active';
 
@@ -351,6 +363,51 @@ export function FlowsListClient({ initialFlows }: Props) {
             </tbody>
           </table>
         </div>
+
+        {/* Paginação */}
+        {filteredFlows.length > 0 && (
+          <div className="mt-4 flex items-center justify-between bg-white px-4 py-3 border border-gray-200 rounded-xl shadow-sm">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-700">Mostrar</span>
+              <select 
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="bg-gray-50 border border-gray-300 text-gray-700 text-sm rounded-lg px-2 py-1 outline-none font-medium hover:border-gray-400 cursor-pointer"
+              >
+                <option value={4}>4</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </select>
+              <span className="text-sm text-gray-700">por página</span>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-gray-700">
+                Página <span className="font-bold text-gray-900">{currentPage}</span> de <span className="font-bold text-gray-900">{totalPages}</span>
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-semibold shadow-xs transition-colors"
+                >
+                  Anterior
+                </button>
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-semibold shadow-xs transition-colors"
+                >
+                  Próxima
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
