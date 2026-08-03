@@ -390,7 +390,8 @@ export default function IntegrationsClient({ connectedAccount: initialConnectedA
                 type="text"
                 value={aiName}
                 onChange={e => setAiName(e.target.value)}
-                className="w-full px-3.5 py-2 border border-gray-300 rounded-xl text-xs font-medium focus:outline-none focus:border-purple-500"
+                placeholder="Assistente IA NexaChat"
+                className="w-full px-3.5 py-2 border border-gray-300 rounded-xl text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:border-purple-500 bg-white"
               />
             </div>
 
@@ -400,7 +401,7 @@ export default function IntegrationsClient({ connectedAccount: initialConnectedA
                 <select
                   value={llmProvider}
                   onChange={e => setLlmProvider(e.target.value)}
-                  className="w-full px-3.5 py-2 border border-gray-300 rounded-xl text-xs font-medium focus:outline-none focus:border-purple-500 bg-white"
+                  className="w-full px-3.5 py-2 border border-gray-300 rounded-xl text-sm font-medium text-gray-900 focus:outline-none focus:border-purple-500 bg-white"
                 >
                   <option value="openai">OpenAI</option>
                   <option value="gemini">Google Gemini</option>
@@ -412,7 +413,7 @@ export default function IntegrationsClient({ connectedAccount: initialConnectedA
                 <select
                   value={model}
                   onChange={e => setModel(e.target.value)}
-                  className="w-full px-3.5 py-2 border border-gray-300 rounded-xl text-xs font-medium focus:outline-none focus:border-purple-500 bg-white"
+                  className="w-full px-3.5 py-2 border border-gray-300 rounded-xl text-sm font-medium text-gray-900 focus:outline-none focus:border-purple-500 bg-white"
                 >
                   <option value="gpt-4o-mini">gpt-4o-mini (Rápido e econômico)</option>
                   <option value="gpt-4o">gpt-4o (Avançado)</option>
@@ -426,11 +427,11 @@ export default function IntegrationsClient({ connectedAccount: initialConnectedA
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">Prompt de Sistema (Instruções da IA)</label>
               <textarea
-                rows={3}
+                rows={4}
                 value={systemPrompt}
                 onChange={e => setSystemPrompt(e.target.value)}
                 placeholder="Ex: Você é um assistente da empresa X..."
-                className="w-full px-3.5 py-2 border border-gray-300 rounded-xl text-xs font-medium focus:outline-none focus:border-purple-500 resize-none"
+                className="w-full px-3.5 py-2 border border-gray-300 rounded-xl text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:border-purple-500 resize-none bg-white"
               />
             </div>
 
@@ -441,7 +442,7 @@ export default function IntegrationsClient({ connectedAccount: initialConnectedA
                 value={handoffKeywords}
                 onChange={e => setHandoffKeywords(e.target.value)}
                 placeholder="falar com humano, atendente, suporte"
-                className="w-full px-3.5 py-2 border border-gray-300 rounded-xl text-xs font-medium focus:outline-none focus:border-purple-500"
+                className="w-full px-3.5 py-2 border border-gray-300 rounded-xl text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:border-purple-500 bg-white"
               />
             </div>
 
