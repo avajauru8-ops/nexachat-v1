@@ -166,7 +166,10 @@ export default async function DashboardPage() {
                     <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
                       <div className="flex items-center gap-1">
                         <Key className="w-3 h-3" />
-                        Gatilho: {log.trigger_type === 'keyword' ? `Palavra "${log.keyword_matched}"` : log.trigger_type}
+                        Gatilho: {(log.trigger_type === 'dm_keyword' || log.trigger_type === 'comment_keyword' || log.trigger_type === 'keyword') ? `Palavra "${log.keyword_matched}"` : 
+                                   log.trigger_type === 'story_mention' ? 'Menção no Story' :
+                                   log.trigger_type === 'story_reply' ? 'Resposta ao Story' :
+                                   log.trigger_type === 'welcome_dm' ? 'Nova Conversa (Boas-Vindas)' : log.trigger_type}
                       </div>
                       <div className="flex items-center gap-1">
                         <Play className="w-3 h-3" />
