@@ -52,8 +52,10 @@ export default async function AudiencePage() {
     <div className="max-w-7xl mx-auto flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <Users className="w-6 h-6 text-blue-600" />
+          <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-instagram-gradient flex items-center justify-center text-white shadow-md shadow-pink-500/20">
+              <Users className="w-5 h-5" />
+            </div>
             Audiência e Leads
           </h1>
           <p className="text-gray-500 mt-1">Gerencie as pessoas que interagiram com seu bot no Instagram.</p>

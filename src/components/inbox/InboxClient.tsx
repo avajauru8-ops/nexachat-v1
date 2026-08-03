@@ -637,7 +637,7 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
                     <button 
                       onClick={handleSyncApi}
                       disabled={isSyncing}
-                      className="w-10 h-10 flex items-center justify-center bg-[#a6c8fa] hover:bg-blue-500 text-white rounded-md transition-colors disabled:bg-[#d0e1ff]"
+                      className="w-10 h-10 flex items-center justify-center bg-instagram-gradient hover:opacity-90 text-white rounded-xl shadow-lg shadow-pink-500/20 transition-all hover:scale-[1.02] disabled:opacity-50 disabled:scale-100"
                       title="Sincronizar Mensagens"
                     >
                       <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
@@ -645,7 +645,7 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
                     <button 
                       onClick={handleSendMessage}
                       disabled={!newMessage.trim()}
-                      className="px-8 py-2.5 bg-[#a6c8fa] hover:bg-blue-600 text-white text-[13px] font-bold rounded-md transition-colors disabled:bg-[#d0e1ff] disabled:cursor-not-allowed"
+                      className="px-8 py-2.5 bg-instagram-gradient hover:opacity-90 text-white text-[13px] font-bold rounded-xl shadow-lg shadow-pink-500/20 transition-all hover:scale-[1.02] disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed"
                     >
                       Enviar Para O Instagram
                     </button>

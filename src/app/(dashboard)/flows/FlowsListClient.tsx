@@ -126,22 +126,22 @@ export function FlowsListClient({ initialFlows }: Props) {
   };
 
   return (
-    <div className="flex h-full -m-6 bg-white overflow-hidden">
+    <div className="flex h-full -m-6 md:-m-0 glass-panel rounded-none md:rounded-3xl overflow-hidden shadow-xl border-0 md:border border-white/60">
       
       {/* Sidebar de Pastas & Filtros (Estilo Manychat Pro) */}
-      <div className="w-64 border-r border-gray-200 bg-[#f9fafb] flex flex-col hidden lg:flex shrink-0">
+      <div className="w-64 border-r border-white/40 bg-white/30 flex flex-col hidden lg:flex shrink-0 backdrop-blur-md">
         <div className="p-4 space-y-1 mt-2">
           <button 
             onClick={() => setActiveFolder('all')}
-            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
-              activeFolder === 'all' ? 'bg-gray-200/80 text-gray-900 shadow-sm' : 'text-gray-600 hover:bg-gray-100'
+            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+              activeFolder === 'all' ? 'bg-white/80 text-gray-900 shadow-sm border border-white' : 'text-gray-600 hover:bg-white/50 border border-transparent'
             }`}
           >
             <div className="flex items-center gap-2">
-              <Folder className="w-4 h-4 text-blue-600" />
+              <Folder className="w-4 h-4 text-pink-500" />
               <span>Minhas Automações</span>
             </div>
-            <span className="bg-white border border-gray-200 text-gray-600 text-xs px-2 py-0.5 rounded-full font-bold">
+            <span className="bg-white/60 border border-white/80 text-gray-700 text-xs px-2 py-0.5 rounded-full font-bold">
               {flows.length}
             </span>
           </button>
@@ -167,17 +167,17 @@ export function FlowsListClient({ initialFlows }: Props) {
       </div>
 
       {/* Conteúdo Principal */}
-      <div className="flex-1 flex flex-col overflow-y-auto bg-white p-4 md:p-8">
+      <div className="flex-1 flex flex-col overflow-y-auto bg-transparent p-4 md:p-8">
         
         {/* Header Superior */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Automações do Instagram</h1>
-            <p className="text-sm text-gray-500 mt-1">Crie e gerencie fluxos interativos acionados por DMs, comentários e stories.</p>
+            <h1 className="text-3xl font-black text-gray-900 tracking-tight">Automações</h1>
+            <p className="text-sm text-gray-600 mt-1">Crie e gerencie fluxos interativos acionados por DMs, comentários e stories.</p>
           </div>
           <Link 
             href="/flows/builder/new" 
-            className="bg-[#0064e0] text-white px-5 py-2.5 rounded-lg font-semibold text-sm hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm"
+            className="bg-instagram-gradient text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-pink-500/20 hover:scale-[1.02] transition-all flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
             Nova Automação
@@ -186,21 +186,21 @@ export function FlowsListClient({ initialFlows }: Props) {
 
         {/* Linha de Busca e Filtros */}
         <div className="flex items-center gap-3 mb-6 flex-wrap">
-          <div className="flex items-center bg-white border border-gray-300 rounded-lg px-3.5 py-2 flex-1 min-w-[240px] focus-within:ring-2 focus-within:ring-blue-100 focus-within:border-blue-500 transition-all shadow-sm">
+          <div className="flex items-center bg-white/60 border border-white rounded-xl px-3.5 py-2 flex-1 min-w-[240px] focus-within:ring-2 focus-within:ring-pink-100 focus-within:border-pink-500 transition-all shadow-sm backdrop-blur-sm">
             <Search className="w-4 h-4 text-gray-400 mr-2" />
             <input 
               type="text" 
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Pesquisar por nome ou palavra-chave..." 
-              className="bg-transparent border-none outline-none text-sm w-full text-gray-800 placeholder-gray-400"
+              className="bg-transparent border-none outline-none text-sm w-full text-gray-800 placeholder-gray-500 font-medium"
             />
           </div>
 
           <select 
             value={statusFilter}
             onChange={e => setStatusFilter(e.target.value)}
-            className="bg-white border border-gray-300 text-gray-700 text-sm rounded-lg px-3 py-2 outline-none hover:border-gray-400 shadow-sm"
+            className="bg-white/60 border border-white text-gray-700 font-medium text-sm rounded-xl px-3 py-2 outline-none hover:bg-white/80 transition-colors shadow-sm backdrop-blur-sm"
           >
             <option value="all">Todos os status</option>
             <option value="published">🟢 Publicados (LIVE)</option>
@@ -210,7 +210,7 @@ export function FlowsListClient({ initialFlows }: Props) {
           <select 
             value={triggerFilter}
             onChange={e => setTriggerFilter(e.target.value)}
-            className="bg-white border border-gray-300 text-gray-700 text-sm rounded-lg px-3 py-2 outline-none hover:border-gray-400 shadow-sm"
+            className="bg-white/60 border border-white text-gray-700 font-medium text-sm rounded-xl px-3 py-2 outline-none hover:bg-white/80 transition-colors shadow-sm backdrop-blur-sm"
           >
             <option value="all">Qualquer gatilho</option>
             <option value="dm_keyword">DM: Palavra-chave</option>
@@ -220,10 +220,10 @@ export function FlowsListClient({ initialFlows }: Props) {
         </div>
 
         {/* Tabela de Fluxos */}
-        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto shadow-sm">
+        <div className="bg-white/40 rounded-2xl border border-white overflow-x-auto shadow-sm backdrop-blur-md">
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
-              <tr className="bg-[#f9fafb] border-b border-gray-200 text-gray-500 text-xs font-semibold uppercase tracking-wider">
+              <tr className="bg-white/50 border-b border-white text-gray-700 text-[11px] font-black uppercase tracking-wider">
                 <th className="pl-4 pr-2 py-3 w-10">
                   <input 
                     type="checkbox" 

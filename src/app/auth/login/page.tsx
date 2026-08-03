@@ -54,8 +54,8 @@ export default function LoginPage({ searchParams }: Props) {
   };
 
   return (
-    <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 max-w-md w-full mx-auto">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Entrar no NexaChat</h2>
+    <div className="glass-panel p-8 rounded-3xl shadow-xl border border-white/60 max-w-md w-full mx-auto backdrop-blur-md bg-white/40">
+      <h2 className="text-3xl font-black text-gray-900 tracking-tight mb-6 text-center">Entrar no NexaChat</h2>
       
       {errorMessage && (
         <div className="bg-red-50 border border-red-200 text-red-600 p-3.5 rounded-xl text-xs font-semibold mb-6 text-center">
@@ -74,7 +74,7 @@ export default function LoginPage({ searchParams }: Props) {
             onChange={(e) => setEmail(e.target.value)}
             required 
             autoComplete="email"
-            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-xs font-medium text-gray-800"
+            className="w-full px-4 py-3 bg-white/60 border border-white rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-300 transition-all text-xs font-medium text-gray-800 shadow-sm backdrop-blur-sm"
             placeholder="seu@email.com"
           />
         </div>
@@ -90,7 +90,7 @@ export default function LoginPage({ searchParams }: Props) {
               onChange={(e) => setPassword(e.target.value)}
               required 
               autoComplete="current-password"
-              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-xs font-medium text-gray-800 pr-10"
+              className="w-full px-4 py-3 bg-white/60 border border-white rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-300 transition-all text-xs font-medium text-gray-800 pr-10 shadow-sm backdrop-blur-sm"
               placeholder="••••••••"
             />
             <button
@@ -107,7 +107,7 @@ export default function LoginPage({ searchParams }: Props) {
         <button 
           type="submit" 
           disabled={isLoading}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-colors mt-2 text-xs flex items-center justify-center gap-2 shadow-xs disabled:opacity-50 cursor-pointer"
+          className="w-full bg-instagram-gradient hover:opacity-90 text-white font-bold py-3.5 rounded-xl transition-all mt-4 text-xs flex items-center justify-center gap-2 shadow-lg shadow-pink-500/20 disabled:opacity-50 cursor-pointer hover:scale-[1.02]"
         >
           {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
           {isLoading ? 'Entrando...' : 'Entrar'}
@@ -116,7 +116,7 @@ export default function LoginPage({ searchParams }: Props) {
 
       <p className="text-center text-xs text-gray-500 mt-6">
         Não tem uma conta?{' '}
-        <Link href="/auth/register" className="text-blue-600 font-bold hover:underline">
+        <Link href="/auth/register" className="text-pink-600 font-bold hover:underline">
           Cadastre-se
         </Link>
       </p>

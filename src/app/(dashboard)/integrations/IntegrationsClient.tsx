@@ -272,16 +272,16 @@ export default function IntegrationsClient({ connectedAccount: initialConnectedA
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Integrações & IA</h1>
-        <p className="text-gray-500 mt-1">Conecte sua conta do Instagram Direct, configure o Agente de IA e sincronize seus CRMs.</p>
+        <h1 className="text-3xl font-black text-gray-900 tracking-tight">Integrações & IA</h1>
+        <p className="text-gray-600 mt-1">Conecte sua conta do Instagram Direct, configure o Agente de IA e sincronize seus CRMs.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Card Conexão Instagram Direct */}
-        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between">
+        <div className="glass-panel p-6 rounded-3xl border border-white/60 shadow-lg flex flex-col justify-between">
           <div>
             <div className="flex items-center gap-4 mb-4">
-              <div className="w-12 h-12 bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 rounded-2xl flex items-center justify-center text-white shadow-md flex-shrink-0">
+              <div className="w-12 h-12 bg-indigo-600/10 rounded-2xl flex items-center justify-center text-indigo-600 shadow-sm flex-shrink-0 border border-indigo-200/50 backdrop-blur-sm">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
                   <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
                   <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
@@ -371,8 +371,8 @@ export default function IntegrationsClient({ connectedAccount: initialConnectedA
           </div>
         </div>
 
-        {/* Card Configurações do Agente de IA */}
-        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex flex-col lg:col-span-2">
+        {/* Configurações do Agente de IA */}
+        <div className="glass-panel p-6 rounded-3xl border border-white/60 shadow-lg flex flex-col lg:col-span-2">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center">
               <Sparkles className="w-5 h-5" />
@@ -447,7 +447,7 @@ export default function IntegrationsClient({ connectedAccount: initialConnectedA
               <button
                 onClick={handleSaveAiConfig}
                 disabled={isSavingAi}
-                className="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-2 shadow-xs"
+                className="w-full sm:w-auto px-6 py-2.5 bg-instagram-gradient hover:opacity-90 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-pink-500/20 flex items-center justify-center gap-2 disabled:opacity-50 hover:scale-[1.02]"
               >
                 <Save className="w-4 h-4" />
                 {isSavingAi ? 'Salvando...' : 'Salvar Configurações de IA'}
@@ -460,7 +460,8 @@ export default function IntegrationsClient({ connectedAccount: initialConnectedA
 
 
       {/* Seção CRM Integration Webhook */}
-      <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+      {isAdmin && (
+      <div className="glass-panel p-6 rounded-3xl border border-white/60 shadow-lg">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center">
             <Globe className="w-5 h-5" />
@@ -487,6 +488,7 @@ export default function IntegrationsClient({ connectedAccount: initialConnectedA
           </button>
         </div>
       </div>
+      )}
 
       {/* MODAL DE CONEXÃO DIRETA VIA TOKEN / CHAVE DA META */}
       {showTokenModal && (
@@ -569,7 +571,7 @@ export default function IntegrationsClient({ connectedAccount: initialConnectedA
                 <button
                   type="submit"
                   disabled={isConnectingDirect}
-                  className="px-5 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-95 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-2 disabled:opacity-50"
+                  className="px-5 py-2 bg-instagram-gradient hover:opacity-95 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-2 disabled:opacity-50"
                 >
                   {isConnectingDirect ? 'Validando...' : 'Salvar e Conectar Conta'}
                 </button>

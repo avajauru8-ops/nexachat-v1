@@ -69,8 +69,8 @@ export default function RegisterPage({ searchParams }: Props) {
   };
 
   return (
-    <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 max-w-md w-full mx-auto">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Criar Conta no NexaChat</h2>
+    <div className="glass-panel p-8 rounded-3xl shadow-xl border border-white/60 max-w-md w-full mx-auto backdrop-blur-md bg-white/40">
+      <h2 className="text-3xl font-black text-gray-900 tracking-tight mb-6 text-center">Criar Conta no NexaChat</h2>
       
       {errorMessage && (
         <div className="bg-red-50 border border-red-200 text-red-600 p-3.5 rounded-xl text-xs font-semibold mb-6 text-center">
@@ -86,7 +86,7 @@ export default function RegisterPage({ searchParams }: Props) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             required 
-            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-xs font-medium text-gray-800"
+            className="w-full px-4 py-3 bg-white/60 border border-white rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-300 transition-all text-xs font-medium text-gray-800 shadow-sm backdrop-blur-sm"
             placeholder="Seu Nome"
           />
         </div>
@@ -98,7 +98,7 @@ export default function RegisterPage({ searchParams }: Props) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required 
-            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-xs font-medium text-gray-800"
+            className="w-full px-4 py-3 bg-white/60 border border-white rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-300 transition-all text-xs font-medium text-gray-800 shadow-sm backdrop-blur-sm"
             placeholder="seu@email.com"
           />
         </div>
@@ -110,7 +110,7 @@ export default function RegisterPage({ searchParams }: Props) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required 
-            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-xs font-medium text-gray-800"
+            className="w-full px-4 py-3 bg-white/60 border border-white rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-300 transition-all text-xs font-medium text-gray-800 shadow-sm backdrop-blur-sm"
             placeholder="••••••••"
           />
         </div>
@@ -118,7 +118,7 @@ export default function RegisterPage({ searchParams }: Props) {
         <button 
           type="submit" 
           disabled={isLoading}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-colors mt-2 text-xs flex items-center justify-center gap-2 shadow-xs disabled:opacity-50 cursor-pointer"
+          className="w-full bg-instagram-gradient hover:opacity-90 text-white font-bold py-3.5 rounded-xl transition-all mt-4 text-xs flex items-center justify-center gap-2 shadow-lg shadow-pink-500/20 disabled:opacity-50 cursor-pointer hover:scale-[1.02]"
         >
           {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
           {isLoading ? 'Cadastrando...' : 'Cadastrar'}
@@ -127,7 +127,7 @@ export default function RegisterPage({ searchParams }: Props) {
 
       <p className="text-center text-xs text-gray-500 mt-6">
         Já possui uma conta?{' '}
-        <Link href="/auth/login" className="text-blue-600 font-bold hover:underline">
+        <Link href="/auth/login" className="text-pink-600 font-bold hover:underline">
           Faça Login
         </Link>
       </p>

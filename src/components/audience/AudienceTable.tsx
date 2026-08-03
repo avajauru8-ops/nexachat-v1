@@ -94,10 +94,10 @@ export function AudienceTable({ contacts }: { contacts: Contact[] }) {
   const displayBio = igProfile?.biography || leadData.biography;
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+    <div className="glass-panel rounded-3xl overflow-hidden">
 
       {/* Barra de Ferramentas */}
-      <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row gap-4 justify-between items-center bg-gray-50/50">
+      <div className="p-4 border-b border-white/50 flex flex-col sm:flex-row gap-4 justify-between items-center bg-white/40">
         <div className="relative w-full sm:w-96">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 transform -translate-y-1/2 text-gray-400" />
           <input
@@ -105,12 +105,12 @@ export function AudienceTable({ contacts }: { contacts: Contact[] }) {
             placeholder="Buscar por nome ou ID..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-xs font-medium"
+            className="w-full pl-10 pr-4 py-2 bg-white/60 border border-white rounded-xl focus:ring-2 focus:ring-pink-500 outline-none text-xs font-medium backdrop-blur-sm"
           />
         </div>
         <button
           onClick={() => toast.success('Filtros ativados.')}
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer shadow-2xs"
+          className="flex items-center gap-2 px-4 py-2 bg-white/60 border border-white rounded-xl text-xs font-bold text-gray-700 hover:bg-white/80 transition-colors cursor-pointer shadow-sm backdrop-blur-sm"
         >
           <Filter className="w-3.5 h-3.5" />
           Filtros Avançados
@@ -120,7 +120,7 @@ export function AudienceTable({ contacts }: { contacts: Contact[] }) {
       {/* Tabela de Leads */}
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs text-gray-600">
-          <thead className="bg-gray-50/80 text-gray-700 font-bold border-b border-gray-200 uppercase tracking-wider text-[10px]">
+          <thead className="bg-white/50 text-gray-800 font-bold border-b border-white/50 uppercase tracking-wider text-[10px]">
             <tr>
               <th className="px-6 py-4">Lead</th>
               <th className="px-6 py-4">Status</th>
@@ -202,10 +202,10 @@ export function AudienceTable({ contacts }: { contacts: Contact[] }) {
           className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={(e) => { if (e.target === e.currentTarget) setSelectedLead(null); }}
         >
-          <div className="bg-white rounded-3xl border border-gray-200 shadow-2xl max-w-lg w-full overflow-hidden relative">
+          <div className="glass-panel rounded-3xl border border-white/80 shadow-2xl max-w-lg w-full overflow-hidden relative">
 
             {/* ── Header com gradiente ────────────────────────── */}
-            <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-6 text-white relative">
+            <div className="bg-instagram-gradient p-6 text-white relative">
               <button
                 onClick={() => setSelectedLead(null)}
                 className="absolute top-4 right-4 text-white/80 hover:text-white bg-black/20 hover:bg-black/40 p-1.5 rounded-full transition-colors cursor-pointer"
@@ -275,15 +275,15 @@ export function AudienceTable({ contacts }: { contacts: Contact[] }) {
 
               {/* KPIs — Seguidores, Username, ID */}
               <div className="grid grid-cols-3 gap-3">
-                <div className="bg-white p-3.5 rounded-2xl border border-gray-200 text-center space-y-1">
-                  <UsersIcon className="w-4 h-4 text-indigo-600 mx-auto" />
+                <div className="bg-white/60 backdrop-blur-sm p-3.5 rounded-2xl border border-white text-center space-y-1 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+                  <UsersIcon className="w-4 h-4 text-pink-600 mx-auto" />
                   <p className="text-lg font-extrabold text-gray-900">
                     {displayFollowers != null ? displayFollowers.toLocaleString('pt-BR') : '—'}
                   </p>
                   <span className="text-[10px] font-bold text-gray-500">Seguidores</span>
                 </div>
 
-                <div className="bg-white p-3.5 rounded-2xl border border-gray-200 text-center space-y-1">
+                <div className="bg-white/60 backdrop-blur-sm p-3.5 rounded-2xl border border-white text-center space-y-1 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
                   <AtSign className="w-4 h-4 text-purple-600 mx-auto" />
                   <p className="text-xs font-extrabold text-gray-900 truncate">
                     {displayUsername || '—'}
@@ -291,8 +291,8 @@ export function AudienceTable({ contacts }: { contacts: Contact[] }) {
                   <span className="text-[10px] font-bold text-gray-500">Username</span>
                 </div>
 
-                <div className="bg-white p-3.5 rounded-2xl border border-gray-200 text-center space-y-1">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600 mx-auto" />
+                <div className="bg-white/60 backdrop-blur-sm p-3.5 rounded-2xl border border-white text-center space-y-1 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+                  <ShieldCheck className="w-4 h-4 text-orange-500 mx-auto" />
                   <p className="text-xs font-extrabold text-gray-900">
                     {displayVerified === true ? '✅ Sim' : displayVerified === false ? '❌ Não' : '—'}
                   </p>
@@ -323,18 +323,18 @@ export function AudienceTable({ contacts }: { contacts: Contact[] }) {
             </div>
 
             {/* ── Rodapé — Ações rápidas ──────────────────────── */}
-            <div className="p-5 border-t border-gray-100 flex items-center justify-between gap-3 bg-gray-50/50">
+            <div className="p-5 border-t border-white/50 flex items-center justify-between gap-3 bg-white/40">
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setSelectedLead(null)}
-                  className="px-4 py-2.5 border border-gray-300 hover:bg-gray-100 text-gray-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                  className="px-4 py-2.5 bg-white/60 border border-white hover:bg-white/80 text-gray-700 rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-sm backdrop-blur-sm"
                 >
                   Fechar
                 </button>
                 <button
                   onClick={handleRefreshProfile}
                   disabled={loadingProfile}
-                  className="px-3 py-2.5 border border-gray-300 hover:bg-gray-100 text-gray-700 rounded-xl text-xs font-bold transition-colors cursor-pointer disabled:opacity-50 inline-flex items-center gap-1.5"
+                  className="px-3 py-2.5 bg-white/60 border border-white hover:bg-white/80 text-gray-700 rounded-xl text-xs font-bold transition-colors cursor-pointer disabled:opacity-50 inline-flex items-center gap-1.5 shadow-sm backdrop-blur-sm"
                   title="Atualizar dados do Instagram"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${loadingProfile ? 'animate-spin' : ''}`} />
@@ -344,7 +344,7 @@ export function AudienceTable({ contacts }: { contacts: Contact[] }) {
 
               <Link
                 href={`/inbox?contactId=${selectedLead.id}`}
-                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-2 shadow-xs"
+                className="px-5 py-2.5 bg-instagram-gradient hover:opacity-90 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-2 shadow-lg shadow-pink-500/20 hover:scale-[1.02]"
               >
                 <MessageSquare className="w-4 h-4" /> Abrir no Inbox
               </Link>

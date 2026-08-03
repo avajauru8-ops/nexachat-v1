@@ -59,11 +59,11 @@ export function TemplatesClient() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)] -m-6 bg-white overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-100px)] -m-6 md:-m-0 glass-panel md:rounded-3xl overflow-hidden shadow-xl border-0 md:border border-white/60">
       
       {/* Header Bar */}
-      <div className="h-16 flex items-center justify-between px-6 border-b border-gray-200 shrink-0">
-        <h1 className="text-xl font-bold text-gray-900">Biblioteca de Modelos de Automação</h1>
+      <div className="h-16 flex items-center justify-between px-6 border-b border-white/50 bg-white/40 shrink-0">
+        <h1 className="text-2xl font-black text-gray-900 tracking-tight">Biblioteca de Modelos</h1>
         <div className="relative">
           <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input 
@@ -71,7 +71,7 @@ export function TemplatesClient() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Procurar em Modelos..." 
-            className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm w-72 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-gray-800 bg-gray-50"
+            className="pl-9 pr-4 py-2 bg-white/60 border border-white rounded-xl text-sm w-72 outline-none focus:border-pink-300 focus:ring-2 focus:ring-pink-300/50 transition-all text-gray-800 backdrop-blur-sm shadow-sm"
           />
         </div>
       </div>
@@ -79,12 +79,12 @@ export function TemplatesClient() {
       <div className="flex-1 flex overflow-hidden">
         
         {/* Sidebar Categorias */}
-        <div className="w-64 border-r border-gray-200 bg-[#f9fafb] p-4 flex flex-col shrink-0 overflow-y-auto">
-          <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 px-3">Por Objetivo</h3>
+        <div className="w-64 border-r border-white/50 bg-white/30 backdrop-blur-md p-4 flex flex-col shrink-0 overflow-y-auto">
+          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 px-3">Por Objetivo</h3>
           <button 
             onClick={() => setActiveCategory('all')}
-            className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium mb-1 transition-colors ${
-              activeCategory === 'all' ? 'bg-gray-200/80 text-gray-900 font-semibold shadow-xs' : 'text-gray-600 hover:bg-gray-100'
+            className={`w-full text-left px-3 py-2 rounded-xl text-sm font-medium mb-1 transition-colors ${
+              activeCategory === 'all' ? 'bg-white/80 text-gray-900 font-semibold shadow-sm border border-white' : 'text-gray-600 hover:bg-white/50 border border-transparent'
             }`}
           >
             Todos os modelos ({PREBUILT_TEMPLATES.length})
@@ -116,7 +116,7 @@ export function TemplatesClient() {
         </div>
 
         {/* Área Principal de Modelos */}
-        <div className="flex-1 overflow-y-auto p-8 bg-white">
+        <div className="flex-1 overflow-y-auto p-8 bg-transparent">
           <div className="max-w-5xl mx-auto">
             
             <div className="flex items-center justify-between mb-6">
@@ -128,7 +128,7 @@ export function TemplatesClient() {
                 <div 
                   key={template.id} 
                   onClick={() => handleInstallTemplate(template.id)}
-                  className="bg-white border border-gray-200 rounded-2xl p-5 hover:border-blue-400 hover:shadow-xl transition-all cursor-pointer flex flex-col group relative overflow-hidden h-56"
+                  className="glass-panel border-white/80 rounded-3xl p-5 hover:border-pink-300 hover:shadow-xl transition-all cursor-pointer flex flex-col group relative overflow-hidden h-56"
                 >
                   <div className="flex items-center justify-between mb-3">
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
@@ -143,7 +143,7 @@ export function TemplatesClient() {
                     )}
                   </div>
                   
-                  <h3 className="font-bold text-gray-900 text-base mb-2 leading-snug group-hover:text-blue-600 transition-colors">
+                  <h3 className="font-bold text-gray-900 text-base mb-2 leading-snug group-hover:text-pink-600 transition-colors">
                     {template.title}
                   </h3>
                   
@@ -151,7 +151,7 @@ export function TemplatesClient() {
                     {template.description}
                   </p>
                   
-                  <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-blue-600 text-xs font-bold">
+                  <div className="mt-4 pt-3 border-t border-white/50 flex items-center justify-between text-pink-600 text-xs font-bold">
                     <span>{isInstalling === template.id ? 'Instalando...' : 'Usar este Modelo'}</span>
                     <ChevronRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
                   </div>
@@ -160,10 +160,10 @@ export function TemplatesClient() {
 
               <Link 
                 href="/flows/builder/new" 
-                className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-2xl p-5 hover:bg-blue-50 hover:border-blue-400 transition-all cursor-pointer flex flex-col items-center justify-center text-gray-500 group relative overflow-hidden h-56"
+                className="bg-white/40 backdrop-blur-sm border-2 border-dashed border-white rounded-3xl p-5 hover:bg-white/60 hover:border-pink-300 transition-all cursor-pointer flex flex-col items-center justify-center text-gray-600 group relative overflow-hidden h-56 shadow-sm hover:shadow-lg"
               >
-                <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                  <Plus className="w-6 h-6 text-blue-600" />
+                <div className="w-12 h-12 rounded-xl bg-instagram-gradient shadow-md shadow-pink-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                  <Plus className="w-6 h-6 text-white" />
                 </div>
                 <h3 className="font-bold text-gray-900 mb-1">Começar do Zero</h3>
                 <p className="text-xs text-center text-gray-500 px-4">Crie sua própria automação a partir de um canvas em branco.</p>

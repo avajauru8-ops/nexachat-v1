@@ -309,14 +309,14 @@ export function SettingsClient({ initialUser, initialWorkspace }: Props) {
       {/* Header Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Configurações do Sistema</h1>
-          <p className="text-sm text-gray-500 mt-1">Gerencie preferências da conta, níveis de acesso e equipe.</p>
+          <h1 className="text-3xl font-black text-gray-900 tracking-tight">Configurações</h1>
+          <p className="text-sm text-gray-600 mt-1">Gerencie preferências da conta, níveis de acesso e equipe.</p>
         </div>
         <div className="flex gap-2">
           <button 
             onClick={handleSaveAll}
             disabled={isSaving}
-            className="px-5 py-2.5 text-xs bg-blue-600 hover:bg-blue-700 rounded-xl text-white font-bold transition-all shadow-sm flex items-center gap-2 disabled:opacity-50"
+            className="px-5 py-2.5 text-xs bg-instagram-gradient hover:opacity-90 rounded-xl text-white font-bold transition-all flex items-center gap-2 disabled:opacity-50 shadow-lg shadow-pink-500/20 hover:scale-[1.02]"
           >
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             {isSaving ? 'Salvando no Banco...' : 'Salvar Alterações'}
@@ -327,7 +327,7 @@ export function SettingsClient({ initialUser, initialWorkspace }: Props) {
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Sidebar Tabs */}
         <div className="w-full lg:w-64 flex-shrink-0">
-          <nav className="space-y-1 bg-white p-2 border border-gray-200 rounded-2xl shadow-xs">
+          <nav className="space-y-1 bg-white/40 backdrop-blur-sm p-2 border border-white/50 rounded-3xl shadow-sm">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -335,13 +335,13 @@ export function SettingsClient({ initialUser, initialWorkspace }: Props) {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-xs font-semibold rounded-xl transition-all ${
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-xs font-semibold rounded-2xl transition-all ${
                     isActive
-                      ? 'bg-blue-50 text-blue-700 font-bold shadow-xs'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      ? 'bg-white/80 text-pink-600 font-bold shadow-sm border border-white'
+                      : 'text-gray-600 hover:bg-white/60 hover:text-gray-900 border border-transparent'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-pink-600' : 'text-gray-400'}`} />
                   {tab.label}
                 </button>
               );
@@ -355,7 +355,7 @@ export function SettingsClient({ initialUser, initialWorkspace }: Props) {
           {/* ABA: MEU PERFIL */}
           {activeTab === 'profile' && (
             <>
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="glass-panel rounded-3xl border-white/60 shadow-lg overflow-hidden">
                 <div className="p-6 border-b border-gray-100">
                   <h2 className="text-base font-bold text-gray-900">Perfil Público</h2>
                   <p className="text-xs text-gray-500 mt-0.5">Como você aparecerá para a sua equipe no NexaChat.</p>
@@ -391,9 +391,9 @@ export function SettingsClient({ initialUser, initialWorkspace }: Props) {
                         <button 
                           type="button"
                           onClick={() => fileInputRef.current?.click()}
-                          className="px-4 py-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
+                          className="px-4 py-2 text-xs bg-instagram-gradient text-white rounded-xl font-bold transition-all shadow-lg shadow-pink-500/20 hover:scale-[1.02] flex items-center gap-1.5 cursor-pointer border-none"
                         >
-                          <Upload className="w-3.5 h-3.5" /> Fazer Upload de Imagem
+                          <Upload className="w-3.5 h-3.5 text-white" /> Fazer Upload de Imagem
                         </button>
 
                         {avatarUrl && (
@@ -463,7 +463,7 @@ export function SettingsClient({ initialUser, initialWorkspace }: Props) {
                 </div>
               </div>
 
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="glass-panel rounded-3xl border-white/60 shadow-lg overflow-hidden">
                 <div className="p-6 border-b border-gray-100">
                   <h2 className="text-base font-bold text-gray-900">Preferências Regionais</h2>
                   <p className="text-xs text-gray-500 mt-0.5">Configure o idioma e fuso horário padrão das automações.</p>
@@ -503,7 +503,7 @@ export function SettingsClient({ initialUser, initialWorkspace }: Props) {
 
           {/* ABA: WORKSPACE */}
           {activeTab === 'workspace' && (
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="glass-panel rounded-3xl border-white/60 shadow-lg overflow-hidden">
               <div className="p-6 border-b border-gray-100">
                 <h2 className="text-base font-bold text-gray-900">Dados do Workspace</h2>
                 <p className="text-xs text-gray-500 mt-0.5">Gerencie as informações gerais e segmento da organização.</p>
@@ -550,7 +550,7 @@ export function SettingsClient({ initialUser, initialWorkspace }: Props) {
 
           {/* ABA: ASSINATURA */}
           {activeTab === 'billing' && (
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="glass-panel rounded-3xl border-white/60 shadow-lg overflow-hidden">
               <div className="p-6 border-b border-gray-100">
                 <h2 className="text-base font-bold text-gray-900">Plano e Assinatura</h2>
                 <p className="text-xs text-gray-500 mt-0.5">Gerencie seu plano, cotas de DMs e faturas recentes.</p>
@@ -590,7 +590,7 @@ export function SettingsClient({ initialUser, initialWorkspace }: Props) {
 
           {/* ABA: NOTIFICAÇÕES */}
           {activeTab === 'notifications' && (
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="glass-panel rounded-3xl border-white/60 shadow-lg overflow-hidden">
               <div className="p-6 border-b border-gray-100">
                 <h2 className="text-base font-bold text-gray-900">Preferências de Notificações</h2>
                 <p className="text-xs text-gray-500 mt-0.5">Escolha quando deseja receber alertas e relatórios por e-mail.</p>
@@ -640,7 +640,7 @@ export function SettingsClient({ initialUser, initialWorkspace }: Props) {
 
           {/* ABA: SEGURANÇA */}
           {activeTab === 'security' && (
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="glass-panel rounded-3xl border-white/60 shadow-lg overflow-hidden">
               <div className="p-6 border-b border-gray-100">
                 <h2 className="text-base font-bold text-gray-900">Segurança da Conta</h2>
                 <p className="text-xs text-gray-500 mt-0.5">Altere sua senha de acesso e configure credenciais de login.</p>
