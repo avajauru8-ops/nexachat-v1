@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Send, Search, Settings, Filter, MoreVertical, Paperclip, Smile, Image as ImageIcon, Video, Mic, CheckCheck, Clock, ChevronDown, Check, MoreHorizontal, MessageCircle, Square, Tag, Trash2, X, RefreshCw, Bot, Workflow, Star } from 'lucide-react';
+import { ArrowLeft, Filter, Paperclip, Smile, Image as ImageIcon, Mic, Clock, ChevronDown, Check, MoreHorizontal, MessageCircle, Square, Tag, Trash2, RefreshCw, Bot, Workflow, Star } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { toast } from 'react-hot-toast';
 
@@ -76,7 +76,7 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
             const params = new URLSearchParams(window.location.search);
             const targetContactId = params.get('contactId');
             if (targetContactId) {
-              const matchingConv = formattedData.find((c: any) => c.contacts?.id === targetContactId);
+              const matchingConv = formattedData.find((c: Record<string, unknown>) => (c.contacts as Record<string, unknown>)?.id === targetContactId);
               if (matchingConv) {
                 setActiveChatId(matchingConv.id);
               }
