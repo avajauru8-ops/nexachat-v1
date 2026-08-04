@@ -125,6 +125,7 @@ async function getOrCreateContactAndConversation(
       ig_scoped_id: senderId,
       name: contactName,
       last_interaction_at: new Date().toISOString(),
+      username: contactUsername,
       custom_fields: contactUsername ? { username: contactUsername } : {}
     };
     if (contactProfilePic) insertPayload.profile_picture = contactProfilePic;
@@ -266,6 +267,12 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
         
         if (!contact || !conversation) continue;
 
+        // Contexto do post/story para a citação (quote) no Inbox
+        const isStory = messageType === 'story_mention' || messageType === 'story_reply';
+        const messageMetadata = isStory
+          ? { post_url: mediaUrl, story: true }
+          : {};
+
         // Inserir Mensagem na Tabela messages
         const { data: newMessage } = await supabase
           .from('messages')
@@ -276,6 +283,7 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
             message_type: messageType,
             media_url: mediaUrl,
             direction: 'inbound',
+            metadata: messageMetadata,
             meta_message_id: msgObj.mid || `mid_${Date.now()}_${Math.random()}`
           })
           .select('id')
@@ -462,6 +470,22 @@ export async function processInstagramComments(
     const { contact, conversation } = await getOrCreateContactAndConversation(activeWorkspaceId, account, senderId, 'comment');
     if (!contact || !conversation) continue;
 
+    // Buscar contexto do post (legenda + thumbnail) para a citação no Inbox
+    let mediaInfo: { caption?: string; media_url?: string; thumbnail_url?: string } | null = null;
+    if (mediaId && account.access_token) {
+      try {
+        const isMetaToken = account.access_token.startsWith('EAA');
+        const domain = isMetaToken ? 'graph.facebook.com' : 'graph.instagram.com';
+        const mediaRes = await fetch(
+          `https://${domain}/v22.0/${mediaId}?fields=caption,media_url,thumbnail_url&access_token=${account.access_token}`
+        );
+        const mediaData = await mediaRes.json();
+        if (mediaData && !mediaData.error) mediaInfo = mediaData;
+      } catch {
+        /* ignora falha ao buscar mídia */
+      }
+    }
+
     // Salvar o comentário como mensagem para aparecer no Inbox (dedupe pelo commentId)
     try {
       const { error: insertErr } = await supabase
@@ -473,6 +497,12 @@ export async function processInstagramComments(
           content: commentText,
           direction: 'inbound',
           media_url: change.value.media?.url || null,
+          metadata: {
+            media_id: mediaId,
+            post_url: change.value.media?.url || mediaInfo?.media_url || null,
+            post_text: mediaInfo?.caption || null,
+            thumbnail_url: mediaInfo?.thumbnail_url || mediaInfo?.media_url || null
+          },
           meta_message_id: commentId
         });
 

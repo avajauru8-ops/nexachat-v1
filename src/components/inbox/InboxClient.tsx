@@ -2,9 +2,10 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Filter, Paperclip, Smile, Image as ImageIcon, Mic, Clock, ChevronDown, Check, MoreHorizontal, MessageCircle, Square, Tag, Trash2, RefreshCw, Bot, Workflow, Star } from 'lucide-react';
+import { ArrowLeft, Filter, Paperclip, Smile, Image as ImageIcon, Mic, Clock, ChevronDown, Check, MoreHorizontal, MessageCircle, Square, Tag, Trash2, RefreshCw, Bot, Workflow, Star, PanelRightOpen, Camera } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { toast } from 'react-hot-toast';
+import { CrmPanel } from './CrmPanel';
 
 export function InboxClient({ workspaceId }: { workspaceId: string }) {
   const [conversations, setConversations] = useState<Record<string, unknown>[]>([]);
@@ -16,6 +17,17 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
   const [newMessage, setNewMessage] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   const [now, setNow] = useState<number | null>(null);
+  const [showCrmPanel, setShowCrmPanel] = useState(true);
+  const [replyMode, setReplyMode] = useState<'dm' | 'public'>('dm');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [members, setMembers] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch('/api/workspace/members')
+      .then(r => r.json())
+      .then(d => { if (d.members) setMembers(d.members); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => setNow(Date.now()), 0);
@@ -50,8 +62,8 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
     supabase
       .from('conversations')
       .select(`
-        id, status, channel, last_interaction_at, window_expires_at, created_at, updated_at,
-        contacts ( id, name, ig_scoped_id, profile_picture ),
+        id, status, channel, last_interaction_at, window_expires_at, created_at, updated_at, pipeline_stage, assigned_agent_id,
+        contacts ( id, name, ig_scoped_id, profile_picture, username, email, phone, custom_fields, contact_tags ( tag_id, tags ( id, name, color ) ) ),
         messages ( content, message_type, timestamp )
       `)
       .eq('workspace_id', workspaceId)
@@ -155,8 +167,8 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
               const { data: newConv } = await supabase
                 .from('conversations')
                 .select(`
-                  id, status, channel, last_interaction_at, window_expires_at, created_at, updated_at, unread_count,
-                  contacts ( id, name, ig_scoped_id, profile_picture ),
+                  id, status, channel, last_interaction_at, window_expires_at, created_at, updated_at, unread_count, pipeline_stage, assigned_agent_id,
+                  contacts ( id, name, ig_scoped_id, profile_picture, username, email, phone, custom_fields, contact_tags ( tag_id, tags ( id, name, color ) ) ),
                   messages ( content, message_type, timestamp )
                 `)
                 .eq('id', newMsg.conversation_id as string)
@@ -255,6 +267,14 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
     }
   };
 
+  const handleSendOrReply = () => {
+    if (activeChat?.channel === 'comment' && replyMode === 'public') {
+      handlePublicCommentReply();
+    } else {
+      handleSendMessage();
+    }
+  };
+
   const handleDeleteConversation = async () => {
     if (!activeChatId) return;
     if (!confirm('Tem certeza que deseja excluir esta conversa inteira? Essa ação é irreversível.')) return;
@@ -283,8 +303,8 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
     supabase
       .from('conversations')
       .select(`
-        id, status, channel, last_interaction_at, window_expires_at, created_at, updated_at,
-        contacts ( id, name, ig_scoped_id, profile_picture ),
+        id, status, channel, last_interaction_at, window_expires_at, created_at, updated_at, pipeline_stage, assigned_agent_id,
+        contacts ( id, name, ig_scoped_id, profile_picture, username, email, phone, custom_fields, contact_tags ( tag_id, tags ( id, name, color ) ) ),
         messages ( content, message_type, timestamp )
       `)
       .eq('workspace_id', workspaceId)
@@ -460,7 +480,10 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
                     <p className={`font-semibold text-sm truncate ${Number(chat.unread_count || 0) > 0 ? 'text-black' : 'text-gray-800'}`}>
                       {(chat.contacts as Record<string, unknown>)?.name as string || (chat.contacts as Record<string, unknown>)?.ig_scoped_id as string}
                       {chat.channel === 'comment' && (
-                        <span className="text-[9px] font-bold uppercase tracking-wide text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-1.5 py-0.5 ml-1 align-middle">Comentário</span>
+                        <span className="text-[9px] font-bold uppercase tracking-wide text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-1.5 py-0.5 ml-1 align-middle">💬 Comentário</span>
+                      )}
+                      {chat.channel === 'story' && (
+                        <span className="text-[9px] font-bold uppercase tracking-wide text-pink-600 bg-pink-50 border border-pink-200 rounded-full px-1.5 py-0.5 ml-1 align-middle">📸 Story</span>
                       )}
                     </p>
                     <span className={`text-[11px] flex-shrink-0 ml-2 ${Number(chat.unread_count || 0) > 0 ? 'text-blue-600 font-bold' : 'text-gray-400'}`}>
@@ -511,6 +534,11 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
               </div>
 
               <div className="flex items-center gap-4 text-gray-400">
+                <PanelRightOpen
+                  onClick={() => setShowCrmPanel(v => !v)}
+                  className={`w-5 h-5 cursor-pointer hover:text-gray-600 transition-colors ${showCrmPanel ? 'text-indigo-500' : ''}`}
+                  aria-label="Painel CRM"
+                />
                 <Tag className="w-5 h-5 cursor-pointer hover:text-gray-600" />
                 <Clock className="w-5 h-5 cursor-pointer hover:text-gray-600" />
                 <Check className="w-5 h-5 cursor-pointer hover:text-gray-600" />
@@ -576,6 +604,42 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
                               {msg.direction === 'outbound' ? 'Resposta pública no comentário' : 'Comentário no post'}
                             </div>
                           )}
+                          {(() => {
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            const meta = (msg.metadata as Record<string, any>) || {};
+                            const isStory = msg.message_type === 'story_mention' || msg.message_type === 'story_reply';
+                            const isCommentCtx = msg.message_type === 'comment' && (meta.post_url || meta.post_text || meta.thumbnail_url);
+                            if (isStory || isCommentCtx) {
+                              const thumb = meta.thumbnail_url || (isStory ? msg.media_url : null);
+                              return (
+                                <div className="mb-2 rounded-xl border border-gray-200 bg-white p-2.5 shadow-sm">
+                                  <div className="flex items-center gap-2">
+                                    {thumb ? (
+                                      <img src={thumb as string} alt="contexto" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                                    ) : (
+                                      <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+                                        <Camera className="w-4 h-4 text-white" />
+                                      </div>
+                                    )}
+                                    <div className="min-w-0 flex-1">
+                                      <p className={`text-[10px] font-bold uppercase tracking-wide ${isStory ? 'text-pink-600' : 'text-gray-400'}`}>
+                                        {isStory ? '📸 Resposta ao Story' : '📌 Post original'}
+                                      </p>
+                                      {meta.post_text && (
+                                        <p className="text-xs text-gray-600 truncate mt-0.5">{meta.post_text as string}</p>
+                                      )}
+                                      {meta.post_url && (
+                                        <a href={meta.post_url as string} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-600 underline mt-0.5 inline-block">
+                                          Ver no Instagram
+                                        </a>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
                           {msg.message_type === 'image' && Boolean(msg.media_url) && (
                             <img src={msg.media_url as string} alt="Mídia" className="max-w-full rounded-lg mb-2 cursor-pointer hover:opacity-90 border border-transparent" onClick={() => window.open(msg.media_url as string, '_blank')} />
                           )}
@@ -682,21 +746,36 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
                       <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
                     </button>
                     {activeChat.channel === 'comment' && (
-                      <button 
-                        onClick={handlePublicCommentReply}
-                        disabled={!newMessage.trim()}
-                        className="px-4 py-2.5 border border-amber-300 bg-amber-50 text-amber-700 text-[13px] font-bold rounded-xl hover:bg-amber-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="Responde publicamente no post do Instagram"
-                      >
-                        Responder no Comentário
-                      </button>
+                      <div className="flex items-center gap-1 rounded-xl bg-amber-50 border border-amber-200 p-1" title="Escolha o canal de resposta">
+                        <button
+                          onClick={() => setReplyMode('dm')}
+                          className={`px-3 py-1.5 text-[11px] font-bold rounded-lg transition-colors ${replyMode === 'dm' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-800'}`}
+                        >
+                          DM
+                        </button>
+                        <button
+                          onClick={() => setReplyMode('public')}
+                          className={`px-3 py-1.5 text-[11px] font-bold rounded-lg transition-colors ${replyMode === 'public' ? 'bg-amber-500 text-white shadow-sm' : 'text-amber-700 hover:bg-amber-100'}`}
+                          title="Responde publicamente no post do Instagram"
+                        >
+                          Público (no post)
+                        </button>
+                      </div>
                     )}
                     <button 
-                      onClick={handleSendMessage}
+                      onClick={handleSendOrReply}
                       disabled={!newMessage.trim()}
-                      className="px-8 py-2.5 bg-instagram-gradient hover:opacity-90 text-white text-[13px] font-bold rounded-xl shadow-lg shadow-pink-500/20 transition-all hover:scale-[1.02] disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed"
+                      className={`px-8 py-2.5 text-[13px] font-bold rounded-xl shadow-lg transition-all hover:scale-[1.02] disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed ${
+                        activeChat.channel === 'comment' && replyMode === 'public'
+                          ? 'bg-amber-500 hover:bg-amber-400 text-white shadow-amber-500/20'
+                          : 'bg-instagram-gradient hover:opacity-90 text-white shadow-pink-500/20'
+                      }`}
                     >
-                      {activeChat.channel === 'comment' ? 'Responder via DM' : 'Enviar Para O Instagram'}
+                      {activeChat.channel === 'comment' && replyMode === 'public'
+                        ? 'Responder no Post'
+                        : activeChat.channel === 'comment'
+                          ? 'Enviar via DM'
+                          : 'Enviar Para O Instagram'}
                     </button>
                   </div>
                 </div>
@@ -712,6 +791,25 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
           </div>
         )}
       </div>
+
+      {/* Coluna 4: Painel CRM (retrátil) */}
+      <aside
+        className={`${showCrmPanel ? 'w-[320px]' : 'w-0'} border-l border-[#e5e7eb] bg-white flex flex-col shrink-0 overflow-hidden transition-all duration-300 hidden lg:flex`}
+      >
+        {activeChat ? (
+          <CrmPanel
+            workspaceId={workspaceId}
+            conversationId={activeChat.id as string}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            contact={(activeChat.contacts as Record<string, any>) || {}}
+            pipelineStage={activeChat.pipeline_stage as string}
+            assigneeId={activeChat.assigned_agent_id as string}
+            members={members}
+            onDataChanged={fetchConversationsList}
+            onClose={() => setShowCrmPanel(false)}
+          />
+        ) : null}
+      </aside>
 
     </div>
   );
