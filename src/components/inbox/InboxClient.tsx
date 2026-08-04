@@ -1235,6 +1235,7 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
       >
         {activeChat ? (
           <CrmPanel
+            key={activeChat.id as string}
             workspaceId={workspaceId}
             conversationId={activeChat.id as string}
             // eslint-disable-next-line @typescript-eslint/no-explicit-any

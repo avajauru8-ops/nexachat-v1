@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AtSign, Mail, Phone, X, ChevronDown, Tag as TagIcon, UserCog, Save, Sparkles } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { toast } from 'react-hot-toast';
@@ -51,6 +51,22 @@ export function CrmPanel({
   const [phone, setPhone] = useState(contact.phone || '');
   const [tagInput, setTagInput] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Se o username ainda não foi capturado, buscar o perfil real no Instagram
+  useEffect(() => {
+    if (!contact?.id || contact.username || contact.custom_fields?.username) return;
+    let cancelled = false;
+    fetch('/api/contacts/fetch-profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contactId: contact.id })
+    })
+      .then(r => r.json())
+      .then(d => { if (!cancelled && d.success && d.contact) onDataChanged(); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contact?.id, contact?.username, contact?.custom_fields?.username]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const contactTags: any[] = contact.contact_tags || [];
@@ -195,7 +211,7 @@ export function CrmPanel({
             <div className="min-w-0">
               <p className="font-semibold text-gray-900 text-sm truncate">{contact.name || 'Lead do Instagram'}</p>
               <p className="text-xs text-gray-500 flex items-center gap-1 truncate">
-                <AtSign className="w-3 h-3" /> {contact.username || 'username não capturado'}
+                <AtSign className="w-3 h-3" /> {contact.username || contact.custom_fields?.username || 'username não capturado'}
               </p>
             </div>
           </div>
