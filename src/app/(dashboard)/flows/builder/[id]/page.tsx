@@ -32,13 +32,15 @@ export default async function FlowBuilderPage({ params }: { params: Promise<{ id
   
   const { data: flow, error } = await supabase
     .from('flows')
-    .select('id, name, flow_data, instagram_account_id, status')
+    .select('id, name, flow_data, instagram_account_id, status, updated_at, flow_logs(count)')
     .eq('id', id)
     .single()
 
   if (error || !flow) {
     notFound()
   }
+
+  const executionCount = (flow.flow_logs as unknown as { count: number }[] | null)?.[0]?.count ?? 0
 
   return (
     <FlowBuilderClient 
@@ -48,6 +50,8 @@ export default async function FlowBuilderPage({ params }: { params: Promise<{ id
       initialStatus={flow.status}
       initialAccountId={flow.instagram_account_id}
       instagramAccounts={accounts}
+      executionCount={executionCount}
+      updatedAt={flow.updated_at as string | null}
     />
   )
 }
