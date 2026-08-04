@@ -914,7 +914,13 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
                     {(activeChat.contacts as Record<string, unknown>)?.name as string || (activeChat.contacts as Record<string, unknown>)?.ig_scoped_id as string}
                   </h2>
                   <div className="text-[11px] text-gray-500 flex items-center gap-1 cursor-pointer hover:text-gray-700">
-                    {activeChat.channel === 'comment' ? '💬 Comentário no post' : 'Não atribuído'} <ChevronDown className="w-3 h-3" />
+                    {(() => {
+                      const assignedAgent = members.find(m => m.user_id === activeChat.assigned_agent_id);
+                      if (assignedAgent) {
+                        return <span className="flex items-center gap-1">👤 {assignedAgent.name || assignedAgent.email || 'Agente'} <ChevronDown className="w-3 h-3" /></span>;
+                      }
+                      return activeChat.channel === 'comment' ? '💬 Comentário no post' : 'Não atribuído';
+                    })()}
                   </div>
                 </div>
               </div>
