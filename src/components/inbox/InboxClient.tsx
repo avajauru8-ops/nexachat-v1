@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Filter, Paperclip, Smile, Image as ImageIcon, Mic, Clock, ChevronDown, Check, MoreHorizontal, MessageCircle, Square, Tag, Trash2, RefreshCw, Bot, Workflow, Star, PanelRightOpen, Camera, X } from 'lucide-react';
+import { ArrowLeft, Filter, Paperclip, Smile, Image as ImageIcon, Mic, Clock, ChevronDown, Check, MoreHorizontal, MessageCircle, Square, Tag, Trash2, Bot, Workflow, Star, PanelRightOpen, Camera, X } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { toast } from 'react-hot-toast';
 import { CrmPanel } from './CrmPanel';
@@ -24,7 +24,6 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const [messages, setMessages] = useState<Record<string, unknown>[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [isSyncing, setIsSyncing] = useState(false);
   const [now, setNow] = useState<number | null>(null);
   const [showCrmPanel, setShowCrmPanel] = useState(true);
   const [replyMode, setReplyMode] = useState<'dm' | 'public'>('dm');
@@ -481,35 +480,6 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
           setConversations(formattedData);
         }
       });
-  };
-
-  const handleSyncApi = async () => {
-    setIsSyncing(true);
-    const toastId = toast.loading('Buscando dados no Instagram...');
-    try {
-      const res = await fetch('/api/instagram/sync', { method: 'POST' });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error('Erro: ' + (data.error || 'Falha ao sincronizar'), { id: toastId });
-      } else {
-        toast.success(`Sincronizado! ${data.synced} conversas atualizadas.`, { id: toastId });
-        fetchConversationsList();
-        if (activeChatId) {
-           supabase
-            .from('messages')
-            .select('*')
-            .eq('conversation_id', activeChatId)
-            .order('timestamp', { ascending: true })
-            .then(({ data: msgs }) => {
-              if (msgs) setMessages(msgs);
-            });
-        }
-      }
-    } catch {
-      toast.error('Erro de conexão ao sincronizar', { id: toastId });
-    } finally {
-      setIsSyncing(false);
-    }
   };
 
   const formatTime = (isoString?: string) => {
@@ -1212,14 +1182,6 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
                 </div>
                   
                   <div className="flex items-center gap-3">
-                    <button 
-                      onClick={handleSyncApi}
-                      disabled={isSyncing}
-                      className="w-10 h-10 flex items-center justify-center bg-instagram-gradient hover:opacity-90 text-white rounded-xl shadow-lg shadow-pink-500/20 transition-all hover:scale-[1.02] disabled:opacity-50 disabled:scale-100"
-                      title="Sincronizar Mensagens"
-                    >
-                      <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                    </button>
                     {activeChat.channel === 'comment' && (
                       <div className="flex items-center gap-1 rounded-xl bg-amber-50 border border-amber-200 p-1" title="Escolha o canal de resposta">
                         <button
@@ -1250,7 +1212,7 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
                         ? 'Responder no Post'
                         : activeChat.channel === 'comment'
                           ? 'Enviar via DM'
-                          : 'Enviar Para O Instagram'}
+                          : 'Enviar'}
                     </button>
                   </div>
                 </div>
