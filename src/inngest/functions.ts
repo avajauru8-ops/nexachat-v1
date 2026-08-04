@@ -1,6 +1,6 @@
 import { inngest } from './client';
 import { createClient } from '@supabase/supabase-js';
-import { processInstagramComments } from '@/utils/webhookProcessor';
+import { processInstagramComments, processInstagramFollows } from '@/utils/webhookProcessor';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
@@ -157,14 +157,18 @@ export const processWebhookEvent = inngest.createFunction(
 
             // Inserir mensagem recebida no banco (dispara Realtime para o Inbox)
             const fallbackContent = messageText || (messageType === 'image' ? '📷 Foto' : messageType === 'video' ? '🎥 Vídeo' : 'Mensagem enviada');
-            await supabase.from('messages').insert({
-              conversation_id: conversation.id,
-              sender_type: 'user',
-              message_type: messageType,
-              content: fallbackContent,
-              media_url: mediaUrl,
-              meta_message_id: msgObj.mid || null
-            });
+            try {
+              await supabase.from('messages').insert({
+                conversation_id: conversation.id,
+                sender_type: 'user',
+                message_type: messageType,
+                content: fallbackContent,
+                media_url: mediaUrl,
+                meta_message_id: msgObj.mid || null
+              });
+            } catch (insertErr) {
+              console.error('[Inngest Router] Erro ao salvar mensagem (ignorado):', insertErr);
+            }
 
             // --- ROTEAMENTO POR STATUS DA CONVERSA ---
             
@@ -249,6 +253,7 @@ export const processWebhookEvent = inngest.createFunction(
         // --- 2. PROCESSAMENTO DE COMENTÁRIOS (COMMENT-TO-DM) ---
         if (entry.changes && Array.isArray(entry.changes)) {
           await processInstagramComments(entry, initialWorkspaceId);
+          await processInstagramFollows(entry, initialWorkspaceId);
         }
       }
     });

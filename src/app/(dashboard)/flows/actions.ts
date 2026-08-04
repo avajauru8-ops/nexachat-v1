@@ -1,6 +1,8 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { resubscribeInstagramWebhooks } from '@/utils/instagramWebhook'
 
 export async function saveFlow(
   id: string, 
@@ -94,6 +96,39 @@ export async function publishFlow(id: string, publish: boolean = true) {
       .eq('id', id);
 
     if (error) return { success: false, error: error.message || 'Erro ao publicar fluxo' }
+
+    // Ao publicar/ativar um fluxo de boas-vindas, (re)inscreve a conta nos webhooks da Meta
+    // (inclui o campo `follow` para detectar novos seguidores). Não bloqueia a publicação.
+    if (publish) {
+      try {
+        const serviceSupabase = createServiceClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.SUPABASE_SERVICE_ROLE_KEY!
+        );
+
+        const { data: flow } = await serviceSupabase
+          .from('flows')
+          .select('trigger_type, instagram_account_id')
+          .eq('id', id)
+          .maybeSingle();
+
+        if (flow && flow.trigger_type === 'welcome_dm' && flow.instagram_account_id) {
+          const { data: account } = await serviceSupabase
+            .from('instagram_accounts')
+            .select('id, ig_user_id, page_id, access_token')
+            .eq('id', flow.instagram_account_id)
+            .maybeSingle();
+
+          if (account) {
+            const subResult = await resubscribeInstagramWebhooks(account);
+            console.log(`[publishFlow] Re-inscrição de webhooks para flow de boas-vindas:`, subResult);
+          }
+        }
+      } catch (resubErr) {
+        console.warn('[publishFlow] Falha ao re-assinar webhooks (não bloqueia):', resubErr);
+      }
+    }
+
     return { success: true, status };
   } catch (err: unknown) {
     return { success: false, error: err instanceof Error ? err.message : 'Erro inesperado' }

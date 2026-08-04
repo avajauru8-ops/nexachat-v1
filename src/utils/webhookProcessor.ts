@@ -337,22 +337,28 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
           : {};
 
         // Inserir Mensagem na Tabela messages
-        const { data: newMessage } = await supabase
-          .from('messages')
-          .insert({
-            conversation_id: conversation.id,
-            sender_type: 'user',
-            content: messageText,
-            message_type: messageType,
-            media_url: mediaUrl,
-            direction: 'inbound',
-            metadata: messageMetadata,
-            meta_message_id: msgObj.mid || `mid_${Date.now()}_${Math.random()}`
-          })
-          .select('id')
-          .single();
+        try {
+          const { data: newMessage } = await supabase
+            .from('messages')
+            .insert({
+              conversation_id: conversation.id,
+              sender_type: 'user',
+              content: messageText,
+              message_type: messageType,
+              media_url: mediaUrl,
+              direction: 'inbound',
+              metadata: messageMetadata,
+              meta_message_id: msgObj.mid || `mid_${Date.now()}_${Math.random()}`
+            })
+            .select('id')
+            .single();
 
-        console.log(`[Processamento Sync] Mensagem salva com sucesso: ${newMessage?.id}`);
+          console.log(`[Processamento Sync] Mensagem salva com sucesso: ${newMessage?.id}`);
+        } catch (insertErr) {
+          // Um erro aqui (ex: tipo de mídia não suportado) não pode abortar o evento
+          // nem impedir o disparo de automações (ex: boas-vindas de novo seguidor).
+          console.error('[Processamento Sync] Erro ao salvar mensagem (ignorado):', insertErr);
+        }
 
         // --- EXECUTAR AUTOMAÇÃO (IA OU FLUXO) ---
         if (conversation.status === 'ai') {
@@ -624,7 +630,7 @@ export async function processInstagramComments(
 
     const activeWorkspaceId = account.workspace_id;
 
-    const { contact, conversation } = await getOrCreateContactAndConversation(activeWorkspaceId, account, senderId, 'comment');
+    const { contact, conversation, created } = await getOrCreateContactAndConversation(activeWorkspaceId, account, senderId, 'comment');
     if (!contact || !conversation) continue;
 
     // Buscar contexto do post (legenda + thumbnail) para a citação no Inbox
@@ -724,6 +730,48 @@ export async function processInstagramComments(
           });
         } catch (e) {
           console.error("[Flow Engine Direct] Erro no fallback de comentário:", e);
+        }
+      }
+    }
+
+    // Contato NOVO (primeira interação por comentário): se nenhum fluxo de comentário
+    // casou, dispara o fluxo de boas-vindas (welcome_dm) pendente atribuído na criação.
+    // Isso garante a mensagem de boas-vindas mesmo sem evento de 'follow' da Meta.
+    if (!matchedFlowId && created && conversation.active_flow_id) {
+      const welcomeFlowId = conversation.active_flow_id;
+      console.log(`[Comentários] Novo contato sem fluxo de comentário — disparando boas-vindas (${welcomeFlowId})`);
+      try {
+        if (process.env.INNGEST_EVENT_KEY) {
+          await inngest.send({
+            name: 'flow/execute',
+            data: {
+              workspaceId: activeWorkspaceId,
+              contactId: contact.id,
+              conversationId: conversation.id,
+              recipientId: recipientId,
+              senderId: senderId,
+              flowId: welcomeFlowId,
+              nodeId: null
+            }
+          });
+        } else {
+          throw new Error("INNGEST_EVENT_KEY ausente");
+        }
+      } catch (inngestErr) {
+        console.warn(`[Comentários] Fallback síncrono para boas-vindas de novo contato: ${inngestErr}`);
+        const { executeFlowDirect } = await import('@/utils/flowEngineDirect');
+        try {
+          await executeFlowDirect({
+            workspaceId: activeWorkspaceId,
+            contactId: contact.id,
+            conversationId: conversation.id,
+            recipientId: recipientId,
+            senderId: senderId,
+            flowId: welcomeFlowId,
+            nodeId: null
+          });
+        } catch (e) {
+          console.error("[Flow Engine Direct] Erro no fallback de boas-vindas:", e);
         }
       }
     }

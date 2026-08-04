@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
+import { resubscribeInstagramWebhooks } from '@/utils/instagramWebhook';
 
 export async function POST(request: Request) {
   try {
@@ -70,10 +71,13 @@ export async function POST(request: Request) {
 
     // 2. Tentar inscrever a conta nos Webhooks de mensagens da Meta automaticamente
     try {
-      await fetch(
-        `https://graph.facebook.com/v22.0/${ig_user_id}/subscribed_apps?subscribed_fields=messages,comments,mentions,follows&access_token=${access_token}`,
-        { method: 'POST' }
-      );
+      const subResult = await resubscribeInstagramWebhooks({
+        id: '',
+        ig_user_id: String(ig_user_id).trim(),
+        page_id: null,
+        access_token: access_token.trim()
+      });
+      console.log('Webhook subscription (connect-direct):', subResult);
     } catch (e) {
       console.warn('Aviso ao registrar Webhook da Meta:', e);
     }

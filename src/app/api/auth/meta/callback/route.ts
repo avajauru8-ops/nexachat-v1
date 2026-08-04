@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { getMetaCredentials } from '@/utils/metaCredentials';
+import { resubscribeInstagramWebhooks } from '@/utils/instagramWebhook';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -124,11 +125,14 @@ export async function GET(request: Request) {
     // 4. Inscrever Webhooks na API de mensagens direta do Instagram via /me/subscribed_apps
     let webhookSubscribed = false;
     try {
-      const subUrl = `https://graph.instagram.com/v22.0/me/subscribed_apps?subscribed_fields=messages,messaging_postbacks,messaging_optins,comments,message_reactions,follows&access_token=${longLivedToken}`;
-      const subRes = await fetch(subUrl, { method: 'POST' });
-      const subData = await subRes.json();
-      if (subData?.success) webhookSubscribed = true;
-      console.log("IG Webhook Subscription:", subData);
+      const subResult = await resubscribeInstagramWebhooks({
+        id: '',
+        ig_user_id: finalIgUserId,
+        page_id: 'native_ig_login',
+        access_token: longLivedToken
+      });
+      webhookSubscribed = subResult.ok;
+      console.log("IG Webhook Subscription:", subResult);
     } catch (e) {
       console.error("Erro ao assinar webhook no IG nativo:", e);
     }
