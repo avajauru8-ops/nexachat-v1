@@ -99,7 +99,7 @@ export async function POST(
           {
             error: message,
             retry: true,
-            message: 'A Meta está com limite de requisições — tentaremos publicar novamente em alguns minutos.'
+            message: `Não foi possível publicar agora (${message}). O post continua agendado e será tentado automaticamente de novo.`
           },
           { status: 429 }
         );

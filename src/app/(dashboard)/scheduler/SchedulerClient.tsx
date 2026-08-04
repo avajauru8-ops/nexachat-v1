@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   CalendarClock, Image as ImageIcon, Video, Upload, X, Loader2, Trash2,
   Send, CheckCircle2, Clock, AlertTriangle, Zap, Copy, CalendarPlus, Link2,
-  CalendarDays, ChevronLeft, ChevronRight
+  CalendarDays, ChevronLeft, ChevronRight, Eye, Heart, MessageCircle, Bookmark, Sparkles
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { createClient } from '@/utils/supabase/client';
@@ -44,9 +44,14 @@ const STATUS_META: Record<ScheduledPost['status'], { label: string; classes: str
   failed: { label: 'Falhou', classes: 'bg-red-50 text-red-700 border-red-200', dot: 'bg-red-500' }
 };
 
-const toLocalInput = (d: Date) => {
+const toDateInput = (d: Date) => {
   const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
+const toTimeInput = (d: Date) => {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
 const formatSchedule = (iso: string) => {
@@ -89,7 +94,10 @@ export function SchedulerClient({
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [fileType, setFileType] = useState<'image' | 'video' | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [scheduledAt, setScheduledAt] = useState('');
+  const [scheduleDate, setScheduleDate] = useState('');
+  const [scheduleTime, setScheduleTime] = useState('');
+  const [aiTopic, setAiTopic] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [posts, setPosts] = useState<ScheduledPost[]>(initialPosts as unknown as ScheduledPost[]);
   const [tableExists, setTableExists] = useState(initialTableExists);
@@ -218,14 +226,18 @@ export function SchedulerClient({
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const setQuickSchedule = (minutesFromNow: number) => {
-    setScheduledAt(toLocalInput(new Date(Date.now() + minutesFromNow * 60000)));
+  const applySchedule = (d: Date) => {
+    setScheduleDate(toDateInput(d));
+    setScheduleTime(toTimeInput(d));
   };
 
   const handleSubmit = async () => {
     if (!accountId) return toast.error('Selecione a conta do Instagram.');
     if (!mediaUrl) return toast.error('Envie a imagem ou vídeo.');
-    if (!scheduledAt) return toast.error('Defina a data e hora da publicação.');
+    if (!scheduleDate || !scheduleTime) return toast.error('Defina a data e a hora da publicação.');
+
+    const scheduled = new Date(`${scheduleDate}T${scheduleTime}`);
+    if (scheduled.getTime() <= Date.now()) return toast.error('Escolha uma data e hora futuras.');
 
     setIsSubmitting(true);
     try {
@@ -237,7 +249,7 @@ export function SchedulerClient({
           mediaType,
           caption,
           mediaUrl,
-          scheduledAt: new Date(scheduledAt).toISOString()
+          scheduledAt: scheduled.toISOString()
         })
       });
       const result = await res.json();
@@ -251,7 +263,8 @@ export function SchedulerClient({
 
       toast.success('Publicação agendada! 🗓️');
       setCaption('');
-      setScheduledAt('');
+      setScheduleDate('');
+      setScheduleTime('');
       clearMedia();
       await refreshPosts();
     } catch (err) {
@@ -299,6 +312,34 @@ export function SchedulerClient({
       setDeletingId(null);
     }
   };
+
+  const handleAiCaption = async () => {
+    if (aiLoading) return;
+    setAiLoading(true);
+    try {
+      const res = await fetch('/api/scheduler/caption-ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic: aiTopic, mediaType })
+      });
+      const result = await res.json();
+      if (!res.ok || result.error) throw new Error(result.error || 'Erro ao gerar a legenda.');
+      setCaption(result.caption.slice(0, 2200));
+      toast.success('Legenda criada pela IA! ✨');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao gerar a legenda.');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const selectedAccount = accounts.find(a => a.id === accountId);
+  const accLabel = selectedAccount ? accountLabel(selectedAccount) : '';
+  const previewMedia = filePreview || mediaUrl;
+  const previewIsVideo = fileType === 'video';
+  const scheduledLabel = scheduleDate && scheduleTime
+    ? formatSchedule(new Date(`${scheduleDate}T${scheduleTime}`).toISOString())
+    : 'Em breve';
 
   const copySetupSql = async () => {
     const sql = `create table if not exists public.scheduled_posts (
@@ -462,7 +503,7 @@ alter table public.scheduled_posts add column if not exists updated_at timestamp
         </div>
       )}
 
-      <div className="grid grid-cols-1 xl:grid-cols-5 gap-6 items-start">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
         {/* ── FORMULÁRIO DE CRIAÇÃO ── */}
         <div className="xl:col-span-2 bg-white/70 backdrop-blur-md rounded-3xl border border-white shadow-xl p-6 space-y-5">
           <div className="flex items-center justify-between">
@@ -577,12 +618,29 @@ alter table public.scheduled_posts add column if not exists updated_at timestamp
 
           {/* Legenda */}
           <div>
-            <div className="flex items-center justify-between mb-1.5">
+            <div className="flex items-center justify-between gap-2 mb-1.5">
               <label className="text-[11px] font-black uppercase tracking-wider text-gray-500">Legenda</label>
-              <span className={`text-[10px] font-bold ${caption.length > 2100 ? 'text-red-500' : 'text-gray-400'}`}>
-                {caption.length}/2200
-              </span>
+              <div className="flex items-center gap-2">
+                <span className={`text-[10px] font-bold ${caption.length > 2100 ? 'text-red-500' : 'text-gray-400'}`}>
+                  {caption.length}/2200
+                </span>
+                <button
+                  onClick={handleAiCaption}
+                  disabled={aiLoading}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-instagram-gradient text-white text-[10px] font-black shadow-sm hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50"
+                  title="Gerar legenda com IA"
+                >
+                  {aiLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                  Criar legenda com IA
+                </button>
+              </div>
             </div>
+            <input
+              value={aiTopic}
+              onChange={e => setAiTopic(e.target.value)}
+              placeholder="Sobre o que é o post? Ex: promoção de lançamento"
+              className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 mb-2 text-sm text-gray-900 outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 font-medium"
+            />
             <textarea
               value={caption}
               onChange={e => setCaption(e.target.value.slice(0, 2200))}
@@ -603,16 +661,24 @@ alter table public.scheduled_posts add column if not exists updated_at timestamp
             </div>
           </div>
 
-          {/* Data/hora */}
+          {/* Data e hora separados */}
           <div>
             <label className="text-[11px] font-black uppercase tracking-wider text-gray-500 block mb-1.5">Data e hora</label>
-            <input
-              type="datetime-local"
-              value={scheduledAt}
-              min={toLocalInput(new Date())}
-              onChange={e => setScheduledAt(e.target.value)}
-              className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-900 outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 cursor-pointer"
-            />
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="date"
+                value={scheduleDate}
+                min={toDateInput(new Date())}
+                onChange={e => setScheduleDate(e.target.value)}
+                className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-900 outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 cursor-pointer"
+              />
+              <input
+                type="time"
+                value={scheduleTime}
+                onChange={e => setScheduleTime(e.target.value)}
+                className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-900 outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 cursor-pointer"
+              />
+            </div>
             <div className="flex items-center gap-1.5 mt-2 flex-wrap">
               {[
                 { label: 'Agora ⚡', mins: 1 },
@@ -625,8 +691,8 @@ alter table public.scheduled_posts add column if not exists updated_at timestamp
                   onClick={() => {
                     if (q.label === 'Hoje 18h') {
                       const d = new Date(); d.setHours(18, 0, 0, 0);
-                      setScheduledAt(toLocalInput(d));
-                    } else setQuickSchedule(q.mins);
+                      applySchedule(d);
+                    } else applySchedule(new Date(Date.now() + q.mins * 60000));
                   }}
                   className="px-2.5 py-1 rounded-full bg-gray-100 hover:bg-pink-50 hover:text-pink-700 text-[10px] font-bold text-gray-600 border border-gray-200 transition-colors cursor-pointer"
                 >
@@ -653,8 +719,85 @@ alter table public.scheduled_posts add column if not exists updated_at timestamp
           </button>
         </div>
 
-        {/* ── CALENDÁRIO DE AGENDAMENTOS ── */}
-        <div className="xl:col-span-3 bg-white/70 backdrop-blur-md rounded-3xl border border-white shadow-xl p-6">
+        {/* ── PRÉVIA ── */}
+        <div className="xl:col-span-1">
+          <div className="bg-white/70 backdrop-blur-md rounded-3xl border border-white shadow-xl p-5 sticky top-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-black text-gray-900 text-sm flex items-center gap-2">
+                <Eye className="w-4 h-4 text-purple-600" /> Prévia
+              </h2>
+              <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 border border-gray-200 rounded-full px-2 py-0.5">
+                {mediaType}
+              </span>
+            </div>
+
+            <div className="bg-gray-900 rounded-[30px] p-2.5 shadow-2xl mx-auto max-w-[300px]">
+              <div className="bg-white rounded-[22px] overflow-hidden">
+                <div className="flex items-center gap-2.5 px-3 py-2.5">
+                  <div className="w-8 h-8 rounded-full bg-instagram-gradient p-[2px] shrink-0">
+                    <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
+                      <span className="text-[11px] font-black text-gray-800">
+                        {(accLabel || 'N').charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[12px] font-bold text-gray-900 leading-tight truncate">{accLabel || 'sua_conta'}</p>
+                    <p className="text-[9px] text-gray-500">Agendado · {scheduledLabel}</p>
+                  </div>
+                </div>
+
+                <div className="aspect-square bg-gray-100 relative">
+                  {previewMedia ? (
+                    previewIsVideo ? (
+                      <video src={previewMedia} className="w-full h-full object-cover" controls />
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={previewMedia} alt="Prévia" className="w-full h-full object-cover" />
+                    )
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-gray-300">
+                      <ImageIcon className="w-8 h-8" />
+                      <span className="text-[10px] font-bold">A mídia aparecerá aqui</span>
+                    </div>
+                  )}
+                  {previewMedia && mediaType === 'REELS' && (
+                    <span className="absolute top-2 left-2 bg-black/60 text-white text-[8px] font-black px-1.5 py-0.5 rounded">
+                      REELS
+                    </span>
+                  )}
+                </div>
+
+                <div className="px-3 pt-2.5 flex items-center gap-3">
+                  <Heart className="w-5 h-5 text-gray-800" />
+                  <MessageCircle className="w-5 h-5 text-gray-800" />
+                  <Send className="w-5 h-5 text-gray-800" />
+                  <Bookmark className="w-5 h-5 text-gray-800 ml-auto" />
+                </div>
+
+                <div className="px-3 pb-3 pt-1.5">
+                  <p className="text-[11px] leading-snug text-gray-800">
+                    <span className="font-bold">{accLabel || 'sua_conta'} </span>
+                    {caption ? (
+                      caption.split(/(\s+)/).map((w, i) =>
+                        w.startsWith('#')
+                          ? <span key={i} className="text-blue-600">{w}</span>
+                          : <span key={i}>{w}</span>
+                      )
+                    ) : (
+                      <span className="text-gray-400">Sua legenda aparecerá aqui</span>
+                    )}
+                  </p>
+                  <p className="text-[9px] text-gray-400 mt-1.5">{scheduledLabel}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── CALENDÁRIO DE AGENDAMENTOS ── */}
+      <div className="bg-white/70 backdrop-blur-md rounded-3xl border border-white shadow-xl p-6">
           <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
             <h2 className="font-black text-gray-900 text-lg flex items-center gap-2">
               <CalendarDays className="w-5 h-5 text-blue-600" /> Próximas Publicações
@@ -782,7 +925,6 @@ alter table public.scheduled_posts add column if not exists updated_at timestamp
             </>
           )}
         </div>
-      </div>
 
       {/* Nota sobre permissões da Meta */}
       <div className="bg-white/50 backdrop-blur-md rounded-2xl border border-white p-4 flex items-start gap-3 shadow-sm">
