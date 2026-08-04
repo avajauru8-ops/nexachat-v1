@@ -10,7 +10,7 @@ export async function PATCH(request: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
 
-    const { conversationId, pipeline_stage, assignee_id } = await request.json();
+    const { conversationId, pipeline_stage, assignee_id, is_favorite } = await request.json();
     if (!conversationId) {
       return NextResponse.json({ error: 'conversationId é obrigatório' }, { status: 400 });
     }
@@ -47,6 +47,9 @@ export async function PATCH(request: Request) {
     if (assignee_id !== undefined) {
       updateData.assigned_agent_id = assignee_id === '' ? null : assignee_id;
     }
+    if (is_favorite !== undefined) {
+      updateData.is_favorite = Boolean(is_favorite);
+    }
 
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json({ error: 'Nada para atualizar' }, { status: 400 });
@@ -56,7 +59,7 @@ export async function PATCH(request: Request) {
       .from('conversations')
       .update(updateData)
       .eq('id', conversationId)
-      .select('id, pipeline_stage, assigned_agent_id')
+      .select('id, pipeline_stage, assigned_agent_id, is_favorite')
       .single();
 
     if (error) {
