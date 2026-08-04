@@ -111,6 +111,12 @@ export function SchedulerClient({
   });
   const [selectedDay, setSelectedDay] = useState<string>(() => toDayKey(new Date()));
 
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
   const refreshPosts = useCallback(async () => {
     if (!tableExists) return;
     const { data, error } = await supabase
@@ -186,6 +192,25 @@ export function SchedulerClient({
   ];
 
   const todayKey = toDayKey(new Date());
+
+  const nextPost = useMemo(() => {
+    return posts
+      .filter(p => p.status === 'scheduled' && new Date(p.scheduled_at).getTime() > now)
+      .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime())[0] || null;
+  }, [posts, now]);
+
+  const countdownText = useMemo(() => {
+    if (!nextPost) return null;
+    const diff = Math.max(0, new Date(nextPost.scheduled_at).getTime() - now);
+    const d = Math.floor(diff / 86400000);
+    const h = Math.floor((diff % 86400000) / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return d > 0 ? `${d}d ${pad(h)}h ${pad(m)}m ${pad(s)}s` : `${pad(h)}h ${pad(m)}m ${pad(s)}s`;
+  }, [nextPost, now]);
+
+  const nextPostDayKey = nextPost ? toDayKey(new Date(nextPost.scheduled_at)) : null;
 
   const accountLabel = (acc: Account) =>
     acc.ig_username ? `@${acc.ig_username}` : (acc.page_id && acc.page_id !== 'ig_login_direct' ? acc.page_id : acc.ig_user_id);
@@ -455,6 +480,26 @@ alter table public.scheduled_posts add column if not exists updated_at timestamp
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Banner de próxima publicação (ao vivo) */}
+      {nextPost && countdownText && (
+        <div className="bg-gradient-to-r from-pink-600 via-fuchsia-600 to-purple-700 rounded-2xl px-5 py-4 text-white shadow-lg shadow-pink-500/25 flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="w-11 h-11 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center shrink-0">
+            <CalendarClock className="w-5 h-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-black uppercase tracking-wider text-white/70">Próxima publicação</p>
+            <p className="text-xl font-black leading-tight tabular-nums">
+              {countdownText}
+              <span className="text-sm font-bold text-white/80 ml-2">· {formatSchedule(nextPost.scheduled_at)}</span>
+            </p>
+          </div>
+          <div className="inline-flex items-center gap-2 bg-white/15 border border-white/20 rounded-full px-3 py-1.5 text-[10px] font-black self-start sm:self-center">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse" />
+            publicação automática
+          </div>
+        </div>
+      )}
+
       {/* Cards de estatísticas */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
@@ -463,12 +508,12 @@ alter table public.scheduled_posts add column if not exists updated_at timestamp
           { label: 'Falhas', value: stats.failed, icon: AlertTriangle, cls: 'text-red-600 bg-red-50 border-red-200' },
           { label: 'Total', value: stats.total, icon: CalendarClock, cls: 'text-pink-600 bg-pink-50 border-pink-200' }
         ].map(s => (
-          <div key={s.label} className="bg-white/60 backdrop-blur-md rounded-2xl border border-white p-5 flex items-center gap-4 shadow-sm">
-            <div className={`w-11 h-11 rounded-xl flex items-center justify-center border ${s.cls}`}>
+          <div key={s.label} className="group bg-white/60 backdrop-blur-md rounded-2xl border border-white p-5 flex items-center gap-4 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300">
+            <div className={`w-11 h-11 rounded-xl flex items-center justify-center border ${s.cls} group-hover:scale-110 transition-transform duration-300`}>
               <s.icon className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-2xl font-black text-gray-900 leading-none">{s.value}</p>
+              <p className="text-2xl font-black text-gray-900 leading-none tabular-nums">{s.value}</p>
               <p className="text-[11px] font-bold text-gray-500 mt-1">{s.label}</p>
             </div>
           </div>
@@ -514,7 +559,10 @@ alter table public.scheduled_posts add column if not exists updated_at timestamp
 
           {/* Seletor de conta */}
           <div>
-            <label className="text-[11px] font-black uppercase tracking-wider text-gray-500 block mb-1.5">Conta do Instagram</label>
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="w-5 h-5 rounded-full bg-instagram-gradient text-white text-[9px] font-black flex items-center justify-center shrink-0">1</span>
+              <label className="text-[11px] font-black uppercase tracking-wider text-gray-500">Conta do Instagram</label>
+            </div>
             <select
               value={accountId}
               onChange={e => setAccountId(e.target.value)}
@@ -529,7 +577,10 @@ alter table public.scheduled_posts add column if not exists updated_at timestamp
 
           {/* Tipo POST / REELS */}
           <div>
-            <label className="text-[11px] font-black uppercase tracking-wider text-gray-500 block mb-1.5">Formato</label>
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="w-5 h-5 rounded-full bg-instagram-gradient text-white text-[9px] font-black flex items-center justify-center shrink-0">2</span>
+              <label className="text-[11px] font-black uppercase tracking-wider text-gray-500">Formato</label>
+            </div>
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => setMediaType('POST')}
@@ -556,9 +607,12 @@ alter table public.scheduled_posts add column if not exists updated_at timestamp
 
           {/* Upload de mídia */}
           <div>
-            <label className="text-[11px] font-black uppercase tracking-wider text-gray-500 block mb-1.5">
-              Mídia {mediaType === 'REELS' ? '(vídeo)' : '(imagem)'}
-            </label>
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="w-5 h-5 rounded-full bg-instagram-gradient text-white text-[9px] font-black flex items-center justify-center shrink-0">3</span>
+              <label className="text-[11px] font-black uppercase tracking-wider text-gray-500">
+                Mídia {mediaType === 'REELS' ? '(vídeo)' : '(imagem)'}
+              </label>
+            </div>
             <input
               ref={fileInputRef}
               type="file"
@@ -619,7 +673,10 @@ alter table public.scheduled_posts add column if not exists updated_at timestamp
           {/* Legenda */}
           <div>
             <div className="flex items-center justify-between gap-2 mb-1.5">
-              <label className="text-[11px] font-black uppercase tracking-wider text-gray-500">Legenda</label>
+              <div className="flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-instagram-gradient text-white text-[9px] font-black flex items-center justify-center shrink-0">4</span>
+                <label className="text-[11px] font-black uppercase tracking-wider text-gray-500">Legenda</label>
+              </div>
               <div className="flex items-center gap-2">
                 <span className={`text-[10px] font-bold ${caption.length > 2100 ? 'text-red-500' : 'text-gray-400'}`}>
                   {caption.length}/2200
@@ -663,7 +720,10 @@ alter table public.scheduled_posts add column if not exists updated_at timestamp
 
           {/* Data e hora separados */}
           <div>
-            <label className="text-[11px] font-black uppercase tracking-wider text-gray-500 block mb-1.5">Data e hora</label>
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="w-5 h-5 rounded-full bg-instagram-gradient text-white text-[9px] font-black flex items-center justify-center shrink-0">5</span>
+              <label className="text-[11px] font-black uppercase tracking-wider text-gray-500">Data e hora</label>
+            </div>
             <div className="grid grid-cols-2 gap-2">
               <input
                 type="date"
@@ -731,8 +791,9 @@ alter table public.scheduled_posts add column if not exists updated_at timestamp
               </span>
             </div>
 
-            <div className="bg-gray-900 rounded-[30px] p-2.5 shadow-2xl mx-auto max-w-[300px]">
-              <div className="bg-white rounded-[22px] overflow-hidden">
+            <div className="bg-instagram-gradient rounded-[34px] p-[3px] shadow-2xl mx-auto max-w-[300px]">
+              <div className="bg-gray-900 rounded-[31px] p-2.5">
+                <div className="bg-white rounded-[22px] overflow-hidden">
                 <div className="flex items-center gap-2.5 px-3 py-2.5">
                   <div className="w-8 h-8 rounded-full bg-instagram-gradient p-[2px] shrink-0">
                     <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
@@ -776,6 +837,9 @@ alter table public.scheduled_posts add column if not exists updated_at timestamp
                 </div>
 
                 <div className="px-3 pb-3 pt-1.5">
+                  <p className="text-[10px] font-bold text-gray-800 mb-1">
+                    Curtido por <span className="text-blue-600">{accLabel || 'sua_conta'}</span> e outras pessoas
+                  </p>
                   <p className="text-[11px] leading-snug text-gray-800">
                     <span className="font-bold">{accLabel || 'sua_conta'} </span>
                     {caption ? (
@@ -795,6 +859,7 @@ alter table public.scheduled_posts add column if not exists updated_at timestamp
           </div>
         </div>
       </div>
+    </div>
 
       {/* ── CALENDÁRIO DE AGENDAMENTOS ── */}
       <div className="bg-white/70 backdrop-blur-md rounded-3xl border border-white shadow-xl p-6">
@@ -852,24 +917,30 @@ alter table public.scheduled_posts add column if not exists updated_at timestamp
                   const items = monthPosts.get(key) || [];
                   const isToday = key === todayKey;
                   const isSelected = key === selectedDay;
+                  const isNext = key === nextPostDayKey;
                   return (
                     <button
                       key={key}
                       onClick={() => setSelectedDay(key)}
-                      className={`relative min-h-[76px] rounded-xl border p-1.5 text-left transition-all cursor-pointer flex flex-col items-stretch ${
+                      className={`relative min-h-[76px] md:min-h-[88px] rounded-xl border p-1.5 text-left transition-all cursor-pointer flex flex-col items-stretch ${
                         isSelected
                           ? 'border-pink-500 bg-pink-50/70 shadow-md shadow-pink-500/10 ring-2 ring-pink-500/20'
                           : isToday
                             ? 'border-pink-300 bg-white hover:border-pink-400 hover:shadow-sm'
-                            : 'border-gray-100 bg-white hover:border-pink-200 hover:shadow-sm'
+                            : isNext
+                              ? 'border-purple-300 bg-purple-50/40 hover:border-purple-400 hover:shadow-sm'
+                              : 'border-gray-100 bg-white hover:border-pink-200 hover:shadow-sm'
                       }`}
                     >
-                      <span className={`text-[10px] font-black leading-none ${isToday ? 'text-pink-600' : 'text-gray-600'}`}>
+                      <span className={`text-[10px] font-black leading-none ${isToday ? 'text-pink-600' : isNext ? 'text-purple-600' : 'text-gray-600'}`}>
                         {day}
                         {items.length > 0 && (
                           <span className="ml-1 text-[8px] font-bold text-pink-500">· {items.length}</span>
                         )}
                       </span>
+                      {isNext && (
+                        <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" title="Próxima publicação" />
+                      )}
                       {items.length > 0 && (
                         <div className="grid grid-cols-2 gap-1 mt-1 flex-1">
                           {items.slice(0, 4).map(p => (
@@ -900,6 +971,15 @@ alter table public.scheduled_posts add column if not exists updated_at timestamp
                   Nenhuma publicação em {monthLabel} — use o formulário ao lado para agendar.
                 </p>
               )}
+
+              {/* Legenda de status */}
+              <div className="flex items-center gap-3 mt-3 flex-wrap">
+                {(Object.keys(STATUS_META) as ScheduledPost['status'][]).map(k => (
+                  <span key={k} className="inline-flex items-center gap-1.5 text-[9px] font-bold text-gray-500">
+                    <span className={`w-2 h-2 rounded-full ${STATUS_META[k].dot}`} /> {STATUS_META[k].label}
+                  </span>
+                ))}
+              </div>
 
               {/* Detalhes do dia selecionado */}
               <div className="mt-5 border-t border-gray-100 pt-4">

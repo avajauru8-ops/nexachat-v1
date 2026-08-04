@@ -56,15 +56,21 @@ export default async function SchedulerPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-instagram-gradient flex items-center justify-center text-white shadow-md shadow-pink-500/20">
-              <CalendarClock className="w-5 h-5" />
-            </div>
-            Agendamento de Posts & Reels
-          </h1>
-          <p className="text-gray-500 mt-1">Planeje e publique conteúdo no Instagram na hora certa, no formato certo.</p>
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-pink-600 via-fuchsia-600 to-purple-700 p-7 text-white shadow-xl shadow-pink-500/25">
+        <div className="absolute -top-12 -right-12 w-48 h-48 bg-white/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-16 left-1/3 w-56 h-56 bg-white/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative flex items-center gap-4 flex-wrap">
+          <div className="w-12 h-12 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center shadow-inner">
+            <CalendarClock className="w-6 h-6" />
+          </div>
+          <div className="flex-1 min-w-[220px]">
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight">Agendamento de Posts & Reels</h1>
+            <p className="text-white/80 mt-0.5 text-sm">Planeje e publique conteúdo no Instagram na hora certa, no formato certo.</p>
+          </div>
+          <div className="inline-flex items-center gap-2 bg-white/15 border border-white/20 rounded-full px-4 py-2 text-[11px] font-black uppercase tracking-wider">
+            <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" />
+            Publicação automática
+          </div>
         </div>
       </div>
 

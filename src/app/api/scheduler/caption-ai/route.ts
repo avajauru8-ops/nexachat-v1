@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     const { data: systemSettings } = await admin
       .from('system_settings')
       .select('key, value')
-      .in('key', ['GEMINI_API_KEY', 'OPENAI_API_KEY']);
+      .in('key', ['GEMINI_API_KEY', 'OPENAI_API_KEY', 'DEFAULT_LLM_MODEL']);
 
     const settingsMap = (systemSettings || []).reduce((acc: Record<string, string>, curr: { key: string; value: string }) => {
       acc[curr.key] = curr.value;
@@ -35,6 +35,7 @@ export async function POST(request: Request) {
 
     const geminiKey = process.env.GEMINI_API_KEY || settingsMap['GEMINI_API_KEY'];
     const openaiKey = process.env.OPENAI_API_KEY || settingsMap['OPENAI_API_KEY'];
+    const configuredModel = settingsMap['DEFAULT_LLM_MODEL'] || 'gemini-1.5-flash';
 
     if (!geminiKey && !openaiKey) {
       return NextResponse.json(
@@ -58,9 +59,19 @@ Regras:
 
     let caption = '';
 
+    // Usa a Gemini já configurada no sistema (Admin → IA); OpenAI apenas como fallback
     if (geminiKey) {
+      const modelMap: Record<string, string> = {
+        'gemini-1.5-flash': 'gemini-flash-latest',
+        'gemini-1.5-pro': 'gemini-pro-latest',
+        'gemini-2.0-flash': 'gemini-flash-latest',
+        'gemini-2.0-flash-lite': 'gemini-flash-latest-lite',
+        'gemini-pro': 'gemini-pro-latest'
+      };
+      const resolvedModel = modelMap[configuredModel] || configuredModel;
+
       const res = await fetch(
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=' + geminiKey,
+        `https://generativelanguage.googleapis.com/v1beta/models/${resolvedModel}:generateContent?key=${geminiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
