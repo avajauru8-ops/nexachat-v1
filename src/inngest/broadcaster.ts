@@ -2,65 +2,79 @@ import { inngest } from './client'
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
-const supabaseServiceKey = process.env.SUPABASE_SECRET_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder'
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder'
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 export const processBroadcast = inngest.createFunction(
   { id: 'process-broadcast-engine', triggers: [{ event: 'broadcast/send' }] },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async ({ event, step }: { event: any, step: any }) => {
     const { workspaceId, tagId, messageText } = event.data;
 
-    // 1. Fetch Instagram Account for this workspace to get Access Token
+    // 1. Buscar a conta do Instagram do workspace (token de acesso)
     const account = await step.run('fetch-ig-account', async () => {
       const { data } = await supabase
         .from('instagram_accounts')
         .select('ig_user_id, access_token')
         .eq('workspace_id', workspaceId)
-        .single();
+        .eq('status', 'active')
+        .limit(1)
+        .maybeSingle();
       return data;
     });
 
     if (!account) return { message: 'Conta do Instagram não encontrada para este Workspace.' };
 
     const pageAccessToken = account.access_token;
-    const recipientId = account.ig_user_id; // Our page ID
 
-    // 2. Fetch all contacts that have this tag
+    // 2. Buscar todos os contatos que possuem esta tag + a janela de 24h das conversas
     const contacts = await step.run('fetch-tagged-contacts', async () => {
       const { data } = await supabase
         .from('contact_tags')
         .select(`
           contact_id,
           contacts (
-            ig_scoped_id
+            ig_scoped_id,
+            conversations (
+              window_expires_at
+            )
           )
         `)
         .eq('tag_id', tagId);
-      
+
       return data || [];
     });
 
     if (contacts.length === 0) return { message: 'Nenhum contato encontrado com esta tag.' };
 
-    // 3. Loop and send messages (Batching logic can be added here)
-    // We send in parallel but cap concurrency to respect Meta limits.
-    // For a simple SaaS MVP, sequential or small batches is safer.
-    await step.run('send-messages-to-audience', async () => {
+    // 3. Loop de envio respeitando a janela de 24h do Instagram
+    const result = await step.run('send-messages-to-audience', async () => {
       let sentCount = 0;
+      let skippedCount = 0;
       let errorCount = 0;
+      const now = Date.now();
 
       for (const ct of contacts) {
-        const contactData = ct.contacts as any;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const contactData: any = Array.isArray(ct.contacts) ? ct.contacts[0] : ct.contacts;
         if (!contactData || !contactData.ig_scoped_id) continue;
 
-        const senderId = contactData.ig_scoped_id; // The user's ID
+        const senderId = contactData.ig_scoped_id;
 
-        const metaUrl = `https://graph.facebook.com/v19.0/${recipientId}/messages`;
+        // Instagram só permite DM dentro da janela de 24h desde a última interação
+        const conv = Array.isArray(contactData.conversations) ? contactData.conversations[0] : contactData.conversations;
+        const windowExpires = conv?.window_expires_at ? new Date(conv.window_expires_at).getTime() : 0;
+
+        if (windowExpires <= now) {
+          skippedCount++;
+          console.log(`[Broadcast] Pulado (janela 24h expirada): ${senderId}`);
+          continue;
+        }
+
+        const metaUrl = `https://graph.instagram.com/v22.0/me/messages`;
         const metaBody = {
           recipient: { id: senderId },
-          message: { text: messageText },
-          messaging_type: 'MESSAGE_TAG', // Required for sending outside 24h window (in some cases)
-          tag: 'POST_PURCHASE_UPDATE' // Just an example tag, Meta rules apply in real life
+          message: { text: messageText }
         };
 
         try {
@@ -73,27 +87,52 @@ export const processBroadcast = inngest.createFunction(
             body: JSON.stringify(metaBody)
           });
 
-          if (metaRes.ok) {
-            sentCount++;
-          } else {
+          if (!metaRes.ok) {
             const err = await metaRes.json();
-            console.error('Meta API Error on Broadcast:', err);
+            console.error('[Broadcast] Meta API Error:', err.error?.message || err);
             errorCount++;
+            await new Promise(r => setTimeout(r, 100));
+            continue;
+          }
+
+          sentCount++;
+
+          // Salvar a mensagem no banco para aparecer no Inbox (dedupe por meta_message_id)
+          const messageId = `broadcast_${workspaceId}_${senderId}_${Date.now()}`;
+          await supabase
+            .from('messages')
+            .insert({
+              conversation_id: conv?.id,
+              sender_type: 'bot',
+              message_type: 'text',
+              content: messageText,
+              direction: 'outbound',
+              meta_message_id: messageId
+            });
+
+          // Atualizar a conversa (nova janela de 24h a partir do envio)
+          if (conv?.id) {
+            await supabase
+              .from('conversations')
+              .update({
+                last_interaction_at: new Date().toISOString(),
+                window_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+              })
+              .eq('id', conv.id);
           }
         } catch (e) {
-          console.error('Fetch Error on Broadcast:', e);
+          console.error('[Broadcast] Fetch Error:', e);
           errorCount++;
         }
 
-        // Small delay to prevent hitting Meta API rate limits (e.g. 50 requests per second)
-        // 100ms means 10 requests per sec.
-        await new Promise(r => setTimeout(r, 100)); 
+        // Pequeno delay para respeitar o rate limit da Meta (10 req/s)
+        await new Promise(r => setTimeout(r, 100));
       }
 
-      console.log(`Broadcast finalizado. Sucesso: ${sentCount}, Erros: ${errorCount}`);
-      return { sentCount, errorCount };
+      console.log(`[Broadcast] Finalizado. Enviados: ${sentCount}, Pulados: ${skippedCount}, Erros: ${errorCount}`);
+      return { sentCount, skippedCount, errorCount };
     });
 
-    return { message: 'Broadcast processado com sucesso' };
+    return { message: 'Broadcast processado com sucesso', ...result };
   }
 );
