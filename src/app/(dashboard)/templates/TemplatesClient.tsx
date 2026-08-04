@@ -33,13 +33,16 @@ export function TemplatesClient() {
         edges: template.edges
       };
 
-      const triggerKeyword = (template.nodes.find(n => n.type === 'triggerNode')?.data?.keyword as string) || '';
+      const triggerNode = template.nodes.find(n => n.type === 'triggerNode');
+      const triggerType = (triggerNode?.data?.triggerType as string) ||
+        (triggerNode?.data?.trigger_type as string) || 'dm_keyword';
+      const triggerKeyword = (triggerNode?.data?.keyword as string) || '';
 
       const res = await saveFlow(
         'new',
         template.title,
         flowData,
-        { triggerType: 'keyword', keyword: triggerKeyword },
+        { triggerType, keyword: triggerKeyword },
         'draft'
       );
 
