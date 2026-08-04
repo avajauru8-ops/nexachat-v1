@@ -19,7 +19,7 @@ export default async function FlowsPage() {
     if (workspace) {
       const { data } = await supabase
         .from('flows')
-        .select('id, name, status, triggers, updated_at, flow_logs(count)')
+        .select('id, name, status, triggers, trigger_type, updated_at, flow_logs(count)')
         .eq('workspace_id', workspace.id)
         .order('updated_at', { ascending: false });
         

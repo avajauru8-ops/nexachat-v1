@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { 
   Search, Folder, Plus, Trash2,
-  Play, Pause, Copy, Edit
+  Play, Pause, Copy, Edit,
+  MessageSquare, UserPlus, Image as ImageIcon, Camera
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { publishFlow, deleteFlow, duplicateFlow } from './actions';
@@ -23,6 +24,55 @@ export interface FlowItem {
 interface Props {
   initialFlows: FlowItem[];
 }
+
+const TRIGGER_META: Record<string, { label: string; icon: React.ElementType; badge: string }> = {
+  dm_keyword: { label: 'Direct', icon: MessageSquare, badge: 'bg-pink-50 text-pink-700 border-pink-100' },
+  welcome_dm: { label: 'Seguidores', icon: UserPlus, badge: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
+  comment_keyword: { label: 'Post / Reels', icon: ImageIcon, badge: 'bg-blue-50 text-blue-700 border-blue-100' },
+  story_mention: { label: 'Storys', icon: Camera, badge: 'bg-purple-50 text-purple-700 border-purple-100' },
+  story_reply: { label: 'Storys', icon: Camera, badge: 'bg-purple-50 text-purple-700 border-purple-100' }
+};
+
+const DEFAULT_TRIGGER = 'dm_keyword';
+
+const normalizeTriggerType = (flow: FlowItem): string => {
+  const raw = (flow.trigger_type as string) ||
+    ((flow.triggers as Record<string, unknown>)?.triggerType as string) || '';
+  const mapped = raw === 'keyword' ? 'dm_keyword' : raw;
+  return TRIGGER_META[mapped] ? mapped : DEFAULT_TRIGGER;
+};
+
+const triggerDetail = (flow: FlowItem) => {
+  const keyword = ((flow.triggers as Record<string, unknown>)?.keyword as string) || '';
+  const tType = normalizeTriggerType(flow);
+  const keywordBadge = (text: string) => (
+    <span className="bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-full font-semibold border border-blue-100">
+      &quot;{text}&quot;
+    </span>
+  );
+
+  switch (tType) {
+    case 'welcome_dm':
+      return <span className="text-gray-500">Novo seguidor recebe boas-vindas</span>;
+    case 'comment_keyword':
+      return keyword
+        ? <span className="flex items-center gap-1.5"><span>O comentário contém:</span>{keywordBadge(keyword)}</span>
+        : <span className="text-gray-400 italic">Qualquer comentário em Post/Reels</span>;
+    case 'story_mention':
+      return keyword
+        ? <span className="flex items-center gap-1.5"><span>Menção</span><span className="bg-purple-50 text-purple-700 px-2.5 py-0.5 rounded-full font-semibold border border-purple-100">@{keyword}</span></span>
+        : <span className="text-gray-500">Menção @sua conta no Story</span>;
+    case 'story_reply':
+      return keyword
+        ? <span className="flex items-center gap-1.5"><span>A resposta contém:</span>{keywordBadge(keyword)}</span>
+        : <span className="text-gray-400 italic">Qualquer resposta ao Story</span>;
+    case 'dm_keyword':
+    default:
+      return keyword
+        ? <span className="flex items-center gap-1.5"><span>A mensagem contém:</span>{keywordBadge(keyword)}</span>
+        : <span className="text-gray-400 italic">Qualquer mensagem</span>;
+  }
+};
 
 export function FlowsListClient({ initialFlows }: Props) {
   const router = useRouter();
@@ -67,7 +117,12 @@ export function FlowsListClient({ initialFlows }: Props) {
       isMatchStatus = flow.status === 'draft' || flow.status === 'paused';
     }
 
-    return isMatchSearch && isMatchStatus;
+    let isMatchTrigger = true;
+    if (triggerFilter !== 'all') {
+      isMatchTrigger = normalizeTriggerType(flow) === triggerFilter;
+    }
+
+    return isMatchSearch && isMatchStatus && isMatchTrigger;
   });
 
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -213,9 +268,11 @@ export function FlowsListClient({ initialFlows }: Props) {
             className="bg-white/60 border border-white text-gray-700 font-medium text-sm rounded-xl px-3 py-2 outline-none hover:bg-white/80 transition-colors shadow-sm backdrop-blur-sm"
           >
             <option value="all">Qualquer gatilho</option>
-            <option value="dm_keyword">DM: Palavra-chave</option>
-            <option value="comment_keyword">Comentário em Post</option>
-            <option value="story_reply">Resposta a Story</option>
+            <option value="dm_keyword">Direct</option>
+            <option value="welcome_dm">Seguidores (boas-vindas)</option>
+            <option value="comment_keyword">Post / Reels</option>
+            <option value="story_mention">Storys (menção)</option>
+            <option value="story_reply">Storys (resposta)</option>
           </select>
         </div>
 
@@ -247,6 +304,9 @@ export function FlowsListClient({ initialFlows }: Props) {
                 currentFlows.map(flow => {
                   const keyword = (flow.triggers as Record<string, unknown>)?.keyword as string;
                   const isPublished = flow.status === 'published' || flow.status === 'active';
+                  const tType = normalizeTriggerType(flow);
+                  const triggerMeta = TRIGGER_META[tType];
+                  const TriggerIcon = triggerMeta.icon;
 
                   return (
                     <tr key={flow.id} className="hover:bg-gray-50/80 transition-colors group">
@@ -268,18 +328,12 @@ export function FlowsListClient({ initialFlows }: Props) {
                             {flow.name}
                           </Link>
                           
-                          <div className="flex items-center gap-2 text-xs text-gray-500 mt-1.5">
-                            <span className="flex items-center gap-1 bg-pink-50 text-pink-700 px-2 py-0.5 rounded-md border border-pink-100 font-medium">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-pink-600"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg> Direct
+                          <div className="flex items-center gap-2 text-xs text-gray-500 mt-1.5 flex-wrap">
+                            <span className={`flex items-center gap-1 px-2 py-0.5 rounded-md border font-medium ${triggerMeta.badge}`}>
+                              <TriggerIcon className="w-3 h-3" />
+                              {triggerMeta.label}
                             </span>
-                            <span>A mensagem contém:</span>
-                            {keyword ? (
-                              <span className="bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-full font-semibold border border-blue-100">
-                                &quot;{keyword}&quot;
-                              </span>
-                            ) : (
-                              <span className="text-gray-400 italic">Qualquer mensagem</span>
-                            )}
+                            {triggerDetail(flow)}
                           </div>
                         </div>
                       </td>
