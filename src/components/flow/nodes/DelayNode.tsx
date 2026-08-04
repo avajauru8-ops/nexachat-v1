@@ -34,12 +34,12 @@ export function DelayNode({ id, data, selected }: { id: string; data: Record<str
             type="number" 
             value={(data.amount as number) || 1} 
             onChange={(e) => updateNodeData(id, { amount: Number(e.target.value) })}
-            className="w-16 border border-gray-200 rounded px-2 py-1 text-sm text-gray-900 bg-white outline-none focus:ring-1 focus:ring-amber-500"
+            className="w-16 border border-gray-200 rounded px-2 py-1 text-sm text-gray-900 bg-white outline-none focus:ring-1 focus:ring-amber-500 nowheel"
           />
           <select 
             value={(data.unit as string) || 'minutes'} 
             onChange={(e) => updateNodeData(id, { unit: e.target.value })}
-            className="flex-1 border border-gray-200 rounded px-2 py-1 text-sm text-gray-900 bg-white outline-none focus:ring-1 focus:ring-amber-500"
+            className="flex-1 border border-gray-200 rounded px-2 py-1 text-sm text-gray-900 bg-white outline-none focus:ring-1 focus:ring-amber-500 nowheel cursor-pointer"
           >
             <option value="seconds">Segundos</option>
             <option value="minutes">Minutos</option>

@@ -30,7 +30,7 @@ export function ConditionNode({ id, data }: { id: string, data: Record<string, u
           value={(data.conditionValue as string) || ''} 
           onChange={(e) => updateNodeData(id, { conditionValue: e.target.value })}
           placeholder="ex: VIP"
-          className="w-full border border-gray-200 rounded px-2 py-1 text-sm text-gray-900 bg-white outline-none focus:ring-1 focus:ring-purple-500"
+          className="w-full border border-gray-200 rounded px-2 py-1 text-sm text-gray-900 bg-white outline-none focus:ring-1 focus:ring-purple-500 nowheel"
         />
       </div>
       

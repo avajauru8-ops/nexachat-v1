@@ -27,56 +27,70 @@ export function CustomEdge({
     setEdges((edges) => edges.filter((edge) => edge.id !== id));
   };
 
+  const gradientId = `ig-gradient-${id}`;
+
   return (
     <>
-      {/* Camada 1: Halo / Brilho Neon Azul de Fundo */}
+      <defs>
+        <linearGradient
+          id={gradientId}
+          gradientUnits="userSpaceOnUse"
+          x1={sourceX}
+          y1={sourceY}
+          x2={targetX}
+          y2={targetY}
+        >
+          <stop offset="0%" stopColor="#f9ce34" />
+          <stop offset="50%" stopColor="#ee2a7b" />
+          <stop offset="100%" stopColor="#6228d7" />
+        </linearGradient>
+      </defs>
+
       <path
         d={edgePath}
         fill="none"
-        stroke="#00f0ff"
+        stroke={`url(#${gradientId})`}
         strokeWidth={8}
-        strokeOpacity={0.25}
+        strokeOpacity={0.22}
         style={{ filter: 'blur(3px)' }}
       />
 
-      {/* Camada 2: Linha Base Neon Cyan */}
       <BaseEdge
         id={id}
         path={edgePath}
         markerEnd={markerEnd}
+        interactionWidth={20}
         style={{
           strokeWidth: 3,
-          stroke: '#00c3ff',
+          stroke: `url(#${gradientId})`,
           strokeLinecap: 'round',
           ...style
         }}
       />
 
-      {/* Camada 3: Pontilhado Neon Azul se movendo continuamente */}
       <path
         d={edgePath}
         fill="none"
-        stroke="#00ffff"
+        stroke="#ee2a7b"
         strokeWidth={3}
-        strokeDasharray="6 6"
+        strokeDasharray="7 7"
         className="animate-dash-flow-neon"
         strokeLinecap="round"
-        style={{ filter: 'drop-shadow(0 0 5px #00ffff)' }}
+        style={{ filter: 'drop-shadow(0 0 4px rgba(238, 42, 123, 0.55))' }}
       />
 
-      {/* Botão de Excluir */}
       <EdgeLabelRenderer>
         <div
           style={{
             position: 'absolute',
             transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
-            pointerEvents: 'all',
+            pointerEvents: 'all'
           }}
           className="nodrag nopan"
         >
           <button
             onClick={onEdgeClick}
-            className="w-5 h-5 bg-white hover:bg-red-500 hover:text-white text-gray-400 hover:border-red-500 rounded-full flex items-center justify-center border border-gray-200 transition-colors cursor-pointer shadow-sm"
+            className="w-5 h-5 bg-white hover:bg-gradient-to-r hover:from-[#ee2a7b] hover:to-[#6228d7] hover:text-white text-gray-400 hover:border-transparent rounded-full flex items-center justify-center border border-gray-200 transition-all cursor-pointer shadow-sm hover:shadow-md hover:scale-110"
             title="Remover conexão"
           >
             <X className="w-3 h-3" />

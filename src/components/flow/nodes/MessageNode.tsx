@@ -122,7 +122,7 @@ export function MessageNode({ id, data, selected }: NodeProps) {
             onChange={(e) => updateNodeData(id, { text: e.target.value })}
             rows={3}
             placeholder="Escreva sua mensagem aqui..."
-            className="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-xs text-gray-900 outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 resize-none font-medium leading-relaxed"
+            className="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-xs text-gray-900 outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 resize-y max-h-44 overflow-y-auto nowheel font-medium leading-relaxed"
           />
         </div>
 
@@ -184,7 +184,7 @@ export function MessageNode({ id, data, selected }: NodeProps) {
                       value={item.value}
                       onChange={(e) => handleUpdateAttachmentValue(item.id, e.target.value)}
                       placeholder="URL da foto (https://...)"
-                      className="w-full border border-gray-200 rounded px-2 py-1 text-[11px] bg-white outline-none"
+                      className="w-full border border-gray-200 rounded px-2 py-1 text-[11px] bg-white outline-none nowheel"
                     />
                   </div>
                 )}
@@ -196,7 +196,7 @@ export function MessageNode({ id, data, selected }: NodeProps) {
                       value={item.value}
                       onChange={(e) => handleUpdateAttachmentValue(item.id, e.target.value)}
                       placeholder="URL do vídeo (https://...)"
-                      className="w-full border border-gray-200 rounded px-2 py-1 text-[11px] bg-white outline-none"
+                      className="w-full border border-gray-200 rounded px-2 py-1 text-[11px] bg-white outline-none nowheel"
                     />
                   </div>
                 )}
@@ -214,7 +214,7 @@ export function MessageNode({ id, data, selected }: NodeProps) {
                     onChange={(e) => handleUpdateAttachmentValue(item.id, e.target.value)}
                     placeholder="Texto adicional..."
                     rows={2}
-                    className="w-full border border-gray-200 rounded p-1.5 text-xs bg-white outline-none resize-none"
+                    className="w-full border border-gray-200 rounded p-1.5 text-xs bg-white outline-none resize-y max-h-24 overflow-y-auto nowheel"
                   />
                 )}
               </div>

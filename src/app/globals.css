@@ -25,10 +25,10 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Animação Neon Azul Pontilhada se Movendo Contínuamente */
+/* Animação Pontilhada se Movendo Continuamente */
 @keyframes dash-flow-neon {
   from {
-    stroke-dashoffset: 24;
+    stroke-dashoffset: 28;
   }
   to {
     stroke-dashoffset: 0;
@@ -36,25 +36,39 @@ body {
 }
 
 .animate-dash-flow-neon {
-  animation: dash-flow-neon 0.75s linear infinite;
+  animation: dash-flow-neon 0.9s linear infinite;
   pointer-events: none;
 }
 
-/* Handles e Pontos de Conexão Neon Azul */
+/* Animação de entrada dos nós (opacidade apenas, pois o transform é usado no posicionamento) */
+@keyframes node-pop {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.react-flow__node.node-pop {
+  animation: node-pop 0.22s ease-out;
+}
+
+/* Handles e Pontos de Conexão Instagram */
 .react-flow__handle {
   width: 12px !important;
   height: 12px !important;
   border-radius: 50% !important;
-  background-color: #00f0ff !important;
+  background-color: #ee2a7b !important;
   border: 2.5px solid #ffffff !important;
-  box-shadow: 0 0 8px rgba(0, 240, 255, 0.8) !important;
+  box-shadow: 0 0 8px rgba(238, 42, 123, 0.7) !important;
   transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease !important;
 }
 
 .react-flow__handle:hover {
   transform: scale(1.4) !important;
-  background-color: #00ffff !important;
-  box-shadow: 0 0 14px rgba(0, 255, 255, 1) !important;
+  background-color: #6228d7 !important;
+  box-shadow: 0 0 14px rgba(98, 40, 215, 0.9) !important;
 }
 
 /* Suavização das Linhas do React Flow */
@@ -66,7 +80,32 @@ body {
 
 .react-flow__edge:hover .react-flow__edge-path {
   stroke-width: 4px !important;
-  stroke: #00ffff !important;
+  filter: drop-shadow(0 0 6px rgba(238, 42, 123, 0.5)) !important;
+}
+
+/* Scrollbar customizada dentro dos nós */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #f0a8c8;
+  border-radius: 999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #ee2a7b;
+}
+
+/* Impede que o arrasto da tela seja iniciado dentro de áreas roláveis */
+.react-flow__node textarea,
+.react-flow__node input,
+.react-flow__node select {
+  user-select: text;
 }
 
 /* ========================================= */

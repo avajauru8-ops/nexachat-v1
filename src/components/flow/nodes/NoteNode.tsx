@@ -28,7 +28,7 @@ export function NoteNode({ id, data }: NodeProps) {
         onChange={(e) => updateNodeData(id, { text: e.target.value, label: e.target.value })}
         rows={4}
         placeholder="Escreva uma dica ou explicação aqui..."
-        className="w-full bg-transparent border-none outline-none text-xs text-gray-800 placeholder-amber-700/50 resize-none font-medium leading-relaxed"
+        className="w-full bg-transparent border-none outline-none text-xs text-gray-800 placeholder-amber-700/50 resize-y max-h-48 overflow-y-auto nowheel font-medium leading-relaxed"
       />
     </div>
   );

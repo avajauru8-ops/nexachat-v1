@@ -60,7 +60,9 @@ export async function sendMessageToMeta({
   }
 
   // 2. Disparar para a Meta API
-  const metaUrl = `https://graph.instagram.com/v22.0/me/messages`;
+  // Tokens do tipo Meta (EAA...) usam graph.facebook.com; tokens nativos usam graph.instagram.com
+  const graphHost = pageAccessToken.startsWith('EAA') ? 'graph.facebook.com' : 'graph.instagram.com';
+  const metaUrl = `https://${graphHost}/v22.0/me/messages`;
 
   let finalMediaUrl: string | null = mediaUrl || null;
   let attachmentId: string | null = null;
@@ -81,7 +83,7 @@ export async function sendMessageToMeta({
     }));
     form.append('file', new Blob([binary], { type: mimeType || 'application/octet-stream' }), fileName);
 
-    const uploadRes = await fetch(`https://graph.instagram.com/v22.0/me/message_attachments`, {
+    const uploadRes = await fetch(`https://${graphHost}/v22.0/me/message_attachments`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${pageAccessToken}` },
       body: form

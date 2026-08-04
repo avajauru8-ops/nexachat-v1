@@ -332,17 +332,19 @@ export function FlowBuilderClient({
       id: `n-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       type,
       position: position || { x: Math.random() * 200 + 200, y: Math.random() * 200 + 150 },
+      className: 'node-pop',
       data: { label, text: type === 'messageNode' ? 'Digite a mensagem de resposta...' : undefined }
     };
     setNodes((nds) => nds.concat(newNode));
   };
 
   const buildTemplate = (templateId: string): { nodes: Node[]; edges: Edge[] } | null => {
+    const pop = { className: 'node-pop' as const };
     if (templateId === 'welcome') {
       return {
         nodes: [
-          { id: 't1-trigger', type: 'triggerNode', position: { x: 0, y: 180 }, data: { label: 'Gatilho Boas-Vindas', triggerType: 'welcome_dm' } },
-          { id: 't1-msg', type: 'messageNode', position: { x: 340, y: 180 }, data: { label: 'Mensagem do Bot', text: 'Olá! 👋 Que bom ter você aqui! Para começar, me conta o que você procura hoje?' } }
+          { id: 't1-trigger', type: 'triggerNode', position: { x: 0, y: 180 }, ...pop, data: { label: 'Gatilho Boas-Vindas', triggerType: 'welcome_dm' } },
+          { id: 't1-msg', type: 'messageNode', position: { x: 340, y: 180 }, ...pop, data: { label: 'Mensagem do Bot', text: 'Olá! 👋 Que bom ter você aqui! Para começar, me conta o que você procura hoje?' } }
         ],
         edges: [{ id: 't1-e1', source: 't1-trigger', target: 't1-msg', type: 'customEdge' }]
       };
@@ -350,9 +352,9 @@ export function FlowBuilderClient({
     if (templateId === 'comment') {
       return {
         nodes: [
-          { id: 't2-trigger', type: 'triggerNode', position: { x: 0, y: 160 }, data: { label: 'Gatilho Comentário', triggerType: 'comment_keyword' } },
-          { id: 't2-reply', type: 'commentReplyNode', position: { x: 340, y: 120 }, data: { label: 'Responder Comentário', publicReply: 'Te mandei os detalhes no Direct! 🚀' } },
-          { id: 't2-msg', type: 'messageNode', position: { x: 680, y: 160 }, data: { label: 'Mensagem do Bot', text: 'Acabei de te responder no post! 💬 Se preferir, me conta aqui o que você precisa.' } }
+          { id: 't2-trigger', type: 'triggerNode', position: { x: 0, y: 160 }, ...pop, data: { label: 'Gatilho Comentário', triggerType: 'comment_keyword' } },
+          { id: 't2-reply', type: 'commentReplyNode', position: { x: 340, y: 120 }, ...pop, data: { label: 'Responder Comentário', publicReply: 'Te mandei os detalhes no Direct! 🚀' } },
+          { id: 't2-msg', type: 'messageNode', position: { x: 680, y: 160 }, ...pop, data: { label: 'Mensagem do Bot', text: 'Acabei de te responder no post! 💬 Se preferir, me conta aqui o que você precisa.' } }
         ],
         edges: [
           { id: 't2-e1', source: 't2-trigger', target: 't2-reply', type: 'customEdge' },
@@ -363,8 +365,8 @@ export function FlowBuilderClient({
     if (templateId === 'cupom') {
       return {
         nodes: [
-          { id: 't3-trigger', type: 'triggerNode', position: { x: 0, y: 180 }, data: { label: 'Gatilho Cupom', triggerType: 'dm_keyword', keyword: 'cupom' } },
-          { id: 't3-msg', type: 'messageNode', position: { x: 340, y: 180 }, data: { label: 'Mensagem do Bot', text: 'Ótima escolha! 🎁 Aqui está seu cupom: NEXA10 — 10% OFF na primeira compra.' } }
+          { id: 't3-trigger', type: 'triggerNode', position: { x: 0, y: 180 }, ...pop, data: { label: 'Gatilho Cupom', triggerType: 'dm_keyword', keyword: 'cupom' } },
+          { id: 't3-msg', type: 'messageNode', position: { x: 340, y: 180 }, ...pop, data: { label: 'Mensagem do Bot', text: 'Ótima escolha! 🎁 Aqui está seu cupom: NEXA10 — 10% OFF na primeira compra.' } }
         ],
         edges: [{ id: 't3-e1', source: 't3-trigger', target: 't3-msg', type: 'customEdge' }]
       };

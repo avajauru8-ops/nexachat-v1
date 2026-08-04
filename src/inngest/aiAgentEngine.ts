@@ -232,7 +232,8 @@ export const processAiAgent = inngest.createFunction(
       // 7. Enviar resposta para o contato no Instagram via Meta Graph API
       await step.run('send-meta-instagram-msg', async () => {
         try {
-          const res = await fetch('https://graph.instagram.com/v22.0/me/messages', {
+          const graphHost = account.access_token.startsWith('EAA') ? 'graph.facebook.com' : 'graph.instagram.com';
+          const res = await fetch(`https://${graphHost}/v22.0/me/messages`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${account.access_token}`,

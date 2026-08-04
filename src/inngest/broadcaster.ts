@@ -71,7 +71,9 @@ export const processBroadcast = inngest.createFunction(
           continue;
         }
 
-        const metaUrl = `https://graph.instagram.com/v22.0/me/messages`;
+        // Tokens do tipo Meta (EAA...) usam graph.facebook.com; tokens nativos usam graph.instagram.com
+        const graphHost = pageAccessToken.startsWith('EAA') ? 'graph.facebook.com' : 'graph.instagram.com';
+        const metaUrl = `https://${graphHost}/v22.0/me/messages`;
         const metaBody = {
           recipient: { id: senderId },
           message: { text: messageText }

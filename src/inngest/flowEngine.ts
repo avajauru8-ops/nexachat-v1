@@ -177,6 +177,11 @@ export const executeFlow = inngest.createFunction(
             if (tag) {
               await supabase.from('contact_tags').upsert({ contact_id: contactId, tag_id: tag.id }, { onConflict: 'contact_id,tag_id' });
             }
+          } else if (actionType === 'remove_tag' && actionValue) {
+            const { data: tag } = await supabase.from('tags').select('id').eq('workspace_id', workspaceId).eq('name', actionValue).maybeSingle();
+            if (tag) {
+              await supabase.from('contact_tags').delete().eq('contact_id', contactId).eq('tag_id', tag.id);
+            }
           } else if (fieldKey && actionValue) {
             const { data: contact } = await supabase.from('contacts').select('custom_fields').eq('id', contactId).maybeSingle();
             const currentFields = contact?.custom_fields || {};

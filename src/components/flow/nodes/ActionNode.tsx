@@ -28,7 +28,7 @@ export function ActionNode({ id, data }: { id: string, data: Record<string, unkn
         <select 
           value={(data.actionType as string) || 'add_tag'} 
           onChange={(e) => updateNodeData(id, { actionType: e.target.value })}
-          className="w-full border border-gray-200 rounded px-2 py-1 text-sm text-gray-900 bg-white outline-none focus:ring-1 focus:ring-rose-500"
+          className="w-full border border-gray-200 rounded px-2 py-1 text-sm text-gray-900 bg-white outline-none focus:ring-1 focus:ring-rose-500 nowheel cursor-pointer"
         >
           <option value="add_tag">Adicionar Tag</option>
           <option value="remove_tag">Remover Tag</option>
@@ -40,7 +40,7 @@ export function ActionNode({ id, data }: { id: string, data: Record<string, unkn
           value={(data.actionValue as string) || ''} 
           onChange={(e) => updateNodeData(id, { actionValue: e.target.value })}
           placeholder="ex: VIP"
-          className="w-full border border-gray-200 rounded px-2 py-1 text-sm text-gray-900 bg-white outline-none focus:ring-1 focus:ring-rose-500 mt-1"
+          className="w-full border border-gray-200 rounded px-2 py-1 text-sm text-gray-900 bg-white outline-none focus:ring-1 focus:ring-rose-500 mt-1 nowheel"
         />
       </div>
       

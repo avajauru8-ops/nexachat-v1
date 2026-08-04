@@ -79,7 +79,7 @@ export async function executeFlowDirect(data: {
       })
       .eq('id', conversationId);
 
-    const nextEdgeSourceHandle: string | null = null;
+    let nextEdgeSourceHandle: string | null = null;
 
     if (node.type === 'messageNode' || node.type === 'send_message' || node.type === 'quick_reply') {
       const guardResult = await canSendMessage(conversationId, supabase);
@@ -146,6 +146,11 @@ export async function executeFlowDirect(data: {
         if (tag) {
           await supabase.from('contact_tags').upsert({ contact_id: contactId, tag_id: tag.id }, { onConflict: 'contact_id,tag_id' });
         }
+      } else if (actionType === 'remove_tag' && actionValue) {
+        const { data: tag } = await supabase.from('tags').select('id').eq('workspace_id', workspaceId).eq('name', actionValue).maybeSingle();
+        if (tag) {
+          await supabase.from('contact_tags').delete().eq('contact_id', contactId).eq('tag_id', tag.id);
+        }
       } else if (fieldKey && actionValue) {
         const { data: contact } = await supabase.from('contacts').select('custom_fields').eq('id', contactId).maybeSingle();
         const currentFields = contact?.custom_fields || {};
@@ -204,6 +209,44 @@ export async function executeFlowDirect(data: {
         console.error(`[Flow Engine Direct] Erro no executeAiDirect:`, err);
       }
       break;
+    }
+    else if (node.type === 'crmNode' || node.type === 'crm_webhook') {
+      const webhookUrl = node.data?.webhookUrl as string | undefined;
+      if (webhookUrl) {
+        try {
+          const { data: contact } = await supabase.from('contacts').select('*').eq('id', contactId).maybeSingle();
+          const crmRes = await fetch(webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ event: 'lead_captured', workspace_id: workspaceId, contact })
+          });
+          try {
+            await supabase.from('crm_sync_log').insert({
+              contact_id: contactId,
+              status: crmRes.ok ? 'success' : 'failed',
+              response_snippet: `Status: ${crmRes.status}`
+            });
+          } catch {
+            /* tabela de log pode não existir ainda */
+          }
+        } catch (crmErr) {
+          console.error('[Flow Engine Direct] Falha ao disparar Webhook CRM:', crmErr);
+        }
+      }
+    }
+    else if (node.type === 'conditionNode' || node.type === 'condition') {
+      const conditionValue = node.data?.conditionValue as string | undefined;
+      if (!conditionValue) {
+        nextEdgeSourceHandle = 'false';
+      } else {
+        const { data: tag } = await supabase.from('tags').select('id').eq('workspace_id', workspaceId).eq('name', conditionValue).maybeSingle();
+        if (!tag) {
+          nextEdgeSourceHandle = 'false';
+        } else {
+          const { data: contactTag } = await supabase.from('contact_tags').select('contact_id').eq('contact_id', contactId).eq('tag_id', tag.id).maybeSingle();
+          nextEdgeSourceHandle = contactTag ? 'true' : 'false';
+        }
+      }
     }
 
     let outgoingEdge: { target: string } | undefined;

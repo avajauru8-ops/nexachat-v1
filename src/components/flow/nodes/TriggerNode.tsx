@@ -95,7 +95,7 @@ export function TriggerNode({ id, data, selected }: NodeProps) {
               value={(data.keyword as string) || ''} 
               onChange={(e) => updateNodeData(id, { keyword: e.target.value })}
               placeholder="Ex: preço, cupom, quero"
-              className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-900 bg-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-semibold"
+              className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-900 bg-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-semibold nowheel"
             />
           </div>
         )}
@@ -144,7 +144,7 @@ export function TriggerNode({ id, data, selected }: NodeProps) {
 
               {/* Lista de Seleção de Media */}
               {showMediaSelector && (!data.specificMediaId || data.specificMediaId === 'all') && (
-                <div className="mt-2 max-h-40 overflow-y-auto bg-white border border-gray-200 rounded-md shadow-inner custom-scrollbar">
+                <div className="mt-2 max-h-40 overflow-y-auto nowheel nodrag bg-white border border-gray-200 rounded-md shadow-inner custom-scrollbar">
                   {loadingMedia ? (
                     <div className="flex justify-center p-4">
                       <Loader2 className="w-4 h-4 text-orange-500 animate-spin" />
@@ -194,7 +194,7 @@ export function TriggerNode({ id, data, selected }: NodeProps) {
               value={(data.keyword as string) || ''} 
               onChange={(e) => updateNodeData(id, { keyword: e.target.value })}
               placeholder="Ex: QUERO, LINK (deixe vazio p/ todos)"
-              className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-900 bg-white outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 font-semibold mb-1"
+              className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-900 bg-white outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 font-semibold mb-1 nowheel"
             />
             <div className="bg-orange-100/50 p-2 rounded-lg mt-2 border border-orange-200 border-dashed">
               <p className="text-[10px] text-orange-800 text-center font-medium">
@@ -228,7 +228,7 @@ export function TriggerNode({ id, data, selected }: NodeProps) {
               value={(data.keyword as string) || ''} 
               onChange={(e) => updateNodeData(id, { keyword: e.target.value })}
               placeholder="Ex: sim, 🔥, quero"
-              className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-900 bg-white outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 font-semibold"
+              className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-900 bg-white outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 font-semibold nowheel"
             />
           </div>
         )}
