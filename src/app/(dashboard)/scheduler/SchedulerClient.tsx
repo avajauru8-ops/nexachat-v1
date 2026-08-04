@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   CalendarClock, Image as ImageIcon, Video, Upload, X, Loader2, Trash2,
-  Send, CheckCircle2, Clock, AlertTriangle, Zap, Copy, CalendarPlus, Link2
+  Send, CheckCircle2, Clock, AlertTriangle, Zap, Copy, CalendarPlus, Link2,
+  CalendarDays, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { createClient } from '@/utils/supabase/client';
@@ -56,15 +57,14 @@ const formatSchedule = (iso: string) => {
   return `${d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })}, ${time}`;
 };
 
-const dayGroupLabel = (iso: string) => {
-  const d = new Date(iso);
-  const today = new Date();
-  const tomorrow = new Date(today.getTime() + 86400000);
-  const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
-  if (sameDay(d, today)) return 'Hoje';
-  if (sameDay(d, tomorrow)) return 'Amanhã';
-  return d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
+const toDayKey = (d: Date) => {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
+
+const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+const isVideoUrl = (url: string | null) => /\.(mp4|mov|m4v|webm)(\?|$)/i.test(url || '');
 
 export function SchedulerClient({
   workspaceId,
@@ -93,6 +93,12 @@ export function SchedulerClient({
   const [publishingId, setPublishingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [viewDate, setViewDate] = useState(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
+  const [selectedDay, setSelectedDay] = useState<string>(() => toDayKey(new Date()));
 
   const refreshPosts = useCallback(async () => {
     if (!tableExists) return;
@@ -123,16 +129,52 @@ export function SchedulerClient({
     return { total, scheduled, published, failed };
   }, [posts]);
 
-  const grouped = useMemo(() => {
+  const monthPosts = useMemo(() => {
     const map = new Map<string, ScheduledPost[]>();
-    [...posts].sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime())
-      .forEach(p => {
-        const key = dayGroupLabel(p.scheduled_at);
+    posts.forEach(p => {
+      const d = new Date(p.scheduled_at);
+      if (d.getFullYear() === viewDate.getFullYear() && d.getMonth() === viewDate.getMonth()) {
+        const key = toDayKey(d);
         if (!map.has(key)) map.set(key, []);
         map.get(key)!.push(p);
-      });
-    return Array.from(map.entries());
-  }, [posts]);
+      }
+    });
+    map.forEach(items =>
+      items.sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime())
+    );
+    return map;
+  }, [posts, viewDate]);
+
+  const selectedPosts = useMemo(() => monthPosts.get(selectedDay) || [], [monthPosts, selectedDay]);
+
+  const selectedDayLabel = useMemo(() => {
+    const [y, m, d] = selectedDay.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    const today = new Date();
+    const same = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+    if (same(date, today)) return 'Hoje';
+    return date.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
+  }, [selectedDay]);
+
+  const monthLabel = useMemo(() => {
+    const s = viewDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }, [viewDate]);
+
+  const changeMonth = (delta: number) => {
+    const d = new Date(viewDate.getFullYear(), viewDate.getMonth() + delta, 1);
+    setViewDate(d);
+    setSelectedDay(toDayKey(d));
+  };
+
+  const firstDow = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
+  const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
+  const cells: (number | null)[] = [
+    ...Array.from({ length: firstDow }, () => null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1)
+  ];
+
+  const todayKey = toDayKey(new Date());
 
   const accountLabel = (acc: Account) =>
     acc.ig_username ? `@${acc.ig_username}` : (acc.page_id && acc.page_id !== 'ig_login_direct' ? acc.page_id : acc.ig_user_id);
@@ -267,6 +309,80 @@ create policy "scheduled_posts_all" on public.scheduled_posts for all using (tru
     } catch {
       toast.error('Não foi possível copiar. Rode o SQL manualmente (veja o arquivo supabase/migrations).');
     }
+  };
+
+  const renderPostRow = (post: ScheduledPost) => {
+    const st = STATUS_META[post.status];
+    return (
+      <div key={post.id} className="bg-white border border-gray-100 rounded-2xl p-3 flex items-center gap-3 hover:border-pink-200 hover:shadow-md transition-all group">
+        {post.media_url && isVideoUrl(post.media_url) ? (
+          <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shrink-0 overflow-hidden relative">
+            <Video className="w-6 h-6 text-white/80" />
+            {post.media_type === 'REELS' && (
+              <span className="absolute bottom-1 left-1 bg-black/50 text-white text-[8px] font-black px-1.5 py-0.5 rounded">REELS</span>
+            )}
+          </div>
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={post.media_url || ''} alt="Post" className="w-20 h-20 rounded-xl object-cover shrink-0 border border-gray-100" />
+        )}
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 border border-gray-200">
+              {post.media_type}
+            </span>
+            <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full border ${st.classes}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
+              {st.label}
+            </span>
+            {post.published_permalink && (
+              <a
+                href={post.published_permalink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 hover:underline"
+                title="Ver publicação no Instagram"
+              >
+                <Link2 className="w-3 h-3" /> ver post
+              </a>
+            )}
+          </div>
+          <p className="text-xs font-bold text-gray-900 mt-1.5 truncate">{post.caption || 'Sem legenda'}</p>
+          <p className="text-[11px] text-gray-400 mt-0.5 flex items-center gap-1">
+            <Clock className="w-3 h-3" /> {formatSchedule(post.scheduled_at)}
+            {post.status === 'failed' && post.error && (
+              <span className="text-red-500 font-semibold truncate" title={post.error}>· {post.error.slice(0, 60)}</span>
+            )}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+          {post.status === 'scheduled' && (
+            <button
+              onClick={() => handlePublishNow(post)}
+              disabled={publishingId === post.id}
+              className="w-9 h-9 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 flex items-center justify-center transition-colors cursor-pointer disabled:opacity-50"
+              title="Publicar agora"
+            >
+              {publishingId === post.id
+                ? <Loader2 className="w-4 h-4 animate-spin" />
+                : <Send className="w-4 h-4" />}
+            </button>
+          )}
+          <button
+            onClick={() => handleDelete(post)}
+            disabled={deletingId === post.id}
+            className="w-9 h-9 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 flex items-center justify-center transition-colors cursor-pointer disabled:opacity-50"
+            title="Excluir agendamento"
+          >
+            {deletingId === post.id
+              ? <Loader2 className="w-4 h-4 animate-spin" />
+              : <Trash2 className="w-4 h-4" />}
+          </button>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -510,13 +626,39 @@ create policy "scheduled_posts_all" on public.scheduled_posts for all using (tru
           </button>
         </div>
 
-        {/* ── TIMELINE DE AGENDAMENTOS ── */}
+        {/* ── CALENDÁRIO DE AGENDAMENTOS ── */}
         <div className="xl:col-span-3 bg-white/70 backdrop-blur-md rounded-3xl border border-white shadow-xl p-6">
-          <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
             <h2 className="font-black text-gray-900 text-lg flex items-center gap-2">
-              <Clock className="w-5 h-5 text-blue-600" /> Próximas Publicações
+              <CalendarDays className="w-5 h-5 text-blue-600" /> Próximas Publicações
             </h2>
-            <span className="text-xs font-bold text-gray-400">{posts.length} agendamento{posts.length !== 1 ? 's' : ''}</span>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => changeMonth(-1)}
+                className="w-8 h-8 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 flex items-center justify-center transition-colors cursor-pointer"
+                title="Mês anterior"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <span className="text-sm font-black text-gray-800 min-w-[130px] text-center capitalize">{monthLabel}</span>
+              <button
+                onClick={() => changeMonth(1)}
+                className="w-8 h-8 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 flex items-center justify-center transition-colors cursor-pointer"
+                title="Próximo mês"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => {
+                  const d = new Date();
+                  setViewDate(new Date(d.getFullYear(), d.getMonth(), 1));
+                  setSelectedDay(toDayKey(d));
+                }}
+                className="px-2.5 h-8 rounded-lg bg-pink-50 hover:bg-pink-100 text-pink-700 border border-pink-200 text-[10px] font-black transition-colors cursor-pointer"
+              >
+                HOJE
+              </button>
+            </div>
           </div>
 
           {!tableExists ? (
@@ -525,105 +667,92 @@ create policy "scheduled_posts_all" on public.scheduled_posts for all using (tru
               <p className="font-bold text-gray-600 text-sm">Crie a tabela para começar</p>
               <p className="text-xs mt-1">Copie o SQL no aviso acima e execute no Supabase.</p>
             </div>
-          ) : grouped.length === 0 ? (
-            <div className="text-center py-16 text-gray-400">
-              <CalendarClock className="w-10 h-10 mx-auto mb-3 text-gray-300" />
-              <p className="font-bold text-gray-600 text-sm">Nenhuma publicação agendada ainda</p>
-              <p className="text-xs mt-1">Use o formulário ao lado para planejar seu próximo post ou reels.</p>
-            </div>
           ) : (
-            <div className="space-y-6 max-h-[560px] overflow-y-auto pr-1 custom-scrollbar">
-              {grouped.map(([label, items]) => (
-                <div key={label}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-[11px] font-black uppercase tracking-wider text-pink-600">{label}</span>
-                    <div className="flex-1 h-px bg-gray-100" />
-                    <span className="text-[10px] font-bold text-gray-400">{items.length}</span>
-                  </div>
-                  <div className="space-y-2">
-                    {items.map(post => {
-                      const st = STATUS_META[post.status];
-                      return (
-                        <div key={post.id} className="bg-white border border-gray-100 rounded-2xl p-3 flex items-center gap-3 hover:border-pink-200 hover:shadow-md transition-all group">
-                          {post.media_url ? (
-                            /\.(mp4|mov|m4v|webm)(\?|$)/i.test(post.media_url) ? (
-                              <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shrink-0 overflow-hidden relative">
-                                <Video className="w-6 h-6 text-white/80" />
-                                {post.media_type === 'REELS' && (
-                                  <span className="absolute bottom-1 left-1 bg-black/50 text-white text-[8px] font-black px-1.5 py-0.5 rounded">REELS</span>
-                                )}
-                              </div>
-                            ) : (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={post.media_url} alt="Post" className="w-20 h-20 rounded-xl object-cover shrink-0 border border-gray-100" />
-                            )
-                          ) : (
-                            <div className="w-20 h-20 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
-                              <ImageIcon className="w-6 h-6 text-gray-300" />
-                            </div>
-                          )}
+            <>
+              <div className="grid grid-cols-7 gap-1.5 mb-1.5">
+                {WEEKDAYS.map(d => (
+                  <div key={d} className="text-center text-[9px] font-black uppercase tracking-wider text-gray-400">{d}</div>
+                ))}
+              </div>
 
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 border border-gray-200">
-                                {post.media_type}
-                              </span>
-                              <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full border ${st.classes}`}>
-                                <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
-                                {st.label}
-                              </span>
-                              {post.published_permalink && (
-                                <a
-                                  href={post.published_permalink}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 hover:underline"
-                                  title="Ver publicação no Instagram"
-                                >
-                                  <Link2 className="w-3 h-3" /> ver post
-                                </a>
+              <div className="grid grid-cols-7 gap-1.5">
+                {cells.map((day, i) => {
+                  if (day === null) return <div key={`empty-${i}`} className="min-h-[76px]" />;
+                  const key = `${viewDate.getFullYear()}-${String(viewDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                  const items = monthPosts.get(key) || [];
+                  const isToday = key === todayKey;
+                  const isSelected = key === selectedDay;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setSelectedDay(key)}
+                      className={`relative min-h-[76px] rounded-xl border p-1.5 text-left transition-all cursor-pointer flex flex-col items-stretch ${
+                        isSelected
+                          ? 'border-pink-500 bg-pink-50/70 shadow-md shadow-pink-500/10 ring-2 ring-pink-500/20'
+                          : isToday
+                            ? 'border-pink-300 bg-white hover:border-pink-400 hover:shadow-sm'
+                            : 'border-gray-100 bg-white hover:border-pink-200 hover:shadow-sm'
+                      }`}
+                    >
+                      <span className={`text-[10px] font-black leading-none ${isToday ? 'text-pink-600' : 'text-gray-600'}`}>
+                        {day}
+                        {items.length > 0 && (
+                          <span className="ml-1 text-[8px] font-bold text-pink-500">· {items.length}</span>
+                        )}
+                      </span>
+                      {items.length > 0 && (
+                        <div className="grid grid-cols-2 gap-1 mt-1 flex-1">
+                          {items.slice(0, 4).map(p => (
+                            <div key={p.id} className="relative aspect-square rounded-md overflow-hidden bg-gray-100">
+                              {p.media_url && !isVideoUrl(p.media_url) ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={p.media_url} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
+                                  <Video className="w-3 h-3 text-white/80" />
+                                </div>
                               )}
+                              <span className={`absolute bottom-0.5 right-0.5 w-1.5 h-1.5 rounded-full border border-white ${STATUS_META[p.status].dot}`} />
                             </div>
-                            <p className="text-xs font-bold text-gray-900 mt-1.5 truncate">{post.caption || 'Sem legenda'}</p>
-                            <p className="text-[11px] text-gray-400 mt-0.5 flex items-center gap-1">
-                              <Clock className="w-3 h-3" /> {formatSchedule(post.scheduled_at)}
-                              {post.status === 'failed' && post.error && (
-                                <span className="text-red-500 font-semibold truncate" title={post.error}>· {post.error.slice(0, 60)}</span>
-                              )}
-                            </p>
-                          </div>
-
-                          <div className="flex items-center gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                            {post.status === 'scheduled' && (
-                              <button
-                                onClick={() => handlePublishNow(post)}
-                                disabled={publishingId === post.id}
-                                className="w-9 h-9 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 flex items-center justify-center transition-colors cursor-pointer disabled:opacity-50"
-                                title="Publicar agora"
-                              >
-                                {publishingId === post.id
-                                  ? <Loader2 className="w-4 h-4 animate-spin" />
-                                  : <Send className="w-4 h-4" />}
-                              </button>
-                            )}
-                            <button
-                              onClick={() => handleDelete(post)}
-                              disabled={deletingId === post.id}
-                              className="w-9 h-9 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 flex items-center justify-center transition-colors cursor-pointer disabled:opacity-50"
-                              title="Excluir agendamento"
-                            >
-                              {deletingId === post.id
-                                ? <Loader2 className="w-4 h-4 animate-spin" />
-                                : <Trash2 className="w-4 h-4" />}
-                            </button>
-                          </div>
+                          ))}
                         </div>
-                      );
-                    })}
-                  </div>
+                      )}
+                      {items.length > 4 && (
+                        <span className="text-[8px] font-bold text-gray-400 mt-0.5">+{items.length - 4} mais</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {monthPosts.size === 0 && (
+                <p className="text-center text-[11px] font-bold text-gray-400 mt-4">
+                  Nenhuma publicação em {monthLabel} — use o formulário ao lado para agendar.
+                </p>
+              )}
+
+              {/* Detalhes do dia selecionado */}
+              <div className="mt-5 border-t border-gray-100 pt-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-pink-600 capitalize">{selectedDayLabel}</span>
+                  <div className="flex-1 h-px bg-gray-100" />
+                  <span className="text-[10px] font-bold text-gray-400">
+                    {selectedPosts.length} publicação{selectedPosts.length !== 1 ? 'ões' : ''}
+                  </span>
                 </div>
-              ))}
-            </div>
+                {selectedPosts.length === 0 ? (
+                  <div className="text-center py-8 text-gray-400">
+                    <Clock className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                    <p className="font-bold text-gray-600 text-xs">Nenhuma publicação neste dia</p>
+                    <p className="text-[11px] mt-0.5">Clique em outro dia do calendário ou agende uma nova publicação.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1 custom-scrollbar">
+                    {selectedPosts.map(renderPostRow)}
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </div>
       </div>
