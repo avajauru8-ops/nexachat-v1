@@ -28,22 +28,9 @@ export function MessageNode({ id, data, selected }: NodeProps) {
     let value = '';
 
     if (type === 'button') {
-      label = prompt('Digite o texto do Botão:', 'Clique Aqui 🔥') || '';
-      if (!label.trim()) return;
-      value = prompt('Payload (identificador interno do botão, opcional):', label) || label;
-    } else if (type === 'link') {
-      value = prompt('URL de destino (https://...):', 'https://') || '';
-      if (!value.trim()) return;
-      label = prompt('Texto do Link (opcional):', '') || '';
-    } else if (type === 'image' || type === 'video') {
-      value = prompt('URL da mídia (https://...):', 'https://') || '';
-      if (!value.trim()) return;
+      label = 'Clique Aqui 🔥';
     } else if (type === 'file') {
-      value = prompt('URL do Arquivo (https://...):', 'https://') || '';
-      if (!value.trim()) return;
-      label = prompt('Nome do Arquivo/PDF (opcional):', 'Documento.pdf') || '';
-    } else if (type === 'text') {
-      value = '';
+      label = 'Documento.pdf';
     }
 
     const newItem: AttachmentItem = {
@@ -135,7 +122,11 @@ export function MessageNode({ id, data, selected }: NodeProps) {
         {attachments.length > 0 && (
           <div className="space-y-2 pt-1 border-t border-gray-100">
             {attachments.map((item) => (
-              <div key={item.id} className="relative group/item bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-xs shadow-xs">
+              <div key={item.id} className={`relative group/item bg-gray-50 rounded-xl p-2.5 text-xs shadow-xs border ${
+                item.type !== 'button' && !item.value?.trim()
+                  ? 'border-amber-300 border-dashed'
+                  : 'border-gray-200'
+              }`}>
                 
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 flex items-center gap-1">
