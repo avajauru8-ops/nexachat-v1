@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { User, Tag as TagIcon, Search, Filter, X, MessageSquare, Copy, Check, Calendar, ShieldCheck, Globe, Users as UsersIcon, BadgeCheck, Loader2, RefreshCw, AtSign } from 'lucide-react';
+import { User, Tag as TagIcon, Search, Filter, X, MessageSquare, RefreshCw, AtSign, Users as UsersIcon, ShieldCheck, Globe, BadgeCheck, Loader2, Trash2, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 
@@ -24,30 +24,36 @@ interface IgProfile {
   biography: string | null;
 }
 
-export function AudienceTable({ contacts }: { contacts: Contact[] }) {
+const PAGE_SIZE = 6;
+
+export function AudienceTable({ contacts: initialContacts }: { contacts: Contact[] }) {
+  const [contacts, setContacts] = useState<Contact[]>(initialContacts);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [selectedLead, setSelectedLead] = useState<Contact | null>(null);
   const [igProfile, setIgProfile] = useState<IgProfile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
-  const [copiedId, setCopiedId] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Contact | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const filteredContacts = contacts.filter((c) =>
     c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.ig_scoped_id.includes(searchTerm)
   );
 
-  const handleCopyId = (id: string) => {
-    navigator.clipboard.writeText(id);
-    setCopiedId(true);
-    toast.success('ID do Instagram copiado!');
-    setTimeout(() => setCopiedId(false), 2000);
+  const totalPages = Math.max(1, Math.ceil(filteredContacts.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedContacts = filteredContacts.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const handleSearch = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
   };
 
   const handleOpenProfile = async (contact: Contact) => {
     setSelectedLead(contact);
     setIgProfile(null);
     setLoadingProfile(true);
-
     try {
       const res = await fetch('/api/contacts/fetch-profile', {
         method: 'POST',
@@ -55,22 +61,17 @@ export function AudienceTable({ contacts }: { contacts: Contact[] }) {
         body: JSON.stringify({ contactId: contact.id }),
       });
       const data = await res.json();
-
       if (data.success) {
-        // Update selected lead with fresh data
         setSelectedLead(prev => prev ? {
           ...prev,
           name: data.contact?.name || prev.name,
           profile_picture: data.contact?.profile_picture || prev.profile_picture,
           custom_fields: data.contact?.custom_fields || prev.custom_fields,
         } : prev);
-
-        if (data.ig_profile) {
-          setIgProfile(data.ig_profile);
-        }
+        if (data.ig_profile) setIgProfile(data.ig_profile);
       }
     } catch (err) {
-      console.warn('Erro ao buscar perfil do Instagram:', err);
+      console.warn('Erro ao buscar perfil:', err);
     } finally {
       setLoadingProfile(false);
     }
@@ -79,14 +80,36 @@ export function AudienceTable({ contacts }: { contacts: Contact[] }) {
   const handleRefreshProfile = () => {
     if (selectedLead) {
       handleOpenProfile(selectedLead);
-      toast.success('Atualizando perfil do Instagram...');
+      toast.success('Atualizando perfil...');
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch('/api/contacts/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contactId: deleteTarget.id }),
+      });
+      if (res.ok) {
+        setContacts(prev => prev.filter(c => c.id !== deleteTarget.id));
+        toast.success(`Lead "${deleteTarget.name || 'Anônimo'}" excluído com sucesso!`);
+        setDeleteTarget(null);
+      } else {
+        const data = await res.json();
+        toast.error(data.error || 'Erro ao excluir o lead.');
+      }
+    } catch {
+      toast.error('Erro de rede ao excluir o lead.');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
   const displayName = selectedLead?.name || 'Lead Anônimo';
   const displayAvatar = igProfile?.profile_picture_url || selectedLead?.profile_picture;
-  
-  // Usar dados recém-carregados ou fazer fallback para o que está no banco (custom_fields)
   const leadData = (selectedLead as any)?.custom_fields || {};
   const displayUsername = igProfile?.username || leadData.username;
   const displayFollowers = igProfile?.follower_count ?? leadData.follower_count;
@@ -104,20 +127,25 @@ export function AudienceTable({ contacts }: { contacts: Contact[] }) {
             type="text"
             placeholder="Buscar por nome ou ID..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => handleSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-white/60 border border-white rounded-xl focus:ring-2 focus:ring-pink-500 outline-none text-xs font-medium backdrop-blur-sm"
           />
         </div>
-        <button
-          onClick={() => toast.success('Filtros ativados.')}
-          className="flex items-center gap-2 px-4 py-2 bg-white/60 border border-white rounded-xl text-xs font-bold text-gray-700 hover:bg-white/80 transition-colors cursor-pointer shadow-sm backdrop-blur-sm"
-        >
-          <Filter className="w-3.5 h-3.5" />
-          Filtros Avançados
-        </button>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-500 font-medium">
+            {filteredContacts.length} lead{filteredContacts.length !== 1 ? 's' : ''}
+          </span>
+          <button
+            onClick={() => toast.success('Filtros ativados.')}
+            className="flex items-center gap-2 px-4 py-2 bg-white/60 border border-white rounded-xl text-xs font-bold text-gray-700 hover:bg-white/80 transition-colors cursor-pointer shadow-sm backdrop-blur-sm"
+          >
+            <Filter className="w-3.5 h-3.5" />
+            Filtros Avançados
+          </button>
+        </div>
       </div>
 
-      {/* Tabela de Leads */}
+      {/* Tabela */}
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs text-gray-600">
           <thead className="bg-white/50 text-gray-800 font-bold border-b border-white/50 uppercase tracking-wider text-[10px]">
@@ -130,14 +158,14 @@ export function AudienceTable({ contacts }: { contacts: Contact[] }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {filteredContacts.length === 0 ? (
+            {paginatedContacts.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
                   Nenhum lead encontrado.
                 </td>
               </tr>
             ) : (
-              filteredContacts.map((contact) => (
+              paginatedContacts.map((contact) => (
                 <tr key={contact.id} className="hover:bg-blue-50/30 transition-colors group">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
@@ -180,12 +208,22 @@ export function AudienceTable({ contacts }: { contacts: Contact[] }) {
                     })}
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <button
-                      onClick={() => handleOpenProfile(contact)}
-                      className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl font-bold text-xs border border-blue-200 transition-colors inline-flex items-center gap-1 cursor-pointer"
-                    >
-                      Ver Perfil
-                    </button>
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => handleOpenProfile(contact)}
+                        className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl font-bold text-xs border border-blue-200 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                      >
+                        Ver Perfil
+                      </button>
+                      <button
+                        onClick={() => setDeleteTarget(contact)}
+                        className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl font-bold text-xs border border-red-200 transition-colors inline-flex items-center gap-1.5 cursor-pointer group/del"
+                        title="Excluir lead"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 group-hover/del:scale-110 transition-transform" />
+                        Excluir
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -194,9 +232,123 @@ export function AudienceTable({ contacts }: { contacts: Contact[] }) {
         </table>
       </div>
 
-      {/* ═══════════════════════════════════════════════════════ */}
-      {/* MODAL — PERFIL REAL DO LEAD (Instagram)                */}
-      {/* ═══════════════════════════════════════════════════════ */}
+      {/* Paginação */}
+      {totalPages > 1 && (
+        <div className="px-6 py-4 border-t border-white/50 bg-white/30 flex items-center justify-between">
+          <p className="text-xs text-gray-500 font-medium">
+            Página <span className="font-bold text-gray-800">{safePage}</span> de <span className="font-bold text-gray-800">{totalPages}</span>
+            {' · '}mostrando <span className="font-bold text-gray-800">{paginatedContacts.length}</span> de <span className="font-bold text-gray-800">{filteredContacts.length}</span> leads
+          </p>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={safePage === 1}
+              className="w-8 h-8 rounded-lg bg-white/70 border border-white hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors shadow-sm"
+            >
+              <ChevronLeft className="w-4 h-4 text-gray-600" />
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                className={`w-8 h-8 rounded-lg border text-xs font-bold transition-all shadow-sm ${
+                  page === safePage
+                    ? 'bg-instagram-gradient text-white border-transparent shadow-lg shadow-pink-500/20 scale-105'
+                    : 'bg-white/70 border-white hover:bg-white text-gray-600'
+                }`}
+              >
+                {page}
+              </button>
+            ))}
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={safePage === totalPages}
+              className="w-8 h-8 rounded-lg bg-white/70 border border-white hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors shadow-sm"
+            >
+              <ChevronRight className="w-4 h-4 text-gray-600" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════ */}
+      {/* MODAL — CONFIRMAÇÃO DE EXCLUSÃO             */}
+      {/* ═══════════════════════════════════════════ */}
+      {deleteTarget && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={(e) => { if (e.target === e.currentTarget && !isDeleting) setDeleteTarget(null); }}
+        >
+          <div className="glass-panel rounded-3xl border border-white/80 shadow-2xl max-w-md w-full overflow-hidden">
+            {/* Header vermelho */}
+            <div className="bg-gradient-to-br from-red-500 to-rose-600 p-6 text-white">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
+                  <AlertTriangle className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black">Excluir Lead</h3>
+                  <p className="text-red-100 text-sm">Esta ação não pode ser desfeita</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Corpo */}
+            <div className="p-6 space-y-4">
+              <div className="flex items-center gap-3 p-4 bg-gray-50 border border-gray-200 rounded-2xl">
+                {deleteTarget.profile_picture ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={deleteTarget.profile_picture} alt={deleteTarget.name} className="w-12 h-12 rounded-full object-cover border border-gray-200" />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold text-base">
+                    {deleteTarget.name ? deleteTarget.name.substring(0, 2).toUpperCase() : <User className="w-5 h-5" />}
+                  </div>
+                )}
+                <div>
+                  <p className="font-black text-gray-900">{deleteTarget.name || 'Lead Anônimo'}</p>
+                  <p className="text-[11px] font-mono text-gray-400">ID: {deleteTarget.ig_scoped_id}</p>
+                </div>
+              </div>
+
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Você está prestes a excluir permanentemente este lead e todas as suas conversas, mensagens e tags associadas. <span className="font-bold text-red-600">Essa ação é irreversível.</span>
+              </p>
+            </div>
+
+            {/* Rodapé */}
+            <div className="p-5 border-t border-white/50 bg-white/40 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                disabled={isDeleting}
+                className="px-5 py-2.5 bg-white/80 border border-gray-200 hover:bg-white text-gray-700 rounded-xl text-sm font-bold transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                disabled={isDeleting}
+                className="px-5 py-2.5 bg-gradient-to-r from-red-500 to-rose-600 hover:opacity-90 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-red-500/20 hover:scale-[1.02] disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Excluindo...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Sim, excluir lead
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════ */}
+      {/* MODAL — PERFIL DO LEAD                      */}
+      {/* ═══════════════════════════════════════════ */}
       {selectedLead && (
         <div
           className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
@@ -204,7 +356,7 @@ export function AudienceTable({ contacts }: { contacts: Contact[] }) {
         >
           <div className="glass-panel rounded-3xl border border-white/80 shadow-2xl max-w-lg w-full overflow-hidden relative">
 
-            {/* ── Header com gradiente ────────────────────────── */}
+            {/* Header gradiente */}
             <div className="bg-instagram-gradient p-6 text-white relative">
               <button
                 onClick={() => setSelectedLead(null)}
@@ -213,20 +365,14 @@ export function AudienceTable({ contacts }: { contacts: Contact[] }) {
               >
                 <X className="w-5 h-5" />
               </button>
-
               <div className="flex items-center gap-4">
-                {/* Avatar real do Instagram */}
                 {loadingProfile ? (
                   <div className="w-18 h-18 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border-3 border-white/60 shadow-lg">
                     <Loader2 className="w-7 h-7 text-white animate-spin" />
                   </div>
                 ) : displayAvatar ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={displayAvatar}
-                    alt={displayName}
-                    className="w-18 h-18 rounded-full object-cover border-3 border-white/60 shadow-lg"
-                  />
+                  <img src={displayAvatar} alt={displayName} className="w-18 h-18 rounded-full object-cover border-3 border-white/60 shadow-lg" />
                 ) : (
                   <div className="w-18 h-18 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white font-extrabold text-2xl border-3 border-white/60 shadow-lg">
                     {displayName.substring(0, 2).toUpperCase()}
@@ -235,13 +381,9 @@ export function AudienceTable({ contacts }: { contacts: Contact[] }) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h3 className="text-xl font-bold text-white truncate">{displayName}</h3>
-                    {displayVerified && (
-                      <BadgeCheck className="w-5 h-5 text-blue-300 flex-shrink-0" />
-                    )}
+                    {displayVerified && <BadgeCheck className="w-5 h-5 text-blue-300 flex-shrink-0" />}
                   </div>
-                  {displayUsername && (
-                    <p className="text-white/70 text-sm font-medium mt-0.5">@{displayUsername}</p>
-                  )}
+                  {displayUsername && <p className="text-white/70 text-sm font-medium mt-0.5">@{displayUsername}</p>}
                   <div className="flex items-center gap-2 mt-1.5">
                     <span className="px-2 py-0.5 bg-emerald-400/20 backdrop-blur-md text-emerald-200 text-[10px] font-black rounded-full border border-emerald-400/30">
                       ● Lead Ativo
@@ -254,55 +396,37 @@ export function AudienceTable({ contacts }: { contacts: Contact[] }) {
               </div>
             </div>
 
-            {/* ── Conteúdo ────────────────────────────────────── */}
+            {/* Conteúdo */}
             <div className="p-6 space-y-5 max-h-[60vh] overflow-y-auto">
-
-              {/* Loading state */}
               {loadingProfile && (
                 <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-2xl">
                   <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
-                  <span className="text-xs font-bold text-blue-800">Buscando perfil real do Instagram via Meta Graph API...</span>
+                  <span className="text-xs font-bold text-blue-800">Buscando perfil via Meta Graph API...</span>
                 </div>
               )}
-
-              {/* Biografia do Instagram */}
               {displayBio && (
                 <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 space-y-1">
                   <span className="text-[10px] font-black uppercase tracking-wider text-gray-500">Biografia</span>
                   <p className="text-xs text-gray-800 leading-relaxed whitespace-pre-line">{displayBio}</p>
                 </div>
               )}
-
-              {/* KPIs — Seguidores, Username, ID */}
               <div className="grid grid-cols-3 gap-3">
                 <div className="bg-white/60 backdrop-blur-sm p-3.5 rounded-2xl border border-white text-center space-y-1 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
                   <UsersIcon className="w-4 h-4 text-pink-600 mx-auto" />
-                  <p className="text-lg font-extrabold text-gray-900">
-                    {displayFollowers != null ? displayFollowers.toLocaleString('pt-BR') : '—'}
-                  </p>
+                  <p className="text-lg font-extrabold text-gray-900">{displayFollowers != null ? displayFollowers.toLocaleString('pt-BR') : '—'}</p>
                   <span className="text-[10px] font-bold text-gray-500">Seguidores</span>
                 </div>
-
                 <div className="bg-white/60 backdrop-blur-sm p-3.5 rounded-2xl border border-white text-center space-y-1 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
                   <AtSign className="w-4 h-4 text-purple-600 mx-auto" />
-                  <p className="text-xs font-extrabold text-gray-900 truncate">
-                    {displayUsername || '—'}
-                  </p>
+                  <p className="text-xs font-extrabold text-gray-900 truncate">{displayUsername || '—'}</p>
                   <span className="text-[10px] font-bold text-gray-500">Username</span>
                 </div>
-
                 <div className="bg-white/60 backdrop-blur-sm p-3.5 rounded-2xl border border-white text-center space-y-1 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
                   <ShieldCheck className="w-4 h-4 text-orange-500 mx-auto" />
-                  <p className="text-xs font-extrabold text-gray-900">
-                    {displayVerified === true ? '✅ Sim' : displayVerified === false ? '❌ Não' : '—'}
-                  </p>
+                  <p className="text-xs font-extrabold text-gray-900">{displayVerified === true ? '✅ Sim' : displayVerified === false ? '❌ Não' : '—'}</p>
                   <span className="text-[10px] font-bold text-gray-500">Verificado</span>
                 </div>
               </div>
-
-
-
-              {/* Tags do Lead */}
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
                   <TagIcon className="w-3.5 h-3.5 text-indigo-600" /> Tags do Lead
@@ -322,7 +446,7 @@ export function AudienceTable({ contacts }: { contacts: Contact[] }) {
               </div>
             </div>
 
-            {/* ── Rodapé — Ações rápidas ──────────────────────── */}
+            {/* Rodapé */}
             <div className="p-5 border-t border-white/50 flex items-center justify-between gap-3 bg-white/40">
               <div className="flex items-center gap-2">
                 <button
@@ -335,13 +459,11 @@ export function AudienceTable({ contacts }: { contacts: Contact[] }) {
                   onClick={handleRefreshProfile}
                   disabled={loadingProfile}
                   className="px-3 py-2.5 bg-white/60 border border-white hover:bg-white/80 text-gray-700 rounded-xl text-xs font-bold transition-colors cursor-pointer disabled:opacity-50 inline-flex items-center gap-1.5 shadow-sm backdrop-blur-sm"
-                  title="Atualizar dados do Instagram"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${loadingProfile ? 'animate-spin' : ''}`} />
                   Atualizar
                 </button>
               </div>
-
               <Link
                 href={`/inbox?contactId=${selectedLead.id}`}
                 className="px-5 py-2.5 bg-instagram-gradient hover:opacity-90 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-2 shadow-lg shadow-pink-500/20 hover:scale-[1.02]"

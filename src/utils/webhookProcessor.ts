@@ -80,6 +80,56 @@ async function logFlowExecution(workspaceId: string, flowId: string, contact: an
   }
 }
 
+async function dispatchFlowExecution(params: {
+  workspaceId: string;
+  contactId: string;
+  conversationId: string;
+  recipientId: string;
+  senderId: string;
+  flowId: string;
+  nodeId: string | null;
+  commentId?: string;
+}) {
+  const { workspaceId, contactId, conversationId, recipientId, senderId, flowId, nodeId, commentId } = params;
+  try {
+    if (process.env.INNGEST_EVENT_KEY) {
+      await inngest.send({
+        name: 'flow/execute',
+        data: {
+          workspaceId,
+          contactId,
+          conversationId,
+          recipientId,
+          senderId,
+          flowId,
+          nodeId,
+          commentId
+        }
+      });
+      console.log(`[Seguidores] Disparado evento FLOW (${flowId}) para a conversa: ${conversationId}`);
+    } else {
+      throw new Error("INNGEST_EVENT_KEY ausente");
+    }
+  } catch (inngestErr) {
+    console.warn(`[Seguidores] Fallback para execução síncrona devido a falha no Inngest: ${inngestErr}`);
+    const { executeFlowDirect } = await import('@/utils/flowEngineDirect');
+    try {
+      await executeFlowDirect({
+        workspaceId,
+        contactId,
+        conversationId,
+        recipientId,
+        senderId,
+        flowId,
+        nodeId,
+        commentId
+      });
+    } catch (e) {
+      console.error("[Flow Engine Direct] Erro no fallback:", e);
+    }
+  }
+}
+
 /**
  * Cria ou recupera o contato e a conversa associada para o evento atual
  */
@@ -87,8 +137,11 @@ async function getOrCreateContactAndConversation(
   activeWorkspaceId: string,
   account: any,
   senderId: string,
-  channel: 'dm' | 'comment' | 'story' = 'dm'
+  channel: 'dm' | 'comment' | 'story' = 'dm',
+  opts: { markUnread?: boolean; username?: string | null } = {}
 ) {
+  const markUnread = opts.markUnread !== false;
+
   // Identificar ou Criar Contato
   let { data: contact } = await supabase
     .from('contacts')
@@ -119,6 +172,13 @@ async function getOrCreateContactAndConversation(
       }
     } catch { /* ignora se falhar */ }
 
+    if (opts.username && !contactUsername) {
+      contactUsername = opts.username;
+    }
+    if (!contactName || contactName === 'Lead do Instagram') {
+      contactName = contactUsername || contactName;
+    }
+
     const insertPayload: Record<string, any> = {
       workspace_id: activeWorkspaceId,
       instagram_account_id: account.id,
@@ -138,7 +198,7 @@ async function getOrCreateContactAndConversation(
     contact = newC;
   }
 
-  if (!contact) return { contact: null, conversation: null };
+  if (!contact) return { contact: null, conversation: null, created: false };
 
   // Atualizar last_interaction_at do contato
   await supabase.from('contacts').update({ last_interaction_at: new Date().toISOString() }).eq('id', contact.id);
@@ -153,7 +213,10 @@ async function getOrCreateContactAndConversation(
 
   const windowExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
+  let created = false;
+
   if (!conversation) {
+    created = true;
     const { data: newConv } = await supabase
       .from('conversations')
       .insert({
@@ -163,7 +226,7 @@ async function getOrCreateContactAndConversation(
         channel,
         last_interaction_at: new Date().toISOString(),
         window_expires_at: windowExpiresAt,
-        unread_count: 1
+        unread_count: markUnread ? 1 : 0
       })
       .select('id, status, window_expires_at, active_flow_id, flow_cursor, unread_count')
       .single();
@@ -188,12 +251,12 @@ async function getOrCreateContactAndConversation(
       .update({
         last_interaction_at: new Date().toISOString(),
         window_expires_at: windowExpiresAt,
-        unread_count: (conversation.unread_count || 0) + 1
+        unread_count: (conversation.unread_count || 0) + (markUnread ? 1 : 0)
       })
       .eq('id', conversation.id);
   }
 
-  return { contact, conversation };
+  return { contact, conversation, created };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -330,8 +393,20 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
 
           // Se não há um cursor ativo, significa que a automação anterior terminou ou travou.
           // Devemos limpar o flowId para forçar a avaliação de novas palavras-chave.
+          // Exceção: fluxos de boas-vindas atribuídos mas ainda não iniciados (sem cursor) devem executar.
           if (!nodeId) {
-            flowId = null;
+            if (flowId) {
+              const { data: assignedFlow } = await supabase
+                .from('flows')
+                .select('trigger_type')
+                .eq('id', flowId)
+                .maybeSingle();
+              if (!assignedFlow || assignedFlow.trigger_type !== 'welcome_dm') {
+                flowId = null;
+              }
+            } else {
+              flowId = null;
+            }
           }
 
           if (!flowId) {
@@ -410,7 +485,89 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
     // --- 2. PROCESSAMENTO DE EVENTOS DIVERSOS (CHANGES) COMO COMENTÁRIOS ---
     if (entry.changes && Array.isArray(entry.changes)) {
       await processInstagramComments(entry, initialWorkspaceId);
+      await processInstagramFollows(entry, initialWorkspaceId);
     }
+  }
+}
+
+/**
+ * Processa eventos de novos seguidores do Instagram (field 'follows'),
+ * criando contato + conversa e disparando automações com trigger_type = 'welcome_dm'.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function processInstagramFollows(
+  entry: any,
+  initialWorkspaceId?: string | null
+) {
+  const entryId = entry.id;
+  if (!entry.changes || !Array.isArray(entry.changes)) return;
+
+  for (const change of entry.changes) {
+    const isFollow = change.field === 'follows' && change.value?.type === 'follow';
+
+    if (!isFollow) continue;
+
+    const followerId = change.value.user?.id;
+    const followerUsername = change.value.user?.username || null;
+
+    if (!followerId) continue;
+
+    const recipientId = entryId;
+
+    let { data: account } = await supabase
+      .from('instagram_accounts')
+      .select('id, workspace_id, access_token')
+      .or(`ig_user_id.eq.${recipientId},page_id.eq.${recipientId}`)
+      .limit(1)
+      .maybeSingle();
+
+    if (!account && initialWorkspaceId) {
+      const { data: fallback } = await supabase
+        .from('instagram_accounts')
+        .select('id, workspace_id, access_token')
+        .eq('workspace_id', initialWorkspaceId)
+        .limit(1)
+        .maybeSingle();
+      account = fallback;
+    }
+
+    if (!account) {
+      console.warn(`[Seguidores] Conta do Instagram não localizada para recipientId: ${recipientId}`);
+      continue;
+    }
+
+    const activeWorkspaceId = account.workspace_id;
+
+    const { contact, conversation, created } = await getOrCreateContactAndConversation(
+      activeWorkspaceId,
+      account,
+      followerId,
+      'dm',
+      { markUnread: false, username: followerUsername }
+    );
+
+    if (!contact || !conversation) continue;
+
+    // Só envia boas-vindas para quem é realmente um contato novo
+    if (!created) continue;
+
+    const welcomeFlowId = conversation.active_flow_id;
+    if (!welcomeFlowId) continue;
+
+    await supabase
+      .from('conversations')
+      .update({ active_flow_id: welcomeFlowId, flow_cursor: null })
+      .eq('id', conversation.id);
+
+    await dispatchFlowExecution({
+      workspaceId: activeWorkspaceId,
+      contactId: contact.id,
+      conversationId: conversation.id,
+      recipientId,
+      senderId: followerId,
+      flowId: welcomeFlowId,
+      nodeId: null
+    });
   }
 }
 

@@ -36,6 +36,24 @@ export async function POST() {
     const accessToken = account.access_token;
     const myIgUserId = account.ig_user_id;
 
+    // Reinscrever a conta nos webhooks do Instagram (garante 'follows' para contas já conectadas)
+    try {
+      await fetch(
+        `https://graph.facebook.com/v22.0/${myIgUserId}/subscribed_apps?subscribed_fields=messages,comments,mentions,follows&access_token=${accessToken}`,
+        { method: 'POST' }
+      );
+    } catch {
+      /* token pode ser do tipo nativo (graph.instagram.com) */
+    }
+    try {
+      await fetch(
+        `https://graph.instagram.com/v22.0/me/subscribed_apps?subscribed_fields=messages,messaging_postbacks,messaging_optins,comments,message_reactions,follows&access_token=${accessToken}`,
+        { method: 'POST' }
+      );
+    } catch {
+      /* token pode ser do tipo Meta (graph.facebook.com) */
+    }
+
     // Fazer fetch na API do Instagram (tratado de forma totalmente segura)
     let syncedCount = 0;
     try {

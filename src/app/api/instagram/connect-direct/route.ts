@@ -71,7 +71,7 @@ export async function POST(request: Request) {
     // 2. Tentar inscrever a conta nos Webhooks de mensagens da Meta automaticamente
     try {
       await fetch(
-        `https://graph.facebook.com/v22.0/${ig_user_id}/subscribed_apps?subscribed_fields=messages,comments,mentions&access_token=${access_token}`,
+        `https://graph.facebook.com/v22.0/${ig_user_id}/subscribed_apps?subscribed_fields=messages,comments,mentions,follows&access_token=${access_token}`,
         { method: 'POST' }
       );
     } catch (e) {

@@ -106,6 +106,8 @@ export async function POST(request: Request) {
         eventType = 'comment';
       } else if (body.entry?.[0]?.changes?.[0]?.field === 'mentions') {
         eventType = 'mention';
+      } else if (body.entry?.[0]?.changes?.[0]?.field === 'follows') {
+        eventType = 'follow';
       }
 
       // 3. Gravação Bruta no Banco de Dados (events_log) para auditoria e resiliência
