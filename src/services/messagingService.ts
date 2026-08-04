@@ -14,7 +14,8 @@ export async function sendMessageToMeta({
   mediaBase64,
   mimeType,
   filename,
-  quickReplies
+  quickReplies,
+  externalAttachmentId
 }: {
   conversationId: string;
   content: string | null;
@@ -25,6 +26,7 @@ export async function sendMessageToMeta({
   mimeType?: string | null;
   filename?: string | null;
   quickReplies?: { title: string; payload?: string }[];
+  externalAttachmentId?: string | null;
 }) {
   // 1. Buscar a conversation e os IDs necessários
   const { data: conversation, error: convError } = await supabaseAdmin
@@ -67,7 +69,7 @@ export async function sendMessageToMeta({
   const metaUrl = `https://${graphHost}/v22.0/me/messages`;
 
   let finalMediaUrl: string | null = mediaUrl || null;
-  let attachmentId: string | null = null;
+  let attachmentId: string | null = externalAttachmentId || null;
 
   // 2.1 Upload de anexo (imagem/vídeo/áudio) via message_attachments
   if (mediaBase64) {
@@ -188,9 +190,8 @@ export async function sendFlowMessageNode({
   nodeData: Record<string, unknown>;
   commentId?: string;
 }) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const attachments: { id: string; type: string; value: string; label?: string }[] =
-    (nodeData.attachments as { id: string; type: string; value: string; label?: string }[]) || [];
+  const attachments: { id: string; type: string; value: string; label?: string; attachmentId?: string }[] =
+    (nodeData.attachments as { id: string; type: string; value: string; label?: string; attachmentId?: string }[]) || [];
 
   const text = ((nodeData.text as string) || '').trim();
   const messageType = (nodeData.messageType as string) || 'text';
@@ -218,11 +219,12 @@ export async function sendFlowMessageNode({
     if (att.type === 'link' && att.value?.trim()) {
       const linkText = att.label?.trim() ? `${att.label}: ${att.value.trim()}` : att.value.trim();
       await sendMessageToMeta({ conversationId, content: linkText, messageType: 'text' });
-    } else if ((att.type === 'image' || att.type === 'video' || att.type === 'file') && att.value?.trim()) {
+    } else if ((att.type === 'image' || att.type === 'video' || att.type === 'file') && (att.value?.trim() || att.attachmentId)) {
       await sendMessageToMeta({
         conversationId,
         content: att.type === 'file' && att.label?.trim() ? `📎 ${att.label}` : null,
-        mediaUrl: att.value.trim(),
+        mediaUrl: att.value?.trim() || null,
+        externalAttachmentId: att.attachmentId || null,
         messageType: att.type
       });
     } else if (att.type === 'text' && att.value?.trim()) {

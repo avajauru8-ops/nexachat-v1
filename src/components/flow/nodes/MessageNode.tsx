@@ -1,12 +1,14 @@
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
-import { X, Plus, Image as ImageIcon, Video, FileText, Link as LinkIcon, MessageSquare, Trash2, ChevronDown, MousePointerClick } from 'lucide-react';
+import { X, Plus, Image as ImageIcon, Video, FileText, Link as LinkIcon, MessageSquare, Trash2, ChevronDown, MousePointerClick, Upload, Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import { toast } from 'react-hot-toast';
 
 export interface AttachmentItem {
   id: string;
   type: 'text' | 'button' | 'link' | 'image' | 'video' | 'file';
   value: string;
   label?: string;
+  attachmentId?: string;
 }
 
 export function MessageNode({ id, data, selected }: NodeProps) {
@@ -16,6 +18,7 @@ export function MessageNode({ id, data, selected }: NodeProps) {
     (data.attachments as AttachmentItem[]) || []
   );
   const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
 
   const onDeleteNode = () => {
     setNodes((nds) => nds.filter((n) => n.id !== id));
@@ -57,6 +60,68 @@ export function MessageNode({ id, data, selected }: NodeProps) {
     setAttachments(updated);
     updateNodeData(id, { attachments: updated });
   };
+
+  const handleUploadAttachment = async (attachId: string, e: React.ChangeEvent<HTMLInputElement>, type: AttachmentItem['type']) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    const mediaType = type === 'video' ? 'video' : type === 'file' ? 'file' : 'image';
+    const maxBytes = (mediaType === 'image' ? 8 : 25) * 1024 * 1024;
+    if (file.size > maxBytes) {
+      toast.error(`Arquivo muito grande. Máximo ${mediaType === 'image' ? '8MB' : '25MB'}.`);
+      return;
+    }
+
+    setUploadingId(attachId);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      form.append('type', mediaType);
+
+      const res = await fetch('/api/instagram/upload-attachment', { method: 'POST', body: form });
+      const result = await res.json();
+
+      if (!res.ok || result.error) {
+        throw new Error(result.error || 'Falha ao enviar o arquivo.');
+      }
+
+      handleUpdateAttachment(attachId, {
+        value: result.uri || '',
+        attachmentId: result.attachmentId || '',
+        ...(type === 'file' && !attachments.find(a => a.id === attachId)?.label ? { label: file.name } : {})
+      });
+      toast.success('Arquivo enviado e pronto para o disparo!');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao enviar o arquivo.');
+    } finally {
+      setUploadingId(null);
+    }
+  };
+
+  const renderUploadButton = (attachId: string, type: AttachmentItem['type'], accept: string, hasAttachment: boolean) => (
+    <div className="flex items-center gap-2">
+      <label className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold cursor-pointer transition-colors border ${
+        uploadingId === attachId
+          ? 'bg-gray-100 border-gray-300 text-gray-400 pointer-events-none'
+          : 'bg-pink-50 hover:bg-pink-100 border-pink-200 text-pink-700'
+      }`}>
+        <input
+          type="file"
+          accept={accept}
+          className="hidden"
+          disabled={uploadingId !== null}
+          onChange={(e) => handleUploadAttachment(attachId, e, type)}
+        />
+        <Upload className="w-3 h-3" />
+        {uploadingId === attachId ? 'Enviando...' : 'Enviar do computador'}
+      </label>
+      {uploadingId === attachId && <Loader2 className="w-3.5 h-3.5 animate-spin text-pink-500" />}
+      {!uploadingId && hasAttachment && (
+        <span className="text-[9px] text-emerald-600 font-semibold">✓ arquivo pronto</span>
+      )}
+    </div>
+  );
 
   const attachTypeLabel = (type: AttachmentItem['type']) => {
     switch (type) {
@@ -195,12 +260,17 @@ export function MessageNode({ id, data, selected }: NodeProps) {
                     {item.value ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img src={item.value} alt="Anexo" className="w-full h-24 object-cover rounded-lg mb-1" />
-                    ) : null}
+                    ) : (
+                      <div className="bg-gray-100 border border-dashed border-gray-300 rounded-lg p-2.5 text-center text-[10px] text-gray-400">
+                        Nenhuma imagem anexada ainda
+                      </div>
+                    )}
+                    {renderUploadButton(item.id, 'image', 'image/*', !!item.attachmentId)}
                     <input
                       type="text"
                       value={item.value || ''}
                       onChange={(e) => handleUpdateAttachment(item.id, { value: e.target.value })}
-                      placeholder="URL da foto (https://...)"
+                      placeholder="Ou cole a URL da foto (https://...)"
                       className="w-full border border-gray-200 rounded px-2 py-1 text-[11px] bg-white outline-none nowheel"
                     />
                   </div>
@@ -212,11 +282,12 @@ export function MessageNode({ id, data, selected }: NodeProps) {
                       <Video className="w-3.5 h-3.5" />
                       <span className="text-[10px]">Vídeo enviado como anexo</span>
                     </div>
+                    {renderUploadButton(item.id, 'video', 'video/*', !!item.attachmentId)}
                     <input
                       type="text"
                       value={item.value || ''}
                       onChange={(e) => handleUpdateAttachment(item.id, { value: e.target.value })}
-                      placeholder="URL do vídeo (https://...)"
+                      placeholder="Ou cole a URL do vídeo (https://...)"
                       className="w-full border border-gray-200 rounded px-2 py-1 text-[11px] bg-white outline-none nowheel"
                     />
                   </div>
@@ -234,11 +305,12 @@ export function MessageNode({ id, data, selected }: NodeProps) {
                         className="flex-1 bg-transparent border-none outline-none text-xs font-medium nowheel"
                       />
                     </div>
+                    {renderUploadButton(item.id, 'file', '.pdf,application/pdf', !!item.attachmentId)}
                     <input
                       type="text"
                       value={item.value || ''}
                       onChange={(e) => handleUpdateAttachment(item.id, { value: e.target.value })}
-                      placeholder="URL do arquivo (https://...)"
+                      placeholder="Ou cole a URL do arquivo (https://...)"
                       className="w-full border border-gray-200 rounded px-2 py-1 text-[11px] bg-white outline-none nowheel"
                     />
                   </div>
