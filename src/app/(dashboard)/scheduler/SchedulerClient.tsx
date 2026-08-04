@@ -30,6 +30,9 @@ interface ScheduledPost {
   published_permalink: string | null;
   published_at: string | null;
   created_at: string;
+  attempts?: number | null;
+  last_error?: string | null;
+  last_error_at?: string | null;
 }
 
 const HASHTAG_SUGGESTIONS = ['#promoção', '#novidade', '#oferta', '#linknabio', '#partiu', '#dicas'];
@@ -229,7 +232,13 @@ export function SchedulerClient({
       const res = await fetch('/api/scheduler/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ instagramAccountId: accountId, mediaType, caption, mediaUrl, scheduledAt })
+        body: JSON.stringify({
+          instagramAccountId: accountId,
+          mediaType,
+          caption,
+          mediaUrl,
+          scheduledAt: new Date(scheduledAt).toISOString()
+        })
       });
       const result = await res.json();
 
@@ -257,7 +266,14 @@ export function SchedulerClient({
     try {
       const res = await fetch(`/api/scheduler/posts/${post.id}`, { method: 'POST' });
       const result = await res.json();
-      if (!res.ok || result.error) throw new Error(result.error || 'Erro ao publicar.');
+      if (!res.ok || result.error) {
+        if (result.retry) {
+          toast.error(result.message || result.error || 'Limite da Meta atingido — nova tentativa em alguns minutos.');
+          await refreshPosts();
+          return;
+        }
+        throw new Error(result.error || 'Erro ao publicar.');
+      }
       toast.success('Post publicado com sucesso! 🎉');
       await refreshPosts();
     } catch (err) {
@@ -298,11 +314,19 @@ export function SchedulerClient({
   published_media_id text,
   published_permalink text,
   published_at timestamptz,
+  attempts integer not null default 0,
+  last_error text,
+  last_error_at timestamptz,
+  updated_at timestamptz not null default now(),
   created_at timestamptz not null default now()
 );
 create index if not exists scheduled_posts_due_idx on public.scheduled_posts (status, scheduled_at);
 alter table public.scheduled_posts enable row level security;
-create policy "scheduled_posts_all" on public.scheduled_posts for all using (true) with check (true);`;
+create policy "scheduled_posts_all" on public.scheduled_posts for all using (true) with check (true);
+alter table public.scheduled_posts add column if not exists attempts integer not null default 0;
+alter table public.scheduled_posts add column if not exists last_error text;
+alter table public.scheduled_posts add column if not exists last_error_at timestamptz;
+alter table public.scheduled_posts add column if not exists updated_at timestamptz not null default now();`;
     try {
       await navigator.clipboard.writeText(sql);
       toast.success('SQL copiado! Cole no Supabase (SQL Editor) e execute.');
@@ -353,6 +377,9 @@ create policy "scheduled_posts_all" on public.scheduled_posts for all using (tru
             <Clock className="w-3 h-3" /> {formatSchedule(post.scheduled_at)}
             {post.status === 'failed' && post.error && (
               <span className="text-red-500 font-semibold truncate" title={post.error}>· {post.error.slice(0, 60)}</span>
+            )}
+            {post.status === 'scheduled' && post.last_error && (
+              <span className="text-amber-600 font-semibold truncate" title={post.last_error}>· nova tentativa em breve</span>
             )}
           </p>
         </div>

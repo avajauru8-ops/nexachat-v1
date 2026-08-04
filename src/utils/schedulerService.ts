@@ -19,10 +19,36 @@ export interface ScheduledPost {
   published_permalink: string | null;
   published_at: string | null;
   created_at: string;
+  attempts?: number | null;
+  last_error?: string | null;
+  last_error_at?: string | null;
+  updated_at?: string | null;
 }
+
+export const MAX_ATTEMPTS = 5;
+export const RETRY_BACKOFF_MS = 15 * 60 * 1000;
 
 export const graphHostFor = (token: string) =>
   token.startsWith('EAA') ? 'graph.facebook.com' : 'graph.instagram.com';
+
+/**
+ * Erro transiente da API da Meta: pode ser tentado novamente depois
+ * (limite de requisições, processamento de vídeo, timeout, 5xx...).
+ */
+export class MetaTransientError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'MetaTransientError';
+  }
+}
+
+const TRANSIENT_PATTERN =
+  /request limit|rate limit|too many|processing|in progress|still being processed|timeout|timed out|temporarily|unavailable|try again|server error|connection/i;
+
+export function isTransientMetaError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return TRANSIENT_PATTERN.test(message);
+}
 
 /**
  * Publica um post/reels agendado na conta do Instagram usando a
@@ -74,10 +100,17 @@ export async function publishPostToMeta(post: ScheduledPost) {
     headers,
     body: JSON.stringify(containerBody)
   });
-  const containerData = await containerRes.json();
+  let containerData: { id?: string; error?: { message?: string; code?: number } } = {};
+  try {
+    containerData = await containerRes.json();
+  } catch {
+    containerData = { error: { message: `Falha de comunicação com a Meta (HTTP ${containerRes.status})` } };
+  }
 
-  if (containerData.error || !containerData.id) {
-    throw new Error(containerData.error?.message || 'Falha ao criar o container da mídia.');
+  if (!containerRes.ok || containerData.error || !containerData.id) {
+    const message = containerData.error?.message || `Falha ao criar o container da mídia (HTTP ${containerRes.status})`;
+    if (!containerRes.ok || isTransientMetaError(message)) throw new MetaTransientError(message);
+    throw new Error(message);
   }
 
   const publishRes = await fetch(`${base}/media_publish`, {
@@ -85,10 +118,17 @@ export async function publishPostToMeta(post: ScheduledPost) {
     headers,
     body: JSON.stringify({ creation_id: containerData.id })
   });
-  const publishData = await publishRes.json();
+  let publishData: { id?: string; permalink?: string | null; error?: { message?: string } } = {};
+  try {
+    publishData = await publishRes.json();
+  } catch {
+    publishData = { error: { message: `Falha de comunicação com a Meta (HTTP ${publishRes.status})` } };
+  }
 
-  if (publishData.error || !publishData.id) {
-    throw new Error(publishData.error?.message || 'Falha ao publicar o conteúdo.');
+  if (!publishRes.ok || publishData.error || !publishData.id) {
+    const message = publishData.error?.message || `Falha ao publicar o conteúdo (HTTP ${publishRes.status})`;
+    if (!publishRes.ok || isTransientMetaError(message)) throw new MetaTransientError(message);
+    throw new Error(message);
   }
 
   return { id: publishData.id, permalink: publishData.permalink || null };

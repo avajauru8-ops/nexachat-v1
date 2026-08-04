@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
-import { publishPostToMeta, ScheduledPost } from '@/utils/schedulerService';
+import { publishPostToMeta, ScheduledPost, isTransientMetaError, MAX_ATTEMPTS } from '@/utils/schedulerService';
 
 export async function DELETE(
   _request: Request,
@@ -56,7 +56,10 @@ export async function POST(
       return NextResponse.json({ error: 'Este post já foi publicado ou está sendo publicado.' }, { status: 400 });
     }
 
-    await supabase.from('scheduled_posts').update({ status: 'publishing' }).eq('id', id);
+    await supabase
+      .from('scheduled_posts')
+      .update({ status: 'publishing', updated_at: new Date().toISOString() })
+      .eq('id', id);
 
     try {
       const published = await publishPostToMeta(post as ScheduledPost);
@@ -67,14 +70,52 @@ export async function POST(
           published_media_id: published.id,
           published_permalink: published.permalink,
           published_at: new Date().toISOString(),
-          error: null
+          error: null,
+          last_error: null,
+          last_error_at: null,
+          attempts: 0,
+          updated_at: new Date().toISOString()
         })
         .eq('id', id);
 
       return NextResponse.json({ success: true, post: { ...post, status: 'published', ...published } });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      await supabase.from('scheduled_posts').update({ status: 'failed', error: message }).eq('id', id);
+      const transient = isTransientMetaError(err) || err instanceof TypeError;
+      const attempts = (post.attempts ?? 0) + 1;
+
+      if (transient && attempts < MAX_ATTEMPTS) {
+        await supabase
+          .from('scheduled_posts')
+          .update({
+            status: 'scheduled',
+            attempts,
+            last_error: message,
+            last_error_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', id);
+        return NextResponse.json(
+          {
+            error: message,
+            retry: true,
+            message: 'A Meta está com limite de requisições — tentaremos publicar novamente em alguns minutos.'
+          },
+          { status: 429 }
+        );
+      }
+
+      await supabase
+        .from('scheduled_posts')
+        .update({
+          status: 'failed',
+          attempts,
+          error: message,
+          last_error: message,
+          last_error_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id);
       return NextResponse.json({ error: message }, { status: 500 });
     }
   } catch (err: unknown) {
