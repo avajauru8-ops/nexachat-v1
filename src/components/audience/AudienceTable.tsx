@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { User, Tag as TagIcon, Search, Filter, X, MessageSquare, RefreshCw, AtSign, Users as UsersIcon, ShieldCheck, Globe, BadgeCheck, Loader2, Trash2, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { User, Tag as TagIcon, Search, X, MessageSquare, RefreshCw, AtSign, Users as UsersIcon, ShieldCheck, Globe, BadgeCheck, Loader2, Trash2, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 
@@ -13,6 +13,7 @@ interface Contact {
   created_at: string;
   contact_tags?: any;
   custom_fields?: Record<string, any>;
+  last_interaction_at?: string | null;
 }
 
 interface IgProfile {
@@ -24,11 +25,22 @@ interface IgProfile {
   biography: string | null;
 }
 
-const PAGE_SIZE = 6;
+const PAGE_SIZE = 8;
+
+const timeAgo = (dateString?: string | null) => {
+  if (!dateString) return null;
+  const diff = Math.floor((Date.now() - new Date(dateString).getTime()) / 60000);
+  if (diff < 1) return 'agora';
+  if (diff < 60) return `há ${diff} min`;
+  if (diff < 1440) return `há ${Math.floor(diff / 60)}h`;
+  if (diff < 10080) return `há ${Math.floor(diff / 1440)}d`;
+  return new Date(dateString).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+};
 
 export function AudienceTable({ contacts: initialContacts }: { contacts: Contact[] }) {
   const [contacts, setContacts] = useState<Contact[]>(initialContacts);
   const [searchTerm, setSearchTerm] = useState('');
+  const [tagFilter, setTagFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedLead, setSelectedLead] = useState<Contact | null>(null);
   const [igProfile, setIgProfile] = useState<IgProfile | null>(null);
@@ -36,10 +48,29 @@ export function AudienceTable({ contacts: initialContacts }: { contacts: Contact
   const [deleteTarget, setDeleteTarget] = useState<Contact | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const filteredContacts = contacts.filter((c) =>
-    c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.ig_scoped_id.includes(searchTerm)
-  );
+  const allTags = useMemo(() => {
+    const set = new Set<string>();
+    contacts.forEach((c) => (c.contact_tags || []).forEach((ct: any) => {
+      if (ct.tags?.name) set.add(ct.tags.name);
+    }));
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }, [contacts]);
+
+  const filteredContacts = contacts.filter((c) => {
+    const term = searchTerm.toLowerCase();
+    const username = (c.custom_fields as Record<string, any>)?.username || '';
+    const tagNames = (c.contact_tags || []).map((ct: any) => ct.tags?.name || '').join(' ').toLowerCase();
+    const matchSearch =
+      !term ||
+      c.name?.toLowerCase().includes(term) ||
+      c.ig_scoped_id.toLowerCase().includes(term) ||
+      username.toLowerCase().includes(term) ||
+      tagNames.includes(term);
+
+    const matchTag = tagFilter === 'all' || (c.contact_tags || []).some((ct: any) => ct.tags?.name === tagFilter);
+
+    return matchSearch && matchTag;
+  });
 
   const totalPages = Math.max(1, Math.ceil(filteredContacts.length / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
@@ -47,6 +78,11 @@ export function AudienceTable({ contacts: initialContacts }: { contacts: Contact
 
   const handleSearch = (value: string) => {
     setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
+  const handleTagFilter = (value: string) => {
+    setTagFilter(value);
     setCurrentPage(1);
   };
 
@@ -131,17 +167,22 @@ export function AudienceTable({ contacts: initialContacts }: { contacts: Contact
             className="w-full pl-10 pr-4 py-2 bg-white/60 border border-white rounded-xl focus:ring-2 focus:ring-pink-500 outline-none text-xs font-medium backdrop-blur-sm"
           />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs text-gray-500 font-medium">
             {filteredContacts.length} lead{filteredContacts.length !== 1 ? 's' : ''}
           </span>
-          <button
-            onClick={() => toast.success('Filtros ativados.')}
-            className="flex items-center gap-2 px-4 py-2 bg-white/60 border border-white rounded-xl text-xs font-bold text-gray-700 hover:bg-white/80 transition-colors cursor-pointer shadow-sm backdrop-blur-sm"
-          >
-            <Filter className="w-3.5 h-3.5" />
-            Filtros Avançados
-          </button>
+          {allTags.length > 0 && (
+            <select
+              value={tagFilter}
+              onChange={(e) => handleTagFilter(e.target.value)}
+              className="bg-white/60 border border-white text-gray-700 font-medium text-xs rounded-xl px-3 py-2 outline-none hover:bg-white/80 transition-colors shadow-sm backdrop-blur-sm cursor-pointer"
+            >
+              <option value="all">Todas as tags</option>
+              {allTags.map((t) => (
+                <option key={t} value={t}>#{t}</option>
+              ))}
+            </select>
+          )}
         </div>
       </div>
 
@@ -154,13 +195,14 @@ export function AudienceTable({ contacts: initialContacts }: { contacts: Contact
               <th className="px-6 py-4">Status</th>
               <th className="px-6 py-4">Tags</th>
               <th className="px-6 py-4">Cadastrado em</th>
+              <th className="px-6 py-4">Última interação</th>
               <th className="px-6 py-4 text-right">Ações</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {paginatedContacts.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
                   Nenhum lead encontrado.
                 </td>
               </tr>
@@ -179,14 +221,23 @@ export function AudienceTable({ contacts: initialContacts }: { contacts: Contact
                       )}
                       <div>
                         <p className="font-bold text-gray-900">{contact.name || 'Lead Anônimo'}</p>
+                        {(contact.custom_fields as Record<string, any>)?.username && (
+                          <p className="text-[11px] text-gray-500">@{(contact.custom_fields as Record<string, any>).username}</p>
+                        )}
                         <p className="text-[11px] font-mono text-gray-400">ID: {contact.ig_scoped_id}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                      Inscrito
-                    </span>
+                    {contact.last_interaction_at ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                        ● Ativo
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                        ● Novo
+                      </span>
+                    )}
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex flex-wrap gap-1.5">
@@ -206,6 +257,9 @@ export function AudienceTable({ contacts: initialContacts }: { contacts: Contact
                     {new Date(contact.created_at).toLocaleDateString('pt-BR', {
                       day: '2-digit', month: 'short', year: 'numeric'
                     })}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-gray-500 font-medium">
+                    {timeAgo(contact.last_interaction_at) || <span className="text-gray-300">—</span>}
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
