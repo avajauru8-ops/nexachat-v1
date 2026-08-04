@@ -13,7 +13,8 @@ export async function sendMessageToMeta({
   commentId,
   mediaBase64,
   mimeType,
-  filename
+  filename,
+  quickReplies
 }: {
   conversationId: string;
   content: string | null;
@@ -23,6 +24,7 @@ export async function sendMessageToMeta({
   mediaBase64?: string | null;
   mimeType?: string | null;
   filename?: string | null;
+  quickReplies?: { title: string; payload?: string }[];
 }) {
   // 1. Buscar a conversation e os IDs necessários
   const { data: conversation, error: convError } = await supabaseAdmin
@@ -112,14 +114,26 @@ export async function sendMessageToMeta({
       }
     };
   } else if (finalMediaUrl) {
+    const attType = messageType === 'video' ? 'video' : messageType === 'file' ? 'file' : 'image';
     metaBody.message = {
       attachment: {
-        type: messageType === 'video' ? 'video' : 'image',
+        type: attType,
         payload: { url: finalMediaUrl }
       }
     };
   } else {
     metaBody.message = { text: content };
+  }
+
+  // Botões (quick replies) — Meta só aceita junto de mensagem de texto
+  if (quickReplies && quickReplies.length > 0 && !metaBody.message.attachment) {
+    metaBody.message.quick_replies = quickReplies
+      .filter((qr) => qr.title && qr.title.trim())
+      .map((qr) => ({
+        content_type: 'text',
+        title: qr.title,
+        payload: qr.payload || qr.title
+      }));
   }
 
   const metaRes = await fetch(metaUrl, {
@@ -159,4 +173,60 @@ export async function sendMessageToMeta({
   await supabaseAdmin.from('conversations').update({ last_interaction_at: new Date().toISOString() }).eq('id', conversationId);
 
   return messageData;
+}
+
+/**
+ * Envia uma mensagem completa de um nó do fluxo (messageNode):
+ * texto principal + botões (quick replies) + todos os anexos em sequência.
+ */
+export async function sendFlowMessageNode({
+  conversationId,
+  nodeData,
+  commentId
+}: {
+  conversationId: string;
+  nodeData: Record<string, unknown>;
+  commentId?: string;
+}) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const attachments: { id: string; type: string; value: string; label?: string }[] =
+    (nodeData.attachments as { id: string; type: string; value: string; label?: string }[]) || [];
+
+  const text = ((nodeData.text as string) || '').trim();
+  const messageType = (nodeData.messageType as string) || 'text';
+  const mediaUrl = (nodeData.mediaUrl as string) || null;
+
+  const buttons = attachments.filter((a) => a.type === 'button');
+  const quickReplies = buttons
+    .filter((b) => b.label && b.label.trim())
+    .map((b) => ({ title: b.label as string, payload: (b.value as string) || (b.label as string) }));
+
+  const primaryText = text || (quickReplies.length > 0 ? 'Escolha uma opção:' : '');
+
+  if (mediaUrl && messageType !== 'text') {
+    if (primaryText) {
+      await sendMessageToMeta({ conversationId, content: primaryText, messageType: 'text', commentId, quickReplies });
+    }
+    await sendMessageToMeta({ conversationId, content: null, mediaUrl, messageType });
+  } else if (primaryText) {
+    await sendMessageToMeta({ conversationId, content: primaryText, messageType: 'text', commentId, quickReplies });
+  }
+
+  for (const att of attachments) {
+    if (att.type === 'button') continue;
+
+    if (att.type === 'link' && att.value?.trim()) {
+      const linkText = att.label?.trim() ? `${att.label}: ${att.value.trim()}` : att.value.trim();
+      await sendMessageToMeta({ conversationId, content: linkText, messageType: 'text' });
+    } else if ((att.type === 'image' || att.type === 'video' || att.type === 'file') && att.value?.trim()) {
+      await sendMessageToMeta({
+        conversationId,
+        content: att.type === 'file' && att.label?.trim() ? `📎 ${att.label}` : null,
+        mediaUrl: att.value.trim(),
+        messageType: att.type
+      });
+    } else if (att.type === 'text' && att.value?.trim()) {
+      await sendMessageToMeta({ conversationId, content: att.value.trim(), messageType: 'text' });
+    }
+  }
 }

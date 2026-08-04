@@ -85,18 +85,12 @@ export async function executeFlowDirect(data: {
       const guardResult = await canSendMessage(conversationId, supabase);
 
       if (guardResult.allowed) {
-        const messageType = node.data?.messageType || 'text';
-        const mediaUrl = node.data?.mediaUrl as string | undefined;
-        const responseText = (node.data?.text as string) || 'Mensagem do Fluxo';
-
-        const { sendMessageToMeta } = await import('@/services/messagingService');
+        const { sendFlowMessageNode } = await import('@/services/messagingService');
 
         try {
-          await sendMessageToMeta({
+          await sendFlowMessageNode({
             conversationId,
-            content: messageType === 'text' ? responseText : null,
-            mediaUrl: mediaUrl || null,
-            messageType,
+            nodeData: (node.data as Record<string, unknown>) || {},
             commentId: iteration === 0 ? commentId : undefined
           });
         } catch (err: unknown) {

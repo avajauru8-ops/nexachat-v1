@@ -95,19 +95,12 @@ export const executeFlow = inngest.createFunction(
 
         if (guardResult.allowed) {
           await step.run(`node-${loopNodeId}-${iteration}-send-msg`, async () => {
-            const messageType = node.data?.messageType || 'text';
-            const mediaUrl = node.data?.mediaUrl as string | undefined;
-            const responseText = (node.data?.text as string) || 'Mensagem do Fluxo';
-
-            // Chama a API interna para manter uma única fonte de verdade e lógica
-            const { sendMessageToMeta } = await import('@/services/messagingService');
+            const { sendFlowMessageNode } = await import('@/services/messagingService');
 
             try {
-              await sendMessageToMeta({
+              await sendFlowMessageNode({
                 conversationId,
-                content: messageType === 'text' ? responseText : null,
-                mediaUrl: mediaUrl || null,
-                messageType,
+                nodeData: (node.data as Record<string, unknown>) || {},
                 commentId: iteration === 0 ? commentId : undefined
               });
             } catch (err: unknown) {
