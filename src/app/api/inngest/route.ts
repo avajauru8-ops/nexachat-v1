@@ -3,6 +3,7 @@ import { inngest } from '@/inngest/client';
 import { processWebhookEvent, processAiAgent } from '@/inngest/functions';
 import { executeFlow } from '@/inngest/flowEngine';
 import { processBroadcast } from '@/inngest/broadcaster';
+import { publishScheduledPosts } from '@/inngest/scheduler';
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
@@ -10,6 +11,7 @@ export const { GET, POST, PUT } = serve({
     processWebhookEvent,
     processAiAgent,
     executeFlow,
-    processBroadcast
+    processBroadcast,
+    publishScheduledPosts
   ],
 });
