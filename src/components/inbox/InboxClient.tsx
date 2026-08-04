@@ -27,6 +27,13 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
   const [labelsOpen, setLabelsOpen] = useState(true);
   const [showLabelInput, setShowLabelInput] = useState(false);
   const [newLabel, setNewLabel] = useState('');
+  const [statusFilter, setStatusFilter] = useState('open');
+  const [unreadOnly, setUnreadOnly] = useState(false);
+  const [sortMode, setSortMode] = useState('recent');
+  const [channelFilter, setChannelFilter] = useState('all');
+  const [pipelineFilter, setPipelineFilter] = useState('all');
+  const [assigneeFilter, setAssigneeFilter] = useState('all');
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/workspace/members')
@@ -438,18 +445,49 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
   const isAttention = (c: Record<string, unknown>) =>
     Number(c.unread_count || 0) > 0 || c.status === 'paused_for_human';
 
-  const visibleConversations = conversations.filter(c => {
-    if (folderFilter === 'all') return true;
-    if (folderFilter === 'attention') return isAttention(c);
-    if (folderFilter === 'favorite') return Boolean(c.is_favorite);
-    if (folderFilter.startsWith('tag:')) {
-      const tagId = folderFilter.slice(4);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const cts = ((c.contacts as Record<string, any>)?.contact_tags as any[]) || [];
-      return cts.some(ct => ct.tag_id === tagId);
-    }
-    return true;
-  });
+  const PIPELINE_OPTIONS = [
+    { value: 'novo', label: 'Novo' },
+    { value: 'em_atendimento', label: 'Em Atendimento' },
+    { value: 'em_negociacao', label: 'Em Negociação' },
+    { value: 'fechado', label: 'Fechado' },
+    { value: 'perdido', label: 'Perdido' }
+  ];
+
+  const visibleConversations = conversations
+    .filter(c => {
+      if (folderFilter === 'attention' && !isAttention(c)) return false;
+      if (folderFilter === 'favorite' && !Boolean(c.is_favorite)) return false;
+      if (folderFilter.startsWith('tag:')) {
+        const tagId = folderFilter.slice(4);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const cts = ((c.contacts as Record<string, any>)?.contact_tags as any[]) || [];
+        if (!cts.some(ct => ct.tag_id === tagId)) return false;
+      }
+      if (statusFilter === 'open' && c.status === 'closed') return false;
+      if (statusFilter === 'closed' && c.status !== 'closed') return false;
+      if (unreadOnly && !(Number(c.unread_count || 0) > 0)) return false;
+      if (channelFilter !== 'all' && c.channel !== channelFilter) return false;
+      if (pipelineFilter !== 'all' && c.pipeline_stage !== pipelineFilter) return false;
+      if (assigneeFilter !== 'all' && c.assigned_agent_id !== assigneeFilter) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortMode === 'name') {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const na = ((a.contacts as Record<string, any>)?.name as string) || '';
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const nb = ((b.contacts as Record<string, any>)?.name as string) || '';
+        return na.localeCompare(nb, 'pt-BR');
+      }
+      const ta = new Date((a.last_interaction_at as string) || (a.updated_at as string) || 0).getTime();
+      const tb = new Date((b.last_interaction_at as string) || (b.updated_at as string) || 0).getTime();
+      return sortMode === 'oldest' ? ta - tb : tb - ta;
+    });
+
+  const statusLabel = statusFilter === 'open' ? 'Conversas Abertas' : statusFilter === 'closed' ? 'Fechadas' : 'Todas';
+  const sortLabel = sortMode === 'recent' ? 'Mais Recentes' : sortMode === 'oldest' ? 'Mais Antigas' : 'Por Nome';
+  const channelLabel = channelFilter === 'all' ? 'Todos Os Canais' : channelFilter === 'dm' ? 'DM' : channelFilter === 'comment' ? 'Comentários' : 'Story';
+  const hasAdvancedFilter = pipelineFilter !== 'all' || assigneeFilter !== 'all';
 
   const attentionCount = conversations.filter(isAttention).length;
   const favoriteCount = conversations.filter(c => Boolean(c.is_favorite)).length;
@@ -545,25 +583,125 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
 
       {/* Coluna 2: Lista de Conversas */}
       <div className={`${activeChatId ? 'hidden md:flex' : 'flex'} w-full md:w-[360px] border-r border-[#e5e7eb] flex-col bg-white shrink-0 relative`}>
-        <div className="flex flex-col border-b border-[#e5e7eb]">
+        <div className="flex flex-col border-b border-[#e5e7eb] relative">
+          {openDropdown && (
+            <div className="fixed inset-0 z-10" onClick={() => setOpenDropdown(null)} />
+          )}
           <div className="flex items-center gap-2 px-3 py-2 border-b border-[#e5e7eb]">
             <Square className="w-4 h-4 text-gray-400" />
-            <div className="flex items-center border border-gray-200 rounded px-2 py-1 gap-1 text-xs text-gray-600 font-medium cursor-pointer">
-              <MessageCircle className="w-3 h-3" /> Conversas Abertas <ChevronDown className="w-3 h-3" />
+            <div className="relative">
+              <button
+                onClick={() => setOpenDropdown(openDropdown === 'status' ? null : 'status')}
+                className={`flex items-center border rounded px-2 py-1 gap-1 text-xs font-medium cursor-pointer transition-colors ${openDropdown === 'status' ? 'border-gray-400 bg-gray-50' : 'border-gray-200 text-gray-600'}`}
+              >
+                <MessageCircle className="w-3 h-3" /> {statusLabel} <ChevronDown className="w-3 h-3" />
+              </button>
+              {openDropdown === 'status' && (
+                <div className="absolute left-0 top-full mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1">
+                  {[{ value: 'open', label: 'Conversas Abertas' }, { value: 'closed', label: 'Fechadas' }, { value: 'all', label: 'Todas' }].map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => { setStatusFilter(opt.value); setOpenDropdown(null); }}
+                      className={`w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 flex items-center justify-between ${statusFilter === opt.value ? 'font-semibold text-gray-900' : 'text-gray-600'}`}
+                    >
+                      {opt.label}
+                      {statusFilter === opt.value && <Check className="w-3 h-3 text-indigo-500" />}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-            <div className="border border-gray-200 rounded px-2 py-1 text-xs text-gray-600 font-medium cursor-pointer">
+            <button
+              onClick={() => setUnreadOnly(v => !v)}
+              className={`border rounded px-2 py-1 text-xs font-medium cursor-pointer transition-colors ${unreadOnly ? 'bg-blue-50 border-blue-300 text-blue-600 font-bold' : 'border-gray-200 text-gray-600'}`}
+              title="Mostrar apenas conversas não lidas"
+            >
               Não Lidas
-            </div>
+            </button>
           </div>
-          <div className="flex items-center gap-2 px-3 py-2 text-xs text-gray-600">
-            <div className="flex items-center gap-1 cursor-pointer hover:text-gray-900">
-              Classificar: Mais Recentes <ChevronDown className="w-3 h-3" />
+          <div className="flex items-center gap-3 px-3 py-2 text-xs text-gray-600">
+            <div className="relative">
+              <button
+                onClick={() => setOpenDropdown(openDropdown === 'sort' ? null : 'sort')}
+                className={`flex items-center gap-1 cursor-pointer hover:text-gray-900 ${openDropdown === 'sort' ? 'text-gray-900' : ''}`}
+              >
+                Classificar: <span className="font-semibold">{sortLabel}</span> <ChevronDown className="w-3 h-3" />
+              </button>
+              {openDropdown === 'sort' && (
+                <div className="absolute left-0 top-full mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1">
+                  {[{ value: 'recent', label: 'Mais Recentes' }, { value: 'oldest', label: 'Mais Antigas' }, { value: 'name', label: 'Por Nome' }].map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => { setSortMode(opt.value); setOpenDropdown(null); }}
+                      className={`w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 flex items-center justify-between ${sortMode === opt.value ? 'font-semibold text-gray-900' : 'text-gray-600'}`}
+                    >
+                      {opt.label}
+                      {sortMode === opt.value && <Check className="w-3 h-3 text-indigo-500" />}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-            <div className="flex items-center gap-1 cursor-pointer hover:text-gray-900">
-              Todos Os Canais <ChevronDown className="w-3 h-3" />
+            <div className="relative">
+              <button
+                onClick={() => setOpenDropdown(openDropdown === 'channel' ? null : 'channel')}
+                className={`flex items-center gap-1 cursor-pointer hover:text-gray-900 ${openDropdown === 'channel' ? 'text-gray-900' : ''}`}
+              >
+                <span className="font-semibold">{channelLabel}</span> <ChevronDown className="w-3 h-3" />
+              </button>
+              {openDropdown === 'channel' && (
+                <div className="absolute left-0 top-full mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1">
+                  {[{ value: 'all', label: 'Todos Os Canais' }, { value: 'dm', label: 'DM' }, { value: 'comment', label: 'Comentários' }, { value: 'story', label: 'Story' }].map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => { setChannelFilter(opt.value); setOpenDropdown(null); }}
+                      className={`w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 flex items-center justify-between ${channelFilter === opt.value ? 'font-semibold text-gray-900' : 'text-gray-600'}`}
+                    >
+                      {opt.label}
+                      {channelFilter === opt.value && <Check className="w-3 h-3 text-indigo-500" />}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-            <div className="flex items-center gap-1 cursor-pointer text-gray-500 hover:text-gray-900 ml-auto border border-gray-200 rounded px-2 py-1">
-              <Filter className="w-3 h-3" /> Filtro
+            <div className="relative ml-auto">
+              <button
+                onClick={() => setOpenDropdown(openDropdown === 'filter' ? null : 'filter')}
+                className={`flex items-center gap-1 border rounded px-2 py-1 cursor-pointer transition-colors ${hasAdvancedFilter || openDropdown === 'filter' ? 'bg-indigo-50 border-indigo-300 text-indigo-600 font-semibold' : 'text-gray-500 hover:text-gray-900 border-gray-200'}`}
+              >
+                <Filter className="w-3 h-3" /> Filtro {hasAdvancedFilter && <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />}
+              </button>
+              {openDropdown === 'filter' && (
+                <div className="absolute right-0 top-full mt-1 w-52 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-2.5 px-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Etapa do funil</p>
+                  <select
+                    value={pipelineFilter}
+                    onChange={e => { setPipelineFilter(e.target.value); }}
+                    className="w-full border border-gray-200 rounded px-2 py-1.5 text-xs outline-none focus:border-indigo-400 mb-3"
+                  >
+                    <option value="all">Todas as etapas</option>
+                    {PIPELINE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Atribuído a</p>
+                  <select
+                    value={assigneeFilter}
+                    onChange={e => { setAssigneeFilter(e.target.value); }}
+                    className="w-full border border-gray-200 rounded px-2 py-1.5 text-xs outline-none focus:border-indigo-400"
+                  >
+                    <option value="all">Qualquer agente</option>
+                    <option value="">Não atribuído</option>
+                    {members.map(m => <option key={m.user_id} value={m.user_id}>{m.name || m.email || 'Membro'}</option>)}
+                  </select>
+                  {(pipelineFilter !== 'all' || assigneeFilter !== 'all') && (
+                    <button
+                      onClick={() => { setPipelineFilter('all'); setAssigneeFilter('all'); }}
+                      className="mt-3 w-full text-center text-[11px] font-bold text-indigo-600 hover:text-indigo-800"
+                    >
+                      Limpar filtros
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
