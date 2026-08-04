@@ -239,6 +239,45 @@ const vendasTemplates: FlowTemplate[] = [
     ]
   },
   {
+    id: 'funil-vendas',
+    title: 'Funil de Vendas Completo — E-commerce & Serviços',
+    description: 'Captura no comentário, responde em público, qualifica na DM, divide VIP vs novo e fecha com IA + consultor.',
+    category: 'Vendas',
+    badge: 'FUNIL',
+    nodes: [
+      trigger('t-funil', 40, 300, 'comment_keyword', 'quero'),
+      n('cr-funil', 'commentReplyNode', 340, 260, { label: 'Responder Comentário', publicReply: 'Já te chamei no Direct! 📩 Responde lá rapidinho 🚀' }),
+      msg('m-funil-1', 640, 260, 'Oii, aqui é o time da [SUA MARCA] 💜 Vi seu comentário e trouxe um presente: desconto especial + bônus exclusivos para quem está começando agora. Bora ver?', [
+        att('att-btn-funil', 'button', 'Quero saber mais 🔥'),
+        att('att-link-funil', 'link', 'Ver Oferta Completa', 'https://seusite.com/oferta')
+      ]),
+      action('a-funil', 940, 260, 'add_tag', 'funil_vendas'),
+      n('c-funil', 'conditionNode', 1240, 260, { conditionValue: 'vip' }),
+      msg('m-funil-vip', 1540, 120, 'Cliente VIP, você merece o máximo: 25% OFF + brinde exclusivo! 🖤 Quer falar com um consultor?', [
+        att('att-btn-vip', 'button', 'Falar com Consultor 🗣️')
+      ]),
+      msg('m-funil-novo', 1540, 400, 'Para começar: 15% OFF no seu primeiro pedido + frete grátis! 🎉 Quer falar com um consultor?', [
+        att('att-btn-novo', 'button', 'Falar com Consultor 🗣️')
+      ]),
+      n('crm-funil', 'crmNode', 1840, 260, { label: 'Webhook CRM', webhookUrl: '' }),
+      n('ai-funil', 'aiHandoffNode', 2140, 260, { label: 'IA responde objeções e qualifica' }),
+      n('hu-funil', 'humanHandoffNode', 2440, 260, { label: 'Consultor humano fecha a venda' }),
+      note('nota-funil', 640, 480, '💡 Etapas do funil: 1) comentário no post → 2) resposta pública → 3) DM com oferta → 4) tag de qualificação → 5) condição VIP vs novo lead → 6) CRM → 7) IA + consultor. Troque a URL do botão e o webhook do CRM pelos seus.')
+    ],
+    edges: [
+      e('e1-funil', 't-funil', 'cr-funil', 'right'),
+      e('e2-funil', 'cr-funil', 'm-funil-1', 'next'),
+      e('e3-funil', 'm-funil-1', 'a-funil', 'att-btn-funil'),
+      e('e4-funil', 'a-funil', 'c-funil'),
+      e('e5-funil', 'c-funil', 'm-funil-vip', 'true'),
+      e('e6-funil', 'c-funil', 'm-funil-novo', 'false'),
+      e('e7-funil', 'm-funil-vip', 'crm-funil', 'att-btn-vip'),
+      e('e8-funil', 'm-funil-novo', 'crm-funil', 'att-btn-novo'),
+      e('e9-funil', 'crm-funil', 'ai-funil'),
+      e('e10-funil', 'ai-funil', 'hu-funil')
+    ]
+  },
+  {
     id: 'ia-educacao',
     title: 'Matrícula com IA — Cursos Online',
     description: 'Quem enviar "curso" ganha atendimento da IA e link direto para a matrícula.',
