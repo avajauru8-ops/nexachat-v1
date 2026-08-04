@@ -86,7 +86,8 @@ async function logFlowExecution(workspaceId: string, flowId: string, contact: an
 async function getOrCreateContactAndConversation(
   activeWorkspaceId: string,
   account: any,
-  senderId: string
+  senderId: string,
+  channel: 'dm' | 'comment' | 'story' = 'dm'
 ) {
   // Identificar ou Criar Contato
   let { data: contact } = await supabase
@@ -158,6 +159,7 @@ async function getOrCreateContactAndConversation(
         workspace_id: activeWorkspaceId,
         contact_id: contact.id,
         status: 'bot',
+        channel,
         last_interaction_at: new Date().toISOString(),
         window_expires_at: windowExpiresAt,
         unread_count: 1
@@ -257,7 +259,10 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
 
         const activeWorkspaceId = account.workspace_id;
 
-        const { contact, conversation } = await getOrCreateContactAndConversation(activeWorkspaceId, account, senderId);
+        const convChannel: 'dm' | 'comment' | 'story' =
+          messageType === 'story_mention' || messageType === 'story_reply' ? 'story' : 'dm';
+
+        const { contact, conversation } = await getOrCreateContactAndConversation(activeWorkspaceId, account, senderId, convChannel);
         
         if (!contact || !conversation) continue;
 
@@ -396,98 +401,142 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
 
     // --- 2. PROCESSAMENTO DE EVENTOS DIVERSOS (CHANGES) COMO COMENTÁRIOS ---
     if (entry.changes && Array.isArray(entry.changes)) {
-      for (const change of entry.changes) {
-        if (change.field === 'comments') {
-          const senderId = change.value.from?.id;
-          const commentText = (change.value.text || '').trim();
-          const recipientId = entryId;
+      await processInstagramComments(entry, initialWorkspaceId);
+    }
+  }
+}
 
-          if (!senderId || !commentText) continue;
+/**
+ * Processa comentários do Instagram transformando-os em contato + conversa + mensagem,
+ * permitindo que o agente responda o comentário publicamente ou via DM (cross-channel).
+ * Também dispara automações com trigger_type = 'comment_keyword'.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function processInstagramComments(
+  entry: any,
+  initialWorkspaceId?: string | null
+) {
+  const entryId = entry.id;
+  if (!entry.changes || !Array.isArray(entry.changes)) return;
 
-          let { data: account } = await supabase
-            .from('instagram_accounts')
-            .select('id, workspace_id, access_token')
-            .or(`ig_user_id.eq.${recipientId},page_id.eq.${recipientId}`)
-            .limit(1)
-            .maybeSingle();
+  for (const change of entry.changes) {
+    const isComment =
+      change.field === 'comments' ||
+      change.value?.item === 'comment' ||
+      change.value?.verb === 'add';
 
-          if (!account && initialWorkspaceId) {
-            const { data: fallback } = await supabase
-              .from('instagram_accounts')
-              .select('id, workspace_id, access_token')
-              .eq('workspace_id', initialWorkspaceId)
-              .limit(1)
-              .maybeSingle();
-            account = fallback;
-          }
+    if (!isComment || !change.value?.text) continue;
 
-          if (!account) {
-            console.warn(`[Processamento Sync] Conta do Instagram não localizada para recipientId (comment): ${recipientId}`);
-            continue;
-          }
+    const senderId = change.value.from?.id;
+    const commentText = (change.value.text || '').trim();
+    const commentId = change.value.id;
+    const mediaId = change.value.media?.id || null;
+    const recipientId = entryId;
 
-          const activeWorkspaceId = account.workspace_id;
+    if (!senderId || !commentText || !commentId) continue;
 
-          const { data: activeFlows } = await supabase
-            .from('flows')
-            .select('id, trigger_type, trigger_config, triggers')
-            .eq('workspace_id', activeWorkspaceId)
-            .in('status', ['active', 'published']);
+    let { data: account } = await supabase
+      .from('instagram_accounts')
+      .select('id, workspace_id, access_token')
+      .or(`ig_user_id.eq.${recipientId},page_id.eq.${recipientId}`)
+      .limit(1)
+      .maybeSingle();
 
-          const mediaId = change.value.media?.id || null;
-          const matchedFlowId = matchActiveFlow(activeFlows || [], 'comment_keyword', commentText, mediaId);
+    if (!account && initialWorkspaceId) {
+      const { data: fallback } = await supabase
+        .from('instagram_accounts')
+        .select('id, workspace_id, access_token')
+        .eq('workspace_id', initialWorkspaceId)
+        .limit(1)
+        .maybeSingle();
+      account = fallback;
+    }
 
-          if (matchedFlowId) {
-            const commentId = change.value.id;
+    if (!account) {
+      console.warn(`[Comentários] Conta do Instagram não localizada para recipientId (comment): ${recipientId}`);
+      continue;
+    }
 
-            const { contact, conversation } = await getOrCreateContactAndConversation(activeWorkspaceId, account, senderId);
-            if (!contact || !conversation) continue;
+    const activeWorkspaceId = account.workspace_id;
 
-            // Define o novo fluxo ativo
-            await supabase
-              .from('conversations')
-              .update({ active_flow_id: matchedFlowId, flow_cursor: null })
-              .eq('id', conversation.id);
-            
-            await logFlowExecution(activeWorkspaceId, matchedFlowId, contact, 'comment_keyword', commentText);
+    const { contact, conversation } = await getOrCreateContactAndConversation(activeWorkspaceId, account, senderId, 'comment');
+    if (!contact || !conversation) continue;
 
-            try {
-              if (process.env.INNGEST_EVENT_KEY) {
-                await inngest.send({
-                  name: 'flow/execute',
-                  data: {
-                    workspaceId: activeWorkspaceId,
-                    contactId: contact.id,
-                    conversationId: conversation.id,
-                    recipientId: recipientId,
-                    senderId: senderId,
-                    flowId: matchedFlowId,
-                    nodeId: null,
-                    commentId: commentId
-                  }
-                });
-              } else {
-                throw new Error("INNGEST_EVENT_KEY ausente");
-              }
-            } catch (inngestErr) {
-              console.warn(`[Processamento Sync] Fallback para execução síncrona de comentário: ${inngestErr}`);
-              const { executeFlowDirect } = await import('@/utils/flowEngineDirect');
-              try {
-                await executeFlowDirect({
-                  workspaceId: activeWorkspaceId,
-                  contactId: contact.id,
-                  conversationId: conversation.id,
-                  recipientId: recipientId,
-                  senderId: senderId,
-                  flowId: matchedFlowId,
-                  nodeId: null,
-                  commentId: commentId
-                });
-              } catch (e) {
-                console.error("[Flow Engine Direct] Erro no fallback de comentário:", e);
-              }
+    // Salvar o comentário como mensagem para aparecer no Inbox (dedupe pelo commentId)
+    try {
+      const { error: insertErr } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversation.id,
+          sender_type: 'user',
+          message_type: 'comment',
+          content: commentText,
+          direction: 'inbound',
+          media_url: change.value.media?.url || null,
+          meta_message_id: commentId
+        });
+
+      if (insertErr) {
+        // Duplicata (o mesmo payload pode chegar pelo Inngest e pelo processamento síncrono)
+        if (insertErr.code !== '23505') {
+          console.error('[Comentários] Erro ao salvar comentário como mensagem:', insertErr);
+        }
+      }
+    } catch (e) {
+      console.error('[Comentários] Falha ao salvar comentário como mensagem:', e);
+    }
+
+    // Disparar automação comment_keyword
+    const { data: activeFlows } = await supabase
+      .from('flows')
+      .select('id, trigger_type, trigger_config, triggers')
+      .eq('workspace_id', activeWorkspaceId)
+      .in('status', ['active', 'published']);
+
+    const matchedFlowId = matchActiveFlow(activeFlows || [], 'comment_keyword', commentText, mediaId);
+
+    if (matchedFlowId) {
+      await supabase
+        .from('conversations')
+        .update({ active_flow_id: matchedFlowId, flow_cursor: null })
+        .eq('id', conversation.id);
+
+      await logFlowExecution(activeWorkspaceId, matchedFlowId, contact, 'comment_keyword', commentText);
+
+      try {
+        if (process.env.INNGEST_EVENT_KEY) {
+          await inngest.send({
+            name: 'flow/execute',
+            data: {
+              workspaceId: activeWorkspaceId,
+              contactId: contact.id,
+              conversationId: conversation.id,
+              recipientId: recipientId,
+              senderId: senderId,
+              flowId: matchedFlowId,
+              nodeId: null,
+              commentId: commentId
             }
-          }
+          });
+        } else {
+          throw new Error("INNGEST_EVENT_KEY ausente");
+        }
+      } catch (inngestErr) {
+        console.warn(`[Comentários] Fallback para execução síncrona de comentário: ${inngestErr}`);
+        const { executeFlowDirect } = await import('@/utils/flowEngineDirect');
+        try {
+          await executeFlowDirect({
+            workspaceId: activeWorkspaceId,
+            contactId: contact.id,
+            conversationId: conversation.id,
+            recipientId: recipientId,
+            senderId: senderId,
+            flowId: matchedFlowId,
+            nodeId: null,
+            commentId: commentId
+          });
+        } catch (e) {
+          console.error("[Flow Engine Direct] Erro no fallback de comentário:", e);
         }
       }
     }

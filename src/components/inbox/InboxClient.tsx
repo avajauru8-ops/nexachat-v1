@@ -50,7 +50,7 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
     supabase
       .from('conversations')
       .select(`
-        id, status, last_interaction_at, window_expires_at, created_at, updated_at,
+        id, status, channel, last_interaction_at, window_expires_at, created_at, updated_at,
         contacts ( id, name, ig_scoped_id, profile_picture ),
         messages ( content, message_type, timestamp )
       `)
@@ -65,7 +65,7 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
             let lastMessage = 'Nova conversa';
             if (msgs && msgs.length > 0) {
               const msg = msgs[0];
-              lastMessage = msg.message_type === 'image' ? '📷 Foto' : msg.message_type === 'video' ? '🎥 Vídeo' : msg.message_type === 'audio' ? '🎵 Áudio' : (msg.content as string);
+              lastMessage = msg.message_type === 'image' ? '📷 Foto' : msg.message_type === 'video' ? '🎥 Vídeo' : msg.message_type === 'audio' ? '🎵 Áudio' : msg.message_type === 'comment' ? `💬 ${(msg.content as string) || 'Comentário'}` : (msg.content as string);
             }
             return { ...c, lastMessage };
           });
@@ -132,7 +132,7 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
                 if (c.id === newMsg.conversation_id) {
                   return {
                     ...c,
-                    lastMessage: newMsg.message_type === 'image' ? '📷 Foto' : newMsg.message_type === 'video' ? '🎥 Vídeo' : newMsg.message_type === 'audio' ? '🎵 Áudio' : newMsg.content,
+                    lastMessage: newMsg.message_type === 'image' ? '📷 Foto' : newMsg.message_type === 'video' ? '🎥 Vídeo' : newMsg.message_type === 'audio' ? '🎵 Áudio' : newMsg.message_type === 'comment' ? `💬 ${(newMsg.content as string) || 'Comentário'}` : newMsg.content,
                     unread_count: isCurrentActive ? 0 : ((c.unread_count as number || 0) + (newMsg.sender_type === 'user' ? 1 : 0)),
                     updated_at: newMsg.timestamp
                   };
@@ -155,7 +155,7 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
               const { data: newConv } = await supabase
                 .from('conversations')
                 .select(`
-                  id, status, last_interaction_at, window_expires_at, created_at, updated_at, unread_count,
+                  id, status, channel, last_interaction_at, window_expires_at, created_at, updated_at, unread_count,
                   contacts ( id, name, ig_scoped_id, profile_picture ),
                   messages ( content, message_type, timestamp )
                 `)
@@ -165,7 +165,7 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
               if (newConv) {
                 const msgs = (newConv.messages as Record<string, unknown>[]) || [];
                 const lastMessage = msgs.length > 0
-                  ? (msgs[0].message_type === 'image' ? '📷 Foto' : msgs[0].message_type === 'video' ? '🎥 Vídeo' : msgs[0].message_type === 'audio' ? '🎵 Áudio' : msgs[0].content as string)
+                  ? (msgs[0].message_type === 'image' ? '📷 Foto' : msgs[0].message_type === 'video' ? '🎥 Vídeo' : msgs[0].message_type === 'audio' ? '🎵 Áudio' : msgs[0].message_type === 'comment' ? `💬 ${(msgs[0].content as string) || 'Comentário'}` : msgs[0].content as string)
                   : 'Nova conversa';
                 const contactName = (newConv.contacts as unknown as Record<string, unknown>)?.name || 'Lead';
                 toast.success(`💬 Nova conversa de ${contactName}`);
@@ -227,6 +227,34 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
     }
   };
 
+  const handlePublicCommentReply = async () => {
+    if (!newMessage.trim() || !activeChatId) return;
+    const content = newMessage;
+    const toastId = toast.loading('Respondendo publicamente ao comentário...');
+    try {
+      const res = await fetch('/api/instagram/comment-reply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversationId: activeChatId, content })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error('Erro: ' + (data.error || 'Falha ao responder comentário'), { id: toastId });
+      } else {
+        toast.success('Comentário respondido publicamente!', { id: toastId });
+        setNewMessage('');
+        const { data: msgs } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('conversation_id', activeChatId)
+          .order('timestamp', { ascending: true });
+        if (msgs) setMessages(msgs);
+      }
+    } catch {
+      toast.error('Erro de comunicação', { id: toastId });
+    }
+  };
+
   const handleDeleteConversation = async () => {
     if (!activeChatId) return;
     if (!confirm('Tem certeza que deseja excluir esta conversa inteira? Essa ação é irreversível.')) return;
@@ -255,7 +283,7 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
     supabase
       .from('conversations')
       .select(`
-        id, status, last_interaction_at, window_expires_at, created_at, updated_at,
+        id, status, channel, last_interaction_at, window_expires_at, created_at, updated_at,
         contacts ( id, name, ig_scoped_id, profile_picture ),
         messages ( content, message_type, timestamp )
       `)
@@ -270,7 +298,7 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
             let lastMessage = 'Nova conversa';
             if (msgs && msgs.length > 0) {
               const msg = msgs[0];
-              lastMessage = msg.message_type === 'image' ? '📷 Foto' : msg.message_type === 'video' ? '🎥 Vídeo' : msg.message_type === 'audio' ? '🎵 Áudio' : (msg.content as string);
+              lastMessage = msg.message_type === 'image' ? '📷 Foto' : msg.message_type === 'video' ? '🎥 Vídeo' : msg.message_type === 'audio' ? '🎵 Áudio' : msg.message_type === 'comment' ? `💬 ${(msg.content as string) || 'Comentário'}` : (msg.content as string);
             }
             return { ...c, lastMessage };
           });
@@ -431,6 +459,9 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
                   <div className="flex justify-between items-baseline mb-1">
                     <p className={`font-semibold text-sm truncate ${Number(chat.unread_count || 0) > 0 ? 'text-black' : 'text-gray-800'}`}>
                       {(chat.contacts as Record<string, unknown>)?.name as string || (chat.contacts as Record<string, unknown>)?.ig_scoped_id as string}
+                      {chat.channel === 'comment' && (
+                        <span className="text-[9px] font-bold uppercase tracking-wide text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-1.5 py-0.5 ml-1 align-middle">Comentário</span>
+                      )}
                     </p>
                     <span className={`text-[11px] flex-shrink-0 ml-2 ${Number(chat.unread_count || 0) > 0 ? 'text-blue-600 font-bold' : 'text-gray-400'}`}>
                       {formatTime(chat.updated_at as string || chat.created_at as string)}
@@ -474,7 +505,7 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
                     {(activeChat.contacts as Record<string, unknown>)?.name as string || (activeChat.contacts as Record<string, unknown>)?.ig_scoped_id as string}
                   </h2>
                   <div className="text-[11px] text-gray-500 flex items-center gap-1 cursor-pointer hover:text-gray-700">
-                    Não atribuído <ChevronDown className="w-3 h-3" />
+                    {activeChat.channel === 'comment' ? '💬 Comentário no post' : 'Não atribuído'} <ChevronDown className="w-3 h-3" />
                   </div>
                 </div>
               </div>
@@ -533,10 +564,18 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
                         )}
                         
                         <div className={`max-w-[70%] px-4 py-3 text-[14px] leading-relaxed ${
-                          isUser 
-                            ? 'bg-[#f0f2f5] text-gray-900 rounded-2xl rounded-bl-sm shadow-sm' 
-                            : 'bg-[#e7f3ff] text-[#0064e0] rounded-2xl rounded-br-sm shadow-sm'
+                          msg.message_type === 'comment'
+                            ? 'bg-amber-50 border border-amber-200 text-gray-900 rounded-2xl rounded-bl-sm shadow-sm'
+                            : isUser 
+                              ? 'bg-[#f0f2f5] text-gray-900 rounded-2xl rounded-bl-sm shadow-sm' 
+                              : 'bg-[#e7f3ff] text-[#0064e0] rounded-2xl rounded-br-sm shadow-sm'
                         }`}>
+                          {msg.message_type === 'comment' && (
+                            <div className="text-[10px] font-bold text-amber-600 uppercase tracking-wide mb-1 flex items-center gap-1">
+                              <MessageCircle className="w-3 h-3" />
+                              {msg.direction === 'outbound' ? 'Resposta pública no comentário' : 'Comentário no post'}
+                            </div>
+                          )}
                           {msg.message_type === 'image' && Boolean(msg.media_url) && (
                             <img src={msg.media_url as string} alt="Mídia" className="max-w-full rounded-lg mb-2 cursor-pointer hover:opacity-90 border border-transparent" onClick={() => window.open(msg.media_url as string, '_blank')} />
                           )}
@@ -642,12 +681,22 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
                     >
                       <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
                     </button>
+                    {activeChat.channel === 'comment' && (
+                      <button 
+                        onClick={handlePublicCommentReply}
+                        disabled={!newMessage.trim()}
+                        className="px-4 py-2.5 border border-amber-300 bg-amber-50 text-amber-700 text-[13px] font-bold rounded-xl hover:bg-amber-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Responde publicamente no post do Instagram"
+                      >
+                        Responder no Comentário
+                      </button>
+                    )}
                     <button 
                       onClick={handleSendMessage}
                       disabled={!newMessage.trim()}
                       className="px-8 py-2.5 bg-instagram-gradient hover:opacity-90 text-white text-[13px] font-bold rounded-xl shadow-lg shadow-pink-500/20 transition-all hover:scale-[1.02] disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed"
                     >
-                      Enviar Para O Instagram
+                      {activeChat.channel === 'comment' ? 'Responder via DM' : 'Enviar Para O Instagram'}
                     </button>
                   </div>
                 </div>

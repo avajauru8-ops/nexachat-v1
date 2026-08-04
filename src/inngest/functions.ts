@@ -1,5 +1,6 @@
 import { inngest } from './client';
 import { createClient } from '@supabase/supabase-js';
+import { processInstagramComments } from '@/utils/webhookProcessor';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
@@ -134,6 +135,7 @@ export const processWebhookEvent = inngest.createFunction(
                   workspace_id: activeWorkspaceId,
                   contact_id: contact.id,
                   status: 'bot',
+                  channel: messageType === 'story_mention' || messageType === 'story_reply' ? 'story' : 'dm',
                   last_interaction_at: new Date().toISOString(),
                   window_expires_at: windowExpiresAt
                 })
@@ -246,15 +248,7 @@ export const processWebhookEvent = inngest.createFunction(
 
         // --- 2. PROCESSAMENTO DE COMENTÁRIOS (COMMENT-TO-DM) ---
         if (entry.changes && Array.isArray(entry.changes)) {
-          for (const change of entry.changes) {
-            if (change.value?.item === 'comment' && change.value?.text) {
-              const senderId = change.value.from?.id;
-              const commentText = change.value.text;
-
-              console.log(`[Inngest Router] Novo comentário de ${senderId}: "${commentText}"`);
-              // Processamento de Comment-to-DM pode ser disparado aqui se houver fluxo com trigger_type = 'comment_keyword'
-            }
-          }
+          await processInstagramComments(entry, initialWorkspaceId);
         }
       }
     });
