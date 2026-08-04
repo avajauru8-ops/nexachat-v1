@@ -865,9 +865,16 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
                         <span className="text-[9px] font-bold uppercase tracking-wide text-pink-600 bg-pink-50 border border-pink-200 rounded-full px-1.5 py-0.5 ml-1 align-middle">📸 Story</span>
                       )}
                     </p>
-                    <span className={`text-[11px] flex-shrink-0 ml-2 ${Number(chat.unread_count || 0) > 0 ? 'text-blue-600 font-bold' : 'text-gray-400'}`}>
-                      {formatTime(chat.updated_at as string || chat.created_at as string)}
-                    </span>
+                    <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                      <span className={`text-[11px] ${Number(chat.unread_count || 0) > 0 ? 'text-blue-600 font-bold' : 'text-gray-400'}`}>
+                        {formatTime(chat.updated_at as string || chat.created_at as string)}
+                      </span>
+                      {Number(chat.unread_count || 0) > 0 && (
+                        <span className="min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-blue-500 text-white text-[10px] font-bold rounded-full">
+                          {Number(chat.unread_count || 0)}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   
                   <div className="flex items-center justify-between gap-1">
