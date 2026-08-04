@@ -2,10 +2,19 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Filter, Paperclip, Smile, Image as ImageIcon, Mic, Clock, ChevronDown, Check, MoreHorizontal, MessageCircle, Square, Tag, Trash2, RefreshCw, Bot, Workflow, Star, PanelRightOpen, Camera } from 'lucide-react';
+import { ArrowLeft, Filter, Paperclip, Smile, Image as ImageIcon, Mic, Clock, ChevronDown, Check, MoreHorizontal, MessageCircle, Square, Tag, Trash2, RefreshCw, Bot, Workflow, Star, PanelRightOpen, Camera, X } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { toast } from 'react-hot-toast';
 import { CrmPanel } from './CrmPanel';
+
+const EMOJIS = [
+  '😀', '😄', '😁', '😂', '🤣', '😊', '😍', '😘',
+  '😎', '🤩', '🥳', '😇', '🙂', '😉', '😅', '😆',
+  '🤔', '🤨', '😐', '😴', '😢', '😭', '😤', '😡',
+  '👍', '👎', '👏', '🙏', '🤝', '💪', '✌️', '🤙',
+  '❤️', '💜', '💛', '💚', '💙', '🔥', '✨', '⭐',
+  '🎉', '🎊', '🎁', '🥂', '☕', '🍕', '🌹', '💯'
+];
 
 export function InboxClient({ workspaceId }: { workspaceId: string }) {
   const [conversations, setConversations] = useState<Record<string, unknown>[]>([]);
@@ -34,6 +43,12 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
   const [pipelineFilter, setPipelineFilter] = useState('all');
   const [assigneeFilter, setAssigneeFilter] = useState('all');
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const recordingChunksRef = useRef<Blob[]>([]);
+  const recordTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     fetch('/api/workspace/members')
@@ -295,6 +310,125 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
     } else {
       handleSendMessage();
     }
+  };
+
+  const handleSendMediaFile = (file: Blob | File, mimeType: string, filename: string) => {
+    if (!activeChatId) return;
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error('Anexo muito grande (máx. 4MB)');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = (reader.result as string).split(',')[1];
+      const mediaType = mimeType.startsWith('video/') ? 'video' : mimeType.startsWith('audio/') ? 'audio' : 'image';
+      const toastId = toast.loading(mediaType === 'audio' ? 'Enviando áudio...' : mediaType === 'video' ? 'Enviando vídeo...' : 'Enviando imagem...');
+      try {
+        const res = await fetch('/api/messages/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ conversationId: activeChatId, mediaBase64: base64, mediaType, mimeType, filename })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          toast.error('Erro: ' + (data.error || 'Falha no envio'), { id: toastId });
+          return;
+        }
+        toast.success(mediaType === 'audio' ? 'Áudio enviado!' : mediaType === 'video' ? 'Vídeo enviado!' : 'Imagem enviada!', { id: toastId });
+        setMessages(prev => prev.find(m => m.id === data.message.id) ? prev : [...prev, data.message]);
+        setConversations(prev => prev.map(c => c.id === activeChatId ? { ...c, lastMessage: mediaType === 'image' ? '📷 Foto' : mediaType === 'video' ? '🎥 Vídeo' : '🎵 Áudio' } : c));
+      } catch {
+        toast.error('Erro de comunicação', { id: toastId });
+      }
+    };
+    reader.onerror = () => toast.error('Falha ao ler o arquivo');
+    reader.readAsDataURL(file);
+  };
+
+  const handlePickFile = (accept: string) => {
+    if (!activeChatId) return;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = accept;
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      const isImage = file.type.startsWith('image/');
+      const isVideo = file.type.startsWith('video/');
+      const isAudio = file.type.startsWith('audio/');
+      if (!isImage && !isVideo && !isAudio) {
+        toast.error('O Instagram aceita apenas imagens, vídeos ou áudios');
+        return;
+      }
+      handleSendMediaFile(file, file.type, file.name);
+    };
+    input.click();
+  };
+
+  const startRecording = async () => {
+    if (!activeChatId) return;
+    if (typeof window === 'undefined' || typeof MediaRecorder === 'undefined') {
+      toast.error('Gravação de voz não suportada neste navegador');
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      let mime = 'audio/mp4;codecs=mp4a.40.2';
+      if (!MediaRecorder.isTypeSupported(mime)) mime = 'audio/webm;codecs=opus';
+      if (!MediaRecorder.isTypeSupported(mime)) mime = '';
+      const recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+      recorderRef.current = recorder;
+      recordingChunksRef.current = [];
+      recorder.ondataavailable = e => { if (e.data.size > 0) recordingChunksRef.current.push(e.data); };
+      recorder.onstop = () => { recorder.stream.getTracks().forEach(t => t.stop()); };
+      recorder.start();
+      setIsRecording(true);
+      setRecordingSeconds(0);
+      recordTimerRef.current = setInterval(() => setRecordingSeconds(s => s + 1), 1000);
+      toast.success('Gravando... clique em Enviar para finalizar');
+    } catch {
+      toast.error('Não foi possível acessar o microfone');
+    }
+  };
+
+  const stopRecording = () => {
+    const recorder = recorderRef.current;
+    if (!recorder) return;
+    clearInterval(recordTimerRef.current || undefined);
+    recordTimerRef.current = null;
+    setRecordingSeconds(0);
+    setIsRecording(false);
+    recorder.onstop = () => {
+      recorder.stream.getTracks().forEach(t => t.stop());
+      const blob = new Blob(recordingChunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+      if (blob.size === 0) {
+        toast.error('Nenhum áudio capturado');
+        return;
+      }
+      const isMp4 = recorder.mimeType.includes('mp4');
+      handleSendMediaFile(blob, recorder.mimeType || 'audio/webm', isMp4 ? 'voz.m4a' : 'voz.webm');
+    };
+    recorder.stop();
+  };
+
+  const cancelRecording = () => {
+    const recorder = recorderRef.current;
+    if (!recorder) return;
+    clearInterval(recordTimerRef.current || undefined);
+    recordTimerRef.current = null;
+    setRecordingSeconds(0);
+    setIsRecording(false);
+    recorder.onstop = () => { recorder.stream.getTracks().forEach(t => t.stop()); };
+    recorder.stop();
+    toast('Gravação cancelada');
+  };
+
+  const insertEmoji = (emoji: string) => {
+    setNewMessage(prev => prev + emoji);
+  };
+
+  const handleToggleActiveFavorite = () => {
+    if (activeChat) handleToggleFavorite(activeChat);
   };
 
   const handleDeleteConversation = async () => {
@@ -957,6 +1091,9 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
                             </a>
                           )}
                           {Boolean(msg.content) && <p className="break-words whitespace-pre-wrap">{msg.content as string}</p>}
+                          {!msg.content && !msg.media_url && (msg.message_type === 'image' || msg.message_type === 'video' || msg.message_type === 'audio') && (
+                            <span className="text-gray-400 italic">📎 Anexo enviado</span>
+                          )}
                           {!msg.content && !msg.media_url && !['image', 'video', 'audio', 'share', 'story_mention'].includes(msg.message_type as string) && (
                             <span className="text-gray-400 italic">Mensagem vazia ou tipo não suportado ({msg.message_type as string})</span>
                           )}
@@ -1001,22 +1138,78 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
                 />
                 
                 <div className="flex items-center justify-between mt-4">
-                  <div className="flex items-center gap-4 text-gray-400">
-                    <Smile className="w-5 h-5 cursor-pointer hover:text-gray-600 transition-colors" />
-                    <ImageIcon className="w-5 h-5 cursor-pointer hover:text-gray-600 transition-colors" />
-                    <Paperclip className="w-5 h-5 cursor-pointer hover:text-gray-600 transition-colors" />
-                    <Mic className="w-5 h-5 cursor-pointer hover:text-gray-600 transition-colors" />
-                    
-                    <div className="relative group flex flex-col items-center">
-                      <div className="absolute -top-8 bg-gray-900 text-white text-[11px] font-semibold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-                        Automação
-                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
-                      </div>
-                      <Workflow className="w-5 h-5 cursor-pointer hover:text-blue-600 transition-colors" />
-                    </div>
-                    
-                    <Star className="w-5 h-5 cursor-pointer hover:text-yellow-500 transition-colors" />
+                <div className="flex items-center gap-4 text-gray-400">
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowEmojiPicker(v => !v)}
+                      className={`hover:text-gray-600 transition-colors ${showEmojiPicker ? 'text-indigo-500' : ''}`}
+                      title="Emojis"
+                    >
+                      <Smile className="w-5 h-5" />
+                    </button>
+                    {showEmojiPicker && (
+                      <>
+                        <div className="fixed inset-0 z-20" onClick={() => setShowEmojiPicker(false)} />
+                        <div className="absolute bottom-full left-0 mb-2 w-[272px] bg-white border border-gray-200 rounded-xl shadow-xl z-30 p-3 grid grid-cols-8 gap-1">
+                          {EMOJIS.map(e => (
+                            <button
+                              key={e}
+                              onClick={() => insertEmoji(e)}
+                              className="text-xl leading-none hover:bg-gray-100 rounded p-1 transition-colors"
+                            >
+                              {e}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
+
+                  <button onClick={() => handlePickFile('image/*')} className="hover:text-gray-600 transition-colors" title="Galeria de Mídia">
+                    <ImageIcon className="w-5 h-5" />
+                  </button>
+
+                  <button onClick={() => handlePickFile('*/*')} className="hover:text-gray-600 transition-colors" title="Anexar arquivo">
+                    <Paperclip className="w-5 h-5" />
+                  </button>
+
+                  <div className="relative group flex flex-col items-center">
+                    {isRecording ? (
+                      <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-full px-3 py-1.5">
+                        <button onClick={cancelRecording} className="text-red-500 hover:opacity-70" title="Cancelar gravação">
+                          <X className="w-4 h-4" />
+                        </button>
+                        <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                        <span className="text-[11px] font-bold text-red-600 tabular-nums">
+                          {Math.floor(recordingSeconds / 60)}:{String(recordingSeconds % 60).padStart(2, '0')}
+                        </span>
+                        <button onClick={stopRecording} className="text-red-600 font-bold text-[11px] hover:opacity-70" title="Enviar áudio">
+                          Enviar
+                        </button>
+                      </div>
+                    ) : (
+                      <button onClick={startRecording} className="hover:text-gray-600 transition-colors" title="Gravar mensagem de voz">
+                        <Mic className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => { window.location.href = '/flows'; }}
+                    className="hover:text-blue-600 transition-colors"
+                    title="Automação e fluxos de chat"
+                  >
+                    <Workflow className="w-5 h-5" />
+                  </button>
+
+                  <button
+                    onClick={handleToggleActiveFavorite}
+                    className={`transition-colors ${activeChat?.is_favorite ? 'text-yellow-400 hover:text-yellow-500' : 'hover:text-yellow-500'}`}
+                    title={activeChat?.is_favorite ? 'Remover dos favoritos' : 'Favoritar conversa'}
+                  >
+                    <Star className={`w-5 h-5 ${activeChat?.is_favorite ? 'fill-yellow-400' : ''}`} />
+                  </button>
+                </div>
                   
                   <div className="flex items-center gap-3">
                     <button 

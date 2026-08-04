@@ -4,9 +4,9 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
 export async function POST(request: Request) {
   try {
-    const { conversationId, content, mediaUrl, messageType } = await request.json();
+    const { conversationId, content, mediaUrl, messageType, mediaBase64, mimeType, filename } = await request.json();
 
-    if (!conversationId || (!content && !mediaUrl)) {
+    if (!conversationId || (!content && !mediaUrl && !mediaBase64)) {
       return NextResponse.json({ error: 'Faltam parâmetros' }, { status: 400 });
     }
 
@@ -22,7 +22,10 @@ export async function POST(request: Request) {
       conversationId,
       content,
       mediaUrl,
-      messageType
+      messageType,
+      mediaBase64,
+      mimeType,
+      filename
     });
 
     // Update sender_type to human_agent since this endpoint is called by the UI
