@@ -21,7 +21,7 @@ import {
 import '@xyflow/react/dist/style.css';
 
 import { TriggerNode } from '@/components/flow/nodes/TriggerNode';
-import { MessageNode } from '@/components/flow/nodes/MessageNode';
+import { MessageNode, AttachmentItem } from '@/components/flow/nodes/MessageNode';
 import { DelayNode } from '@/components/flow/nodes/DelayNode';
 import { ActionNode } from '@/components/flow/nodes/ActionNode';
 import { ConditionNode } from '@/components/flow/nodes/ConditionNode';
@@ -38,7 +38,8 @@ import { toast } from 'react-hot-toast';
 import {
   ArrowLeft, Save, Play, Download, Upload, Sparkles, UserCheck, Globe, Clock,
   Filter, MessageSquare, Tag, StickyNote, Plus, Undo2, Redo2, Search, Pencil,
-  Workflow, Info, CheckCircle2, MessageCircle, Zap, Circle
+  Workflow, Info, CheckCircle2, MessageCircle, Zap, Circle,
+  MousePointerClick, Link as LinkIcon, Image as ImageIcon, Video, FileText, MessageSquarePlus
 } from 'lucide-react';
 
 const nodeTypes = {
@@ -79,6 +80,7 @@ type PaletteItemDef = {
   desc: string;
   icon: React.ElementType;
   color: keyof typeof ITEM_STYLES;
+  preset?: AttachmentItem['type'];
 };
 
 const PALETTE_GROUPS: { title: string; items: PaletteItemDef[] }[] = [
@@ -94,6 +96,17 @@ const PALETTE_GROUPS: { title: string; items: PaletteItemDef[] }[] = [
       { type: 'messageNode', label: 'Mensagem do Bot', desc: 'Envia texto no Direct', icon: MessageSquare, color: 'emerald' },
       { type: 'commentReplyNode', label: 'Responder Comentário', desc: 'Resposta pública no post', icon: MessageCircle, color: 'orange' },
       { type: 'delayNode', label: 'Atraso Inteligente', desc: 'Pausa o fluxo por tempo', icon: Clock, color: 'amber' }
+    ]
+  },
+  {
+    title: 'Anexos & Botões',
+    items: [
+      { type: 'messageNode', preset: 'button', label: 'Botão de Ação', desc: 'Mensagem + botão clicável', icon: MousePointerClick, color: 'emerald' },
+      { type: 'messageNode', preset: 'link', label: 'Link Externo', desc: 'Mensagem + link clicável', icon: LinkIcon, color: 'blue' },
+      { type: 'messageNode', preset: 'image', label: 'Imagem', desc: 'Mensagem + foto com upload', icon: ImageIcon, color: 'rose' },
+      { type: 'messageNode', preset: 'video', label: 'Vídeo', desc: 'Mensagem + vídeo com upload', icon: Video, color: 'purple' },
+      { type: 'messageNode', preset: 'file', label: 'Documento / PDF', desc: 'Mensagem + PDF com upload', icon: FileText, color: 'amber' },
+      { type: 'messageNode', preset: 'text', label: 'Texto Extra', desc: 'Mensagem + texto adicional', icon: MessageSquarePlus, color: 'yellow' }
     ]
   },
   {
@@ -126,17 +139,17 @@ function MetricCard({ label, value, hint }: { label: string; value: React.ReactN
   );
 }
 
-function PaletteItem({ item, onAdd }: { item: PaletteItemDef; onAdd: (type: string) => void }) {
+function PaletteItem({ item, onAdd }: { item: PaletteItemDef; onAdd: (type: string, preset?: AttachmentItem['type']) => void }) {
   const Icon = item.icon;
   const style = ITEM_STYLES[item.color];
   return (
     <button
       draggable
       onDragStart={(e) => {
-        e.dataTransfer.setData('application/reactflow', item.type);
+        e.dataTransfer.setData('application/reactflow', JSON.stringify({ type: item.type, preset: item.preset }));
         e.dataTransfer.effectAllowed = 'move';
       }}
-      onClick={() => onAdd(item.type)}
+      onClick={() => onAdd(item.type, item.preset)}
       title={item.desc}
       className={`w-full text-left px-3 py-2.5 rounded-lg border ${style.btn} hover:shadow-md hover:brightness-[0.97] transition-all font-semibold text-xs flex items-center gap-2.5 cursor-grab active:cursor-grabbing`}
     >
@@ -161,7 +174,7 @@ function FlowCanvas({
   onNodesChange: (changes: any) => void;
   onEdgesChange: (changes: any) => void;
   onConnect: (params: Connection | Edge) => void;
-  onDropNode: (type: string, position: { x: number; y: number }) => void;
+  onDropNode: (type: string, preset: AttachmentItem['type'] | undefined, position: { x: number; y: number }) => void;
   onZoomChange: (zoom: number) => void;
   nodeTypes: NodeTypes;
   edgeTypes: EdgeTypes;
@@ -170,10 +183,21 @@ function FlowCanvas({
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    const type = e.dataTransfer.getData('application/reactflow');
-    if (!type) return;
+    const raw = e.dataTransfer.getData('application/reactflow');
+    if (!raw) return;
+    let type = raw;
+    let preset: AttachmentItem['type'] | undefined;
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed.type) {
+        type = parsed.type;
+        preset = parsed.preset;
+      }
+    } catch {
+      // payload legado (apenas o tipo)
+    }
     const position = screenToFlowPosition({ x: e.clientX, y: e.clientY });
-    onDropNode(type, position);
+    onDropNode(type, preset, position);
   };
 
   return (
@@ -315,7 +339,7 @@ export function FlowBuilderClient({
     [setEdges]
   );
 
-  const addNode = (type: string, position?: { x: number; y: number }) => {
+  const addNode = (type: string, position?: { x: number; y: number }, presetType?: AttachmentItem['type']) => {
     let label = 'Novo Bloco';
     if (type === 'messageNode') label = 'Mensagem do Bot';
     if (type === 'commentReplyNode') label = 'Responder Comentário';
@@ -328,12 +352,27 @@ export function FlowBuilderClient({
     if (type === 'crmNode') label = 'Webhook CRM';
     if (type === 'noteNode') label = 'Nota Explicativa';
 
+    const data: Record<string, unknown> = {
+      label,
+      text: type === 'messageNode' ? 'Digite a mensagem de resposta...' : undefined
+    };
+
+    if (type === 'messageNode' && presetType) {
+      const presetLabel = presetType === 'button' ? 'Clique Aqui 🔥' : presetType === 'file' ? 'Documento.pdf' : '';
+      data.attachments = [{
+        id: `att-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        type: presetType,
+        label: presetLabel,
+        value: ''
+      }];
+    }
+
     const newNode: Node = {
       id: `n-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       type,
       position: position || { x: Math.random() * 200 + 200, y: Math.random() * 200 + 150 },
       className: 'node-pop',
-      data: { label, text: type === 'messageNode' ? 'Digite a mensagem de resposta...' : undefined }
+      data
     };
     setNodes((nds) => nds.concat(newNode));
   };
@@ -636,8 +675,8 @@ export function FlowBuilderClient({
                       <PaletteItem
                         key={item.type}
                         item={item}
-                        onAdd={(type) => {
-                          addNode(type);
+                        onAdd={(type, preset) => {
+                          addNode(type, undefined, preset);
                           setIsPaletteOpen(false);
                         }}
                       />
@@ -659,7 +698,7 @@ export function FlowBuilderClient({
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
-                onDropNode={addNode}
+                onDropNode={(type, preset, position) => addNode(type, position, preset)}
                 onZoomChange={setZoom}
                 nodeTypes={nodeTypes}
                 edgeTypes={edgeTypes}
