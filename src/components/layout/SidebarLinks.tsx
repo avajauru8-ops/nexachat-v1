@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Home, MessageSquare, Webhook, Workflow, Settings, Users, Megaphone, Bot, ShieldAlert, ShieldCheck, Sparkles, CreditCard, Bell, ArrowLeft, CalendarClock, Menu, Wrench } from 'lucide-react';
+import { Home, MessageSquare, Webhook, Workflow, Settings, Users, Megaphone, Bot, ShieldAlert, ShieldCheck, Sparkles, CreditCard, Bell, ArrowLeft, CalendarClock, Menu } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { parseRole } from '@/utils/rbac';
 import { DEFAULT_DASHBOARD_MENUS, fetchDashboardMenus, getMenuByHref, subscribeDashboardMenus, type DashboardMenu } from '@/utils/dashboardMenus';
@@ -126,31 +126,21 @@ export function SidebarLinks({ workspaceId, initialUnreadCount }: { workspaceId?
   }
 
   // MODO PADRÃO DA APLICAÇÃO
-  const menuItems = getMenuItems(unreadCount)
-    .map((item) => {
-      const setting = getMenuByHref(menus, item.href);
-      return { ...item, maintenance: setting?.maintenance === true };
-    })
-    .filter((item) => {
-      const setting = getMenuByHref(menus, item.href);
-      return !setting || setting.enabled;
-    });
+  const menuItems = getMenuItems(unreadCount).filter((item) => {
+    const setting = getMenuByHref(menus, item.href);
+    return !setting || setting.enabled;
+  });
 
   const secondaryItems = [
     ...(isAdmin ? [{ name: '👑 Painel Admin', icon: ShieldAlert, href: '/admin' }] : []),
     { name: 'Configurações', icon: Settings, href: '/settings' },
     { name: 'Integrações', icon: Webhook, href: '/integrations' },
     { name: 'Broadcasts', icon: Megaphone, href: '/broadcasts' },
-  ]
-    .map((item) => {
-      const setting = getMenuByHref(menus, item.href);
-      return { ...item, maintenance: setting?.maintenance === true };
-    })
-    .filter((item) => {
-      if (item.href === '/admin') return true;
-      const setting = getMenuByHref(menus, item.href);
-      return !setting || setting.enabled;
-    });
+  ].filter((item) => {
+    if (item.href === '/admin') return true;
+    const setting = getMenuByHref(menus, item.href);
+    return !setting || setting.enabled;
+  });
 
   return (
     <div className="flex flex-col h-full justify-between">
@@ -185,12 +175,6 @@ export function SidebarLinks({ workspaceId, initialUnreadCount }: { workspaceId?
                     {item.badge}
                   </span>
                 )}
-
-                {item.maintenance && !item.badge && (
-                  <span className="bg-amber-100 text-amber-700 border border-amber-200 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                    <Wrench className="w-2.5 h-2.5" /> Manutenção
-                  </span>
-                )}
               </Link>
             </li>
           );
@@ -217,11 +201,6 @@ export function SidebarLinks({ workspaceId, initialUnreadCount }: { workspaceId?
             >
               <Icon className={`w-5 h-5 mr-3 ${isActive ? 'text-white' : isAdminLink ? 'text-indigo-600' : 'text-gray-500 group-hover:text-gray-900'} transition-colors`} />
               {item.name}
-              {item.maintenance && (
-                <span className="ml-auto bg-amber-100 text-amber-700 border border-amber-200 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                  <Wrench className="w-2.5 h-2.5" /> Manutenção
-                </span>
-              )}
             </Link>
           );
         })}
