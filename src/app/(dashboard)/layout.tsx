@@ -2,6 +2,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { SidebarWrapper } from "@/components/layout/SidebarWrapper";
 import { Topbar } from "@/components/layout/Topbar";
 import { GlobalAlertModal } from "@/components/common/GlobalAlertModal";
+import { MenuGuard } from "@/components/layout/MenuGuard";
 import { Suspense } from "react";
 import { SidebarProvider } from "@/contexts/SidebarContext";
 
@@ -22,7 +23,7 @@ export default function DashboardLayout({
         <div className="flex-1 md:ml-64 flex flex-col h-screen overflow-hidden">
           <Topbar />
           <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6">
-            {children}
+            <MenuGuard>{children}</MenuGuard>
           </main>
         </div>
       </div>

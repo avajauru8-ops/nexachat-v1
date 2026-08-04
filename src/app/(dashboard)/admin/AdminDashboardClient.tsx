@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Check, Copy, Settings, Users, Database, Sparkles, Plus, Trash2, Save, CreditCard, Bell, Send, LayoutDashboard, ShieldAlert, UserPlus, RefreshCw, ShieldCheck, Cpu, Pencil, EyeOff, Eye, Globe, CheckCircle, X } from 'lucide-react';
+import { Check, Copy, Settings, Users, Database, Sparkles, Plus, Trash2, Save, CreditCard, Bell, Send, LayoutDashboard, ShieldAlert, UserPlus, RefreshCw, ShieldCheck, Cpu, Pencil, EyeOff, Eye, Globe, CheckCircle, X, Menu, Power, Wrench } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { DEFAULT_DASHBOARD_MENUS, notifyMenusChanged, type DashboardMenu } from '@/utils/dashboardMenus';
 
 interface UserItem {
   id: string;
@@ -43,7 +44,7 @@ interface Props {
 
 export default function AdminDashboardClient({ currentUser }: Props) {
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'meta' | 'ai' | 'plans' | 'notifications'>(() => {
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'meta' | 'ai' | 'plans' | 'notifications' | 'menus'>(() => {
     const tabParam = searchParams.get('tab');
     return (tabParam as any) || 'dashboard';
   });
@@ -121,6 +122,10 @@ export default function AdminDashboardClient({ currentUser }: Props) {
   const [isClient, setIsClient] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState('');
 
+  const [menus, setMenus] = useState<DashboardMenu[]>(DEFAULT_DASHBOARD_MENUS);
+  const [isLoadingMenus, setIsLoadingMenus] = useState(true);
+  const [isSavingMenus, setIsSavingMenus] = useState(false);
+
   useEffect(() => {
     setIsClient(true);
     setWebhookUrl(`${window.location.origin}/api/webhooks/instagram`);
@@ -129,6 +134,7 @@ export default function AdminDashboardClient({ currentUser }: Props) {
     fetchAiCredentials();
     fetchPlans();
     fetchNotifications();
+    fetchMenus();
   }, []);
 
   const handleCopy = (text: string, fieldId: string, label: string) => {
@@ -179,6 +185,43 @@ export default function AdminDashboardClient({ currentUser }: Props) {
     fetch('/api/admin/notifications')
       .then(res => res.json())
       .then(data => { if (data.notifications) setNotifications(data.notifications); });
+  };
+
+  const fetchMenus = () => {
+    fetch('/api/admin/menus')
+      .then(res => res.json())
+      .then(data => { if (Array.isArray(data.menus)) setMenus(data.menus); })
+      .finally(() => setIsLoadingMenus(false));
+  };
+
+  const toggleMenuEnabled = (key: string) => {
+    setMenus(prev => prev.map(m => m.key === key ? { ...m, enabled: !m.enabled } : m));
+  };
+
+  const toggleMenuMaintenance = (key: string) => {
+    setMenus(prev => prev.map(m => m.key === key ? { ...m, maintenance: !m.maintenance } : m));
+  };
+
+  const handleSaveMenus = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingMenus(true);
+    try {
+      const res = await fetch('/api/admin/menus', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ menus })
+      });
+      if (res.ok) {
+        toast.success('Menus atualizados com sucesso!');
+        notifyMenusChanged();
+      } else {
+        toast.error('Erro ao salvar menus.');
+      }
+    } catch {
+      toast.error('Erro de servidor ao salvar menus.');
+    } finally {
+      setIsSavingMenus(false);
+    }
   };
 
   const handleCreateUser = async (e: React.FormEvent) => {
@@ -389,6 +432,15 @@ export default function AdminDashboardClient({ currentUser }: Props) {
           }`}
         >
           <Bell className="w-4 h-4" /> Envio de Notificações
+        </button>
+
+        <button
+          onClick={() => setActiveTab('menus')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+            activeTab === 'menus' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+          }`}
+        >
+          <Menu className="w-4 h-4" /> Menus & Manutenção
         </button>
       </div>
 
@@ -1461,6 +1513,117 @@ export default function AdminDashboardClient({ currentUser }: Props) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 7. ABA: MENUS & MANUTENÇÃO */}
+      {activeTab === 'menus' && (
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-5">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-4">
+            <div>
+              <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                <Menu className="w-5 h-5 text-indigo-600" /> Menus & Manutenção
+              </h2>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Ative/desative menus do painel dos usuários ou coloque páginas em manutenção em tempo real.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={fetchMenus}
+                className="px-3.5 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-xl text-xs font-semibold flex items-center gap-1.5"
+              >
+                <RefreshCw className="w-3.5 h-3.5" /> Atualizar
+              </button>
+              <button
+                onClick={handleSaveMenus}
+                disabled={isSavingMenus}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-2 shadow-xs disabled:opacity-50"
+              >
+                <Save className="w-4 h-4" /> {isSavingMenus ? 'Salvando...' : 'Salvar Alterações'}
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Menus do Painel dos Usuários</p>
+            {isLoadingMenus ? (
+              <div className="text-xs text-gray-500 py-8 text-center">Carregando menus...</div>
+            ) : (
+              menus.map((menu) => (
+                <div
+                  key={menu.key}
+                  className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl border transition-colors ${
+                    !menu.enabled ? 'bg-red-50/60 border-red-200' : menu.maintenance ? 'bg-amber-50/60 border-amber-200' : 'bg-white border-gray-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold shrink-0 ${
+                      !menu.enabled ? 'bg-red-100 text-red-600' : menu.maintenance ? 'bg-amber-100 text-amber-600' : 'bg-indigo-100 text-indigo-600'
+                    }`}>
+                      {menu.maintenance ? <Wrench className="w-5 h-5" /> : <Power className="w-5 h-5" />}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-gray-900">{menu.label}</p>
+                      <p className="text-[11px] font-mono text-gray-500 truncate">{menu.href}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    {!menu.enabled && (
+                      <span className="px-2.5 py-1 bg-red-100 text-red-700 rounded-full text-[10px] font-bold">
+                        DESATIVADO
+                      </span>
+                    )}
+                    {menu.enabled && menu.maintenance && (
+                      <span className="px-2.5 py-1 bg-amber-100 text-amber-700 rounded-full text-[10px] font-bold">
+                        EM MANUTENÇÃO
+                      </span>
+                    )}
+                    {menu.enabled && !menu.maintenance && (
+                      <span className="px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-bold">
+                        ATIVO
+                      </span>
+                    )}
+                    <button
+                      onClick={() => toggleMenuEnabled(menu.key)}
+                      className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all flex items-center gap-1.5 border ${
+                        menu.enabled
+                          ? 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                          : 'bg-emerald-600 border-emerald-600 text-white hover:bg-emerald-700'
+                      }`}
+                    >
+                      <Power className="w-3.5 h-3.5" />
+                      {menu.enabled ? 'Desativar' : 'Ativar'}
+                    </button>
+                    <button
+                      onClick={() => toggleMenuMaintenance(menu.key)}
+                      disabled={!menu.enabled}
+                      className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all flex items-center gap-1.5 border disabled:opacity-40 disabled:cursor-not-allowed ${
+                        menu.maintenance
+                          ? 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                          : 'bg-amber-500 border-amber-500 text-white hover:bg-amber-600'
+                      }`}
+                    >
+                      <Wrench className="w-3.5 h-3.5" />
+                      {menu.maintenance ? 'Sair da Manutenção' : 'Manutenção'}
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="rounded-2xl bg-indigo-50 border border-indigo-100 p-4 text-[11px] text-indigo-900 leading-relaxed">
+            <p className="font-bold mb-1">📌 Como funciona:</p>
+            <p>
+              <b>Desativado:</b> o menu some da barra lateral e a página bloqueia o acesso ao ser aberta diretamente.
+              <br />
+              <b>Em manutenção:</b> o menu continua visível com selo de manutenção e a página exibe um aviso temporário.
+              <br />
+              Alterações valem para todos os usuários instantaneamente após salvar.
+            </p>
           </div>
         </div>
       )}

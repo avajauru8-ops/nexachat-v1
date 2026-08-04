@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Home, MessageSquare, Webhook, Workflow, Settings, Users, Megaphone, Bot, ShieldAlert, ShieldCheck, Sparkles, CreditCard, Bell, ArrowLeft, CalendarClock } from 'lucide-react';
+import { Home, MessageSquare, Webhook, Workflow, Settings, Users, Megaphone, Bot, ShieldAlert, ShieldCheck, Sparkles, CreditCard, Bell, ArrowLeft, CalendarClock, Menu, Wrench } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { parseRole } from '@/utils/rbac';
+import { DEFAULT_DASHBOARD_MENUS, fetchDashboardMenus, getMenuByHref, subscribeDashboardMenus, type DashboardMenu } from '@/utils/dashboardMenus';
 
 const getMenuItems = (unreadCount: number) => [
   { name: 'Inicial', icon: Home, href: '/' },
@@ -23,6 +24,18 @@ export function SidebarLinks({ workspaceId, initialUnreadCount }: { workspaceId?
 
   const [unreadCount, setUnreadCount] = useState(initialUnreadCount || 0);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [menus, setMenus] = useState<DashboardMenu[]>(DEFAULT_DASHBOARD_MENUS);
+
+  useEffect(() => {
+    fetchDashboardMenus().then(setMenus);
+    const unsubscribe = subscribeDashboardMenus(setMenus);
+    const onMenusChanged = () => { fetchDashboardMenus().then(setMenus); };
+    window.addEventListener('nexachat:menus-changed', onMenusChanged);
+    return () => {
+      unsubscribe();
+      window.removeEventListener('nexachat:menus-changed', onMenusChanged);
+    };
+  }, []);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -70,6 +83,7 @@ export function SidebarLinks({ workspaceId, initialUnreadCount }: { workspaceId?
       { name: '🤖 Conexão IA (Gemini)', icon: Sparkles, tab: 'ai' },
       { name: '💳 Planos & Assinaturas', icon: CreditCard, tab: 'plans' },
       { name: '📢 Envio de Notificações', icon: Bell, tab: 'notifications' },
+      { name: '🧭 Menus & Manutenção', icon: Menu, tab: 'menus' },
     ];
 
     return (
@@ -112,14 +126,31 @@ export function SidebarLinks({ workspaceId, initialUnreadCount }: { workspaceId?
   }
 
   // MODO PADRÃO DA APLICAÇÃO
-  const menuItems = getMenuItems(unreadCount);
+  const menuItems = getMenuItems(unreadCount)
+    .map((item) => {
+      const setting = getMenuByHref(menus, item.href);
+      return { ...item, maintenance: setting?.maintenance === true };
+    })
+    .filter((item) => {
+      const setting = getMenuByHref(menus, item.href);
+      return !setting || setting.enabled;
+    });
 
   const secondaryItems = [
     ...(isAdmin ? [{ name: '👑 Painel Admin', icon: ShieldAlert, href: '/admin' }] : []),
     { name: 'Configurações', icon: Settings, href: '/settings' },
     { name: 'Integrações', icon: Webhook, href: '/integrations' },
     { name: 'Broadcasts', icon: Megaphone, href: '/broadcasts' },
-  ];
+  ]
+    .map((item) => {
+      const setting = getMenuByHref(menus, item.href);
+      return { ...item, maintenance: setting?.maintenance === true };
+    })
+    .filter((item) => {
+      if (item.href === '/admin') return true;
+      const setting = getMenuByHref(menus, item.href);
+      return !setting || setting.enabled;
+    });
 
   return (
     <div className="flex flex-col h-full justify-between">
@@ -154,6 +185,12 @@ export function SidebarLinks({ workspaceId, initialUnreadCount }: { workspaceId?
                     {item.badge}
                   </span>
                 )}
+
+                {item.maintenance && !item.badge && (
+                  <span className="bg-amber-100 text-amber-700 border border-amber-200 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <Wrench className="w-2.5 h-2.5" /> Manutenção
+                  </span>
+                )}
               </Link>
             </li>
           );
@@ -180,6 +217,11 @@ export function SidebarLinks({ workspaceId, initialUnreadCount }: { workspaceId?
             >
               <Icon className={`w-5 h-5 mr-3 ${isActive ? 'text-white' : isAdminLink ? 'text-indigo-600' : 'text-gray-500 group-hover:text-gray-900'} transition-colors`} />
               {item.name}
+              {item.maintenance && (
+                <span className="ml-auto bg-amber-100 text-amber-700 border border-amber-200 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <Wrench className="w-2.5 h-2.5" /> Manutenção
+                </span>
+              )}
             </Link>
           );
         })}
