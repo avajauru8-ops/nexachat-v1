@@ -20,12 +20,6 @@ export function TriggerNode({ id, data, selected }: NodeProps) {
   const [loadingMedia, setLoadingMedia] = useState(false);
   const [showMediaSelector, setShowMediaSelector] = useState(false);
 
-  useEffect(() => {
-    if (currentType === 'comment_keyword' && showMediaSelector && mediaList.length === 0) {
-      fetchMedia();
-    }
-  }, [currentType, showMediaSelector]);
-
   const fetchMedia = async () => {
     setLoadingMedia(true);
     try {
@@ -41,6 +35,12 @@ export function TriggerNode({ id, data, selected }: NodeProps) {
       setLoadingMedia(false);
     }
   };
+
+  useEffect(() => {
+    if (currentType === 'comment_keyword' && showMediaSelector && mediaList.length === 0) {
+      fetchMedia();
+    }
+  }, [currentType, showMediaSelector, mediaList.length]);
 
   return (
     <div className={`bg-white border-2 rounded-2xl shadow-md min-w-[280px] max-w-[320px] group overflow-hidden transition-all duration-200 ${

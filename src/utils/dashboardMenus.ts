@@ -13,6 +13,7 @@ export const DEFAULT_DASHBOARD_MENUS: DashboardMenu[] = [
   { key: 'templates', label: 'Nexa AI', href: '/templates', enabled: true, maintenance: false },
   { key: 'inbox', label: 'Caixa de Entrada', href: '/inbox', enabled: true, maintenance: false },
   { key: 'scheduler', label: 'Agendamento', href: '/scheduler', enabled: true, maintenance: false },
+  { key: 'report', label: 'Relatório', href: '/report', enabled: true, maintenance: false },
   { key: 'settings', label: 'Configurações', href: '/settings', enabled: true, maintenance: false },
   { key: 'integrations', label: 'Integrações', href: '/integrations', enabled: true, maintenance: false },
   { key: 'broadcasts', label: 'Broadcasts', href: '/broadcasts', enabled: true, maintenance: false },

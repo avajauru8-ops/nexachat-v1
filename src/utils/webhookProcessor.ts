@@ -500,7 +500,7 @@ export async function processMetaPayload(payload: any, initialWorkspaceId?: stri
  * Processa eventos de novos seguidores do Instagram (field 'follows'),
  * criando contato + conversa e disparando automações com trigger_type = 'welcome_dm'.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export async function processInstagramFollows(
   entry: any,
   initialWorkspaceId?: string | null
@@ -582,7 +582,7 @@ export async function processInstagramFollows(
  * permitindo que o agente responda o comentário publicamente ou via DM (cross-channel).
  * Também dispara automações com trigger_type = 'comment_keyword'.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export async function processInstagramComments(
   entry: any,
   initialWorkspaceId?: string | null

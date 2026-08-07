@@ -6,7 +6,7 @@ import authRoutes from './routes/AuthRoute';
 import mongoose from 'mongoose';
 import IGRoutes from './routes/IGRoutes';
 
-let app = express();
+const app = express();
 dotenv.config()
 
 const port = process.env.PORT || 50000

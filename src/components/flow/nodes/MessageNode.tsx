@@ -28,7 +28,7 @@ export function MessageNode({ id, data, selected }: NodeProps) {
   const handleAddAttachment = (type: AttachmentItem['type']) => {
     setShowAttachMenu(false);
     let label = '';
-    let value = '';
+    const value = '';
 
     if (type === 'button') {
       label = 'Clique Aqui 🔥';

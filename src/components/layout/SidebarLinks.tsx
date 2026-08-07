@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Home, MessageSquare, Webhook, Workflow, Settings, Users, Megaphone, Bot, ShieldAlert, ShieldCheck, Sparkles, CreditCard, Bell, ArrowLeft, CalendarClock, Menu } from 'lucide-react';
+import { Home, MessageSquare, Webhook, Workflow, Settings, Users, Megaphone, Bot, ShieldAlert, ShieldCheck, Sparkles, CreditCard, Bell, ArrowLeft, CalendarClock, Menu, BarChart3 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { parseRole } from '@/utils/rbac';
 import { DEFAULT_DASHBOARD_MENUS, fetchDashboardMenus, getMenuByHref, subscribeDashboardMenus, type DashboardMenu } from '@/utils/dashboardMenus';
@@ -15,6 +15,7 @@ const getMenuItems = (unreadCount: number) => [
   { name: 'Nexa AI', icon: Bot, href: '/templates' },
   { name: 'Caixa de Entrada', icon: MessageSquare, href: '/inbox', badge: unreadCount > 0 ? unreadCount : undefined },
   { name: 'Agendamento', icon: CalendarClock, href: '/scheduler' },
+  { name: 'Relatório', icon: BarChart3, href: '/report' },
 ];
 
 export function SidebarLinks({ workspaceId, initialUnreadCount }: { workspaceId?: string, initialUnreadCount?: number }) {
