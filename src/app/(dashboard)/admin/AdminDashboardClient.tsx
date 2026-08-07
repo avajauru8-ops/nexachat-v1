@@ -80,6 +80,7 @@ export default function AdminDashboardClient({ currentUser }: Props) {
   const [metaAppSecret, setMetaAppSecret] = useState('');
   const [metaVerifyToken, setMetaVerifyToken] = useState('');
   const [showMetaSecret, setShowMetaSecret] = useState(false);
+  const [showMetaVerifyToken, setShowMetaVerifyToken] = useState(false);
   const [isSavingMeta, setIsSavingMeta] = useState(false);
   const [copiedWebhookUrl, setCopiedWebhookUrl] = useState(false);
 
@@ -709,20 +710,30 @@ export default function AdminDashboardClient({ currentUser }: Props) {
               </label>
               <div className="relative flex items-center">
                 <input
-                  type="text"
+                  type={showMetaVerifyToken ? "text" : "password"}
                   required
                   value={metaVerifyToken}
                   onChange={e => setMetaVerifyToken(e.target.value)}
-                  className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs font-mono text-gray-900 pr-10 outline-none focus:border-indigo-500"
+                  className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs font-mono text-gray-900 pr-16 outline-none focus:border-indigo-500"
                 />
-                <button
-                  type="button"
-                  onClick={() => handleCopy(metaVerifyToken, 'metaVerifyToken', 'META_VERIFY_TOKEN')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-600 transition-colors p-1"
-                  title="Copiar META_VERIFY_TOKEN"
-                >
-                  {copiedField === 'metaVerifyToken' ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-                </button>
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowMetaVerifyToken(!showMetaVerifyToken)}
+                    className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+                    title={showMetaVerifyToken ? "Ocultar" : "Mostrar"}
+                  >
+                    {showMetaVerifyToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(metaVerifyToken, 'metaVerifyToken', 'META_VERIFY_TOKEN')}
+                    className="text-gray-400 hover:text-indigo-600 transition-colors p-1"
+                    title="Copiar META_VERIFY_TOKEN"
+                  >
+                    {copiedField === 'metaVerifyToken' ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
