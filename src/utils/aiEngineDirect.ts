@@ -87,8 +87,8 @@ export async function executeAiDirect(data: {
     const dbGeminiKey = settingsMap['GEMINI_API_KEY'];
     const dbOpenaiKey = settingsMap['OPENAI_API_KEY'];
 
-    const geminiKey = process.env.GEMINI_API_KEY || dbGeminiKey;
-    const openaiKey = process.env.OPENAI_API_KEY || dbOpenaiKey;
+    const geminiKey = aiConfig.gemini_api_key || process.env.GEMINI_API_KEY || dbGeminiKey;
+    const openaiKey = aiConfig.openai_api_key || process.env.OPENAI_API_KEY || dbOpenaiKey;
 
     // 6. Chamar a API da IA
     let aiResponseText = '';

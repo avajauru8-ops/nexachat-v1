@@ -108,8 +108,8 @@ export const processAiAgent = inngest.createFunction(
       const dbGeminiKey = settingsMap['GEMINI_API_KEY'];
       const dbOpenaiKey = settingsMap['OPENAI_API_KEY'];
 
-      const geminiKey = process.env.GEMINI_API_KEY || dbGeminiKey;
-      const openaiKey = process.env.OPENAI_API_KEY || dbOpenaiKey;
+      const geminiKey = aiConfig.gemini_api_key || process.env.GEMINI_API_KEY || dbGeminiKey;
+      const openaiKey = aiConfig.openai_api_key || process.env.OPENAI_API_KEY || dbOpenaiKey;
       const provider = aiConfig.llm_provider || 'gemini';
 
       console.log(`[AI Agent] Provedor configurado: ${provider}`);
