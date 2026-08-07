@@ -120,9 +120,10 @@ export const processAiAgent = inngest.createFunction(
 
       // Map of old/legacy model names to supported ones
       const modelMap: Record<string, string> = {
-        'gemini-1.5-flash': 'gemini-flash-latest',
-        'gemini-1.5-pro': 'gemini-pro-latest',
-        'gemini-pro': 'gemini-pro-latest',
+        'gemini-flash-latest': 'gemini-1.5-flash-latest',
+        'gemini-1.5-flash': 'gemini-1.5-flash-latest',
+        'gemini-1.5-pro': 'gemini-1.5-pro-latest',
+        'gemini-pro': 'gemini-1.5-pro-latest',
       };
 
       try {
