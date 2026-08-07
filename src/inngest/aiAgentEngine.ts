@@ -118,13 +118,13 @@ export const processAiAgent = inngest.createFunction(
         return `Obrigado pela mensagem! Configure a chave de API da IA nas Integrações para que eu possa responder automaticamente.`;
       }
 
-      // Map of old/legacy model names to supported ones
-      const modelMap: Record<string, string> = {
-        'gemini-flash-latest': 'gemini-1.5-flash-latest',
-        'gemini-1.5-flash': 'gemini-1.5-flash-latest',
-        'gemini-1.5-pro': 'gemini-1.5-pro-latest',
-        'gemini-pro': 'gemini-1.5-pro-latest',
-      };
+        const modelId = aiConfig.model || 'gemini-flash-latest';
+        const modelMap: Record<string, string> = {
+          'gemini-1.5-flash': 'gemini-flash-latest',
+          'gemini-1.5-flash-latest': 'gemini-flash-latest',
+          'gemini-1.5-pro': 'gemini-1.5-pro-latest',
+          'gemini-pro': 'gemini-1.5-pro-latest',
+        };
 
       try {
         if (provider === 'gemini' || (!openaiKey && geminiKey)) {

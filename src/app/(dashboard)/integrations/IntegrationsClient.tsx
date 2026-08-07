@@ -39,7 +39,7 @@ export default function IntegrationsClient({ connectedAccount: initialConnectedA
   const [aiName, setAiName] = useState('Assistente IA NexaChat');
   const [systemPrompt, setSystemPrompt] = useState('Você é um assistente virtual atencioso e prestativo da nossa empresa no Instagram. Responda de forma clara, educada e sucinta em português.');
   const [llmProvider, setLlmProvider] = useState('gemini');
-  const [model, setModel] = useState('gemini-1.5-flash-latest');
+  const [model, setModel] = useState('gemini-flash-latest');
   const [handoffKeywords, setHandoffKeywords] = useState('falar com humano, atendente, suporte humano');
   const [crmWebhookUrl, setCrmWebhookUrl] = useState('');
 
@@ -84,7 +84,7 @@ export default function IntegrationsClient({ connectedAccount: initialConnectedA
           setAiName(data.name || 'Assistente IA NexaChat');
           setSystemPrompt(data.system_prompt || '');
           setLlmProvider(data.llm_provider || 'gemini');
-          setModel(data.model || 'gemini-1.5-flash-latest');
+          setModel(data.model || 'gemini-flash-latest');
           const keywords = data.handoff_rules?.keywords || ['falar com humano', 'atendente'];
           setHandoffKeywords(Array.isArray(keywords) ? keywords.join(', ') : String(keywords));
         }
@@ -400,7 +400,11 @@ export default function IntegrationsClient({ connectedAccount: initialConnectedA
                 <label className="block text-xs font-semibold text-gray-700 mb-1">Provedor de LLM</label>
                 <select
                   value={llmProvider}
-                  onChange={e => setLlmProvider(e.target.value)}
+                  onChange={e => {
+                    const newProv = e.target.value;
+                    setLlmProvider(newProv);
+                    setModel(newProv === 'gemini' ? 'gemini-flash-latest' : 'gpt-4o-mini');
+                  }}
                   className="w-full px-3.5 py-2 border border-gray-300 rounded-xl text-sm font-medium text-gray-900 focus:outline-none focus:border-purple-500 bg-white"
                 >
                   <option value="openai">OpenAI</option>
@@ -415,11 +419,19 @@ export default function IntegrationsClient({ connectedAccount: initialConnectedA
                   onChange={e => setModel(e.target.value)}
                   className="w-full px-3.5 py-2 border border-gray-300 rounded-xl text-sm font-medium text-gray-900 focus:outline-none focus:border-purple-500 bg-white"
                 >
-                  <option value="gpt-4o-mini">gpt-4o-mini (Rápido e econômico)</option>
-                  <option value="gpt-4o">gpt-4o (Avançado)</option>
-                  <option value="gemini-1.5-flash-latest">gemini-1.5-flash-latest (Rápido e gratuito)</option>
-                  <option value="gemini-1.5-pro-latest">gemini-1.5-pro-latest (Mais inteligente)</option>
-                  <option value="gemini-2.5-flash">gemini-2.5-flash (Mais recente)</option>
+                  {llmProvider === 'openai' && (
+                    <>
+                      <option value="gpt-4o-mini">gpt-4o-mini (Rápido e econômico)</option>
+                      <option value="gpt-4o">gpt-4o (Avançado)</option>
+                    </>
+                  )}
+                  {llmProvider === 'gemini' && (
+                    <>
+                      <option value="gemini-flash-latest">gemini-flash-latest (Rápido e gratuito)</option>
+                      <option value="gemini-1.5-pro-latest">gemini-1.5-pro-latest (Mais inteligente)</option>
+                      <option value="gemini-2.5-flash">gemini-2.5-flash (Mais recente)</option>
+                    </>
+                  )}
                 </select>
               </div>
             </div>

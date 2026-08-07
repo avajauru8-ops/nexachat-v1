@@ -33,7 +33,7 @@ export async function GET() {
       gemini_api_key: settingsMap['GEMINI_API_KEY'] || process.env.GEMINI_API_KEY || '',
       openai_api_key: settingsMap['OPENAI_API_KEY'] || process.env.OPENAI_API_KEY || '',
       default_provider: settingsMap['DEFAULT_LLM_PROVIDER'] || 'gemini',
-      default_model: settingsMap['DEFAULT_LLM_MODEL'] || 'gemini-1.5-flash',
+      default_model: settingsMap['DEFAULT_LLM_MODEL'] || 'gemini-flash-latest',
       global_system_prompt: settingsMap['GLOBAL_SYSTEM_PROMPT'] || 'Você é um assistente virtual atencioso e inteligente da nossa empresa no Instagram.'
     });
   } catch (error: unknown) {
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
       { key: 'GEMINI_API_KEY', value: String(gemini_api_key || '').trim() },
       { key: 'OPENAI_API_KEY', value: String(openai_api_key || '').trim() },
       { key: 'DEFAULT_LLM_PROVIDER', value: String(default_provider || 'gemini').trim() },
-      { key: 'DEFAULT_LLM_MODEL', value: String(default_model || 'gemini-1.5-flash').trim() },
+      { key: 'DEFAULT_LLM_MODEL', value: String(default_model || 'gemini-flash-latest').trim() },
       { key: 'GLOBAL_SYSTEM_PROMPT', value: String(global_system_prompt || '').trim() }
     ];
 

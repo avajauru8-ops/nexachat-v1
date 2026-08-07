@@ -88,7 +88,7 @@ export default function AdminDashboardClient({ currentUser }: Props) {
   const [showGeminiKey, setShowGeminiKey] = useState(false);
   const [showOpenaiKey, setShowOpenaiKey] = useState(false);
   const [defaultProvider, setDefaultProvider] = useState('gemini');
-  const [defaultModel, setDefaultModel] = useState('gemini-1.5-flash');
+  const [defaultModel, setDefaultModel] = useState('gemini-flash-latest');
   const [globalSystemPrompt, setGlobalSystemPrompt] = useState('Você é um assistente virtual atencioso.');
   const [isSavingAi, setIsSavingAi] = useState(false);
   const [isLoadingAi, setIsLoadingAi] = useState(true);
@@ -168,7 +168,7 @@ export default function AdminDashboardClient({ currentUser }: Props) {
         setGeminiApiKey(data.gemini_api_key || '');
         setOpenaiApiKey(data.openai_api_key || '');
         setDefaultProvider(data.default_provider || 'gemini');
-        setDefaultModel(data.default_model || 'gemini-1.5-flash');
+        setDefaultModel(data.default_model || 'gemini-flash-latest');
         setGlobalSystemPrompt(data.global_system_prompt || '');
       })
       .finally(() => setIsLoadingAi(false));
@@ -1055,7 +1055,11 @@ export default function AdminDashboardClient({ currentUser }: Props) {
               <label className="block text-xs font-bold text-gray-700 mb-1">Provedor Padrão do Sistema</label>
               <select
                 value={defaultProvider}
-                onChange={e => setDefaultProvider(e.target.value)}
+                onChange={e => {
+                  const newProv = e.target.value;
+                  setDefaultProvider(newProv);
+                  setDefaultModel(newProv === 'gemini' ? 'gemini-flash-latest' : 'gpt-4o-mini');
+                }}
                 className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs font-bold text-gray-900 bg-white outline-none cursor-pointer"
               >
                 <option value="gemini">Google Gemini (Gratuito & Rápido)</option>
@@ -1070,10 +1074,18 @@ export default function AdminDashboardClient({ currentUser }: Props) {
                 onChange={e => setDefaultModel(e.target.value)}
                 className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs font-bold text-gray-900 bg-white outline-none cursor-pointer"
               >
-                <option value="gemini-1.5-flash">gemini-1.5-flash (Ultra Rápido)</option>
-                <option value="gemini-1.5-pro">gemini-1.5-pro (Raciocínio Complexo)</option>
-                <option value="gpt-4o-mini">gpt-4o-mini (Econômico)</option>
-                <option value="gpt-4o">gpt-4o (Avançado)</option>
+                {defaultProvider === 'gemini' && (
+                  <>
+                    <option value="gemini-flash-latest">gemini-flash-latest (Ultra Rápido)</option>
+                    <option value="gemini-1.5-pro">gemini-1.5-pro (Raciocínio Complexo)</option>
+                  </>
+                )}
+                {defaultProvider === 'openai' && (
+                  <>
+                    <option value="gpt-4o-mini">gpt-4o-mini (Econômico)</option>
+                    <option value="gpt-4o">gpt-4o (Avançado)</option>
+                  </>
+                )}
               </select>
             </div>
           </div>

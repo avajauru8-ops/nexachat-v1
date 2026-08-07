@@ -134,10 +134,10 @@ export async function executeAiDirect(data: {
           }
 
           if (!aiResponseText) {
-            const modelId = aiConfig.model || 'gemini-1.5-flash-latest';
+            const modelId = aiConfig.model || 'gemini-flash-latest';
             const modelMap: Record<string, string> = {
-              'gemini-flash-latest': 'gemini-1.5-flash-latest',
-              'gemini-1.5-flash': 'gemini-1.5-flash-latest',
+              'gemini-1.5-flash': 'gemini-flash-latest',
+              'gemini-1.5-flash-latest': 'gemini-flash-latest',
               'gemini-1.5-pro': 'gemini-1.5-pro-latest',
               'gemini-pro': 'gemini-1.5-pro-latest',
             };
