@@ -42,65 +42,52 @@ export async function GET(request: Request) {
     since.setDate(since.getDate() - 30);
     const sinceStr = since.toISOString().split('T')[0];
 
-    const [genderRes, ageRes, countryRes, cityRes] = await Promise.all([
-      fetch(
-        `https://${domain}/v22.0/${ig_user_id}/insights?metric=impressions&period=day&since=${sinceStr}&breakdown=gender&access_token=${access_token}`
-      ),
-      fetch(
-        `https://${domain}/v22.0/${ig_user_id}/insights?metric=impressions&period=day&since=${sinceStr}&breakdown=age&access_token=${access_token}`
-      ),
-      fetch(
-        `https://${domain}/v22.0/${ig_user_id}/insights?metric=impressions&period=day&since=${sinceStr}&breakdown=country&access_token=${access_token}`
-      ),
-      fetch(
-        `https://${domain}/v22.0/${ig_user_id}/insights?metric=impressions&period=day&since=${sinceStr}&breakdown=city&access_token=${access_token}`
-      ),
-    ]);
+    const res = await fetch(
+      `https://${domain}/v22.0/${ig_user_id}/insights?metric=audience_gender_age,audience_city,audience_country&period=lifetime&access_token=${access_token}`
+    );
+    const data = await res.json();
+    
+    let genderAgeData: Record<string, number> = {};
+    let cityDataObj: Record<string, number> = {};
+    let countryDataObj: Record<string, number> = {};
 
-    const genderData = await genderRes.json();
-    const ageData = await ageRes.json();
-    const countryData = await countryRes.json();
-    const cityData = await cityRes.json();
+    if (!data.error && data.data) {
+      for (const item of data.data) {
+        if (item.values && item.values.length > 0) {
+          const valObj = item.values[0].value || {};
+          if (item.name === 'audience_gender_age') genderAgeData = valObj;
+          if (item.name === 'audience_city') cityDataObj = valObj;
+          if (item.name === 'audience_country') countryDataObj = valObj;
+        }
+      }
+    }
 
-    const byGender = (genderData.data || []).map((row: Record<string, unknown>) => {
-      const values = (row.values || []) as Record<string, number>[];
-      const total = values.reduce((acc: number, v: Record<string, number>) => acc + (v.value || 0), 0);
-      return {
-        gender: row.title || row.name || '',
-        count: total,
-        percentage: 0,
-      };
-    });
+    const genderMap = new Map<string, number>();
+    const ageMap = new Map<string, number>();
+    
+    for (const [key, value] of Object.entries(genderAgeData)) {
+      const [g, a] = key.split('.');
+      const genderLabel = g === 'F' ? 'Mulher' : g === 'M' ? 'Homem' : 'Não informado';
+      genderMap.set(genderLabel, (genderMap.get(genderLabel) || 0) + (value as number));
+      if (a) {
+        ageMap.set(a, (ageMap.get(a) || 0) + (value as number));
+      }
+    }
 
-    const byAge = (ageData.data || []).map((row: Record<string, unknown>) => {
-      const values = (row.values || []) as Record<string, number>[];
-      const total = values.reduce((acc: number, v: Record<string, number>) => acc + (v.value || 0), 0);
-      return {
-        age_range: row.title || row.name || '',
-        count: total,
-        percentage: 0,
-      };
-    });
+    const byGender = Array.from(genderMap.entries()).map(([gender, count]) => ({ gender, count, percentage: 0 }));
+    const byAge = Array.from(ageMap.entries()).map(([age_range, count]) => ({ age_range, count, percentage: 0 }));
+    
+    byAge.sort((a, b) => a.age_range.localeCompare(b.age_range));
 
-    const byCountry = (countryData.data || []).map((row: Record<string, unknown>) => {
-      const values = (row.values || []) as Record<string, number>[];
-      const total = values.reduce((acc: number, v: Record<string, number>) => acc + (v.value || 0), 0);
-      return {
-        country: row.title || row.name || '',
-        count: total,
-        percentage: 0,
-      };
-    });
+    const byCity = Object.entries(cityDataObj)
+      .map(([city, count]) => ({ city, count: count as number, percentage: 0 }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 15);
 
-    const byCity = (cityData.data || []).map((row: Record<string, unknown>) => {
-      const values = (row.values || []) as Record<string, number>[];
-      const total = values.reduce((acc: number, v: Record<string, number>) => acc + (v.value || 0), 0);
-      return {
-        city: row.title || row.name || '',
-        count: total,
-        percentage: 0,
-      };
-    });
+    const byCountry = Object.entries(countryDataObj)
+      .map(([country, count]) => ({ country, count: count as number, percentage: 0 }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 15);
 
     const calcPercentages = (arr: Array<{ count: number; percentage: number }>) => {
       const total = arr.reduce((sum, item) => sum + item.count, 0);

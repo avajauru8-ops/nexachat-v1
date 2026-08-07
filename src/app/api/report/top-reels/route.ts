@@ -39,7 +39,7 @@ export async function GET(request: Request) {
     const domain = isMetaToken ? 'graph.facebook.com' : 'graph.instagram.com';
 
     const res = await fetch(
-      `https://${domain}/v22.0/${ig_user_id}/media?fields=id,caption,media_type,media_url,permalink,timestamp,insights.metric(impressions,engagement,likes,comments,shares,saves)&limit=50&access_token=${access_token}`
+      `https://${domain}/v22.0/${ig_user_id}/media?fields=id,caption,media_type,media_url,permalink,timestamp,like_count,comments_count,insights.metric(impressions,saved,shares)&limit=50&access_token=${access_token}`
     );
     const data = await res.json();
 
@@ -51,8 +51,8 @@ export async function GET(request: Request) {
       .filter((item: Record<string, unknown>) => item.media_type === 'REELS' || (item.media_type === 'VIDEO' && typeof item.caption === 'string' && item.caption.includes('reel')))
       .map((item: Record<string, unknown>) => {
         let views = 0;
-        let likes = 0;
-        let comments = 0;
+        let likes = (item.like_count as number) || 0;
+        let comments = (item.comments_count as number) || 0;
         let shares = 0;
         let saves = 0;
 
@@ -62,11 +62,8 @@ export async function GET(request: Request) {
           const values = (ins.values || []) as Record<string, number>[];
           const total = values.reduce((acc: number, v: Record<string, number>) => acc + (v.value || 0), 0);
           if (metric === 'impressions') views = total;
-          if (metric === 'engagement') likes = total;
-          if (metric === 'likes') likes = total;
-          if (metric === 'comments') comments = total;
           if (metric === 'shares') shares = total;
-          if (metric === 'save') saves = total;
+          if (metric === 'saved' || metric === 'save') saves = total;
         }
 
         return {

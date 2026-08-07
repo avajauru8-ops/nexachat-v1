@@ -39,7 +39,7 @@ export async function GET(request: Request) {
     const domain = isMetaToken ? 'graph.facebook.com' : 'graph.instagram.com';
 
     const res = await fetch(
-      `https://${domain}/v22.0/${ig_user_id}/media?fields=id,media_type,timestamp,insights.metric(likes,comments)&limit=100&access_token=${access_token}`
+      `https://${domain}/v22.0/${ig_user_id}/media?fields=id,media_type,timestamp,like_count,comments_count&limit=100&access_token=${access_token}`
     );
     const data = await res.json();
 
@@ -60,15 +60,8 @@ export async function GET(request: Request) {
       }
       const entry = dayHourMap.get(key)!;
       entry.count += 1;
-
-      const insights = item.insights?.data || [];
-      for (const ins of insights) {
-        const metric = ins.name || ins.metric || '';
-        const values = ins.values || [];
-        const total = values.reduce((acc: number, v: Record<string, number>) => acc + (v.value || 0), 0);
-        if (metric === 'likes') entry.total_likes += total;
-        if (metric === 'comments') entry.total_comments += total;
-      }
+      entry.total_likes += (item.like_count as number) || 0;
+      entry.total_comments += (item.comments_count as number) || 0;
     }
 
     const result = Array.from(dayHourMap.entries()).map(([key, val]) => {

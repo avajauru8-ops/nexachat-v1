@@ -40,10 +40,10 @@ export async function GET(request: Request) {
 
     const since = new Date();
     since.setDate(since.getDate() - 30);
-    const sinceStr = since.toISOString().split('T')[0];
+    const sinceUnix = Math.floor(since.getTime() / 1000);
 
     const res = await fetch(
-      `https://${domain}/v22.0/${ig_user_id}/insights?metric=click_throughs&period=day&since=${sinceStr}&access_token=${access_token}`
+      `https://${domain}/v22.0/${ig_user_id}/insights?metric=website_clicks&period=day&since=${sinceUnix}&access_token=${access_token}`
     );
     const data = await res.json();
 

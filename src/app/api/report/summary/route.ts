@@ -43,7 +43,6 @@ function getGenderLabel(gender: string): string {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const genderFilter = searchParams.get('gender') || 'all';
 
     const account = await getInstagramAccount();
     const { access_token, ig_user_id } = account;
@@ -52,107 +51,67 @@ export async function GET(request: Request) {
 
     const since = new Date();
     since.setDate(since.getDate() - 30);
-    const sinceStr = since.toISOString().split('T')[0];
-
-    const metrics = ['impressions', 'reach', 'engagement', 'profile_views'];
-    const breakdown = genderFilter !== 'all' ? `gender=${genderFilter}` : undefined;
+    const sinceUnix = Math.floor(since.getTime() / 1000);
 
     const summary: Record<string, number> = { views: 0, interactions: 0, likes: 0, comments: 0, shares: 0, saves: 0 };
     const byGender: Array<{ label: string; views: number; interactions: number; likes: number; comments: number; shares: number; saves: number }> = [];
 
-    for (const metric of metrics) {
-      let url = `https://${domain}/v22.0/${ig_user_id}/insights?metric=${metric}&period=day&since=${sinceStr}&access_token=${access_token}`;
-      if (breakdown) url += `&breakdown=${breakdown}`;
-
+    // 1. Fetch User Insights (Impressions & Profile Views)
+    const userMetrics = ['impressions', 'profile_views'];
+    for (const metric of userMetrics) {
+      const url = `https://${domain}/v22.0/${ig_user_id}/insights?metric=${metric}&period=day&since=${sinceUnix}&access_token=${access_token}`;
       const res = await fetch(url);
       const data = await res.json();
-
-      if (data.error) continue;
-
-      const rows = data.data || [];
-      for (const row of rows) {
-        const values = row.values || [];
-        const total = values.reduce((acc: number, v: Record<string, number>) => acc + (v.value || 0), 0);
-
-        if (metric === 'impressions') summary.views = total;
-        if (metric === 'engagement') summary.interactions = total;
-        if (metric === 'reach') summary.views += total;
-      }
-    }
-
-    const likesRes = await fetch(
-      `https://${domain}/v22.0/${ig_user_id}/insights?metric=engagement&period=day&since=${sinceStr}&breakdown=post_type&access_token=${access_token}`
-    );
-    const likesData = await likesRes.json();
-    if (!likesData.error) {
-      const likesRows = likesData.data || [];
-      for (const row of likesRows) {
-        const values = row.values || [];
-        summary.likes = values.reduce((acc: number, v: Record<string, number>) => acc + (v.value || 0), 0);
-      }
-    }
-
-    const commentsRes = await fetch(
-      `https://${domain}/v22.0/${ig_user_id}/insights?metric=comments&period=day&since=${sinceStr}&access_token=${access_token}`
-    );
-    const commentsData = await commentsRes.json();
-    if (!commentsData.error) {
-      const commentsRows = commentsData.data || [];
-      for (const row of commentsRows) {
-        const values = row.values || [];
-        summary.comments = values.reduce((acc: number, v: Record<string, number>) => acc + (v.value || 0), 0);
-      }
-    }
-
-    const sharesRes = await fetch(
-      `https://${domain}/v22.0/${ig_user_id}/insights?metric=shares&period=day&since=${sinceStr}&access_token=${access_token}`
-    );
-    const sharesData = await sharesRes.json();
-    if (!sharesData.error) {
-      const sharesRows = sharesData.data || [];
-      for (const row of sharesRows) {
-        const values = row.values || [];
-        summary.shares = values.reduce((acc: number, v: Record<string, number>) => acc + (v.value || 0), 0);
-      }
-    }
-
-    const savesRes = await fetch(
-      `https://${domain}/v22.0/${ig_user_id}/insights?metric=save&period=day&since=${sinceStr}&access_token=${access_token}`
-    );
-    const savesData = await savesRes.json();
-    if (!savesData.error) {
-      const savesRows = savesData.data || [];
-      for (const row of savesRows) {
-        const values = row.values || [];
-        summary.saves = values.reduce((acc: number, v: Record<string, number>) => acc + (v.value || 0), 0);
-      }
-    }
-
-    if (genderFilter === 'all') {
-      const genderBreakdown = ['male', 'female', 'non_informed'];
-      for (const g of genderBreakdown) {
-        const gRes = await fetch(
-          `https://${domain}/v22.0/${ig_user_id}/insights?metric=impressions&period=day&since=${sinceStr}&breakdown=gender&gender=${g}&access_token=${access_token}`
-        );
-        const gData = await gRes.json();
-        if (gData.error) continue;
-        const gRows = gData.data || [];
-        let gViews = 0;
-        for (const row of gRows) {
+      if (!data.error && data.data) {
+        for (const row of data.data) {
           const values = row.values || [];
-          gViews = values.reduce((acc: number, v: Record<string, number>) => acc + (v.value || 0), 0);
+          const total = values.reduce((acc: number, v: Record<string, number>) => acc + (v.value || 0), 0);
+          if (metric === 'impressions') summary.views += total;
         }
-        byGender.push({
-          label: getGenderLabel(g),
-          views: gViews,
-          interactions: 0,
-          likes: 0,
-          comments: 0,
-          shares: 0,
-          saves: 0,
-        });
       }
     }
+
+    // 2. Fetch Media and sum up engagement metrics
+    let hasNext = true;
+    let afterCursor = '';
+    let fetchedCount = 0;
+    while (hasNext && fetchedCount < 100) { // Limit to 100 recent posts
+      let mediaUrl = `https://${domain}/v22.0/${ig_user_id}/media?fields=id,like_count,comments_count,insights.metric(saved,shares)&limit=50&access_token=${access_token}`;
+      if (afterCursor) mediaUrl += `&after=${afterCursor}`;
+      
+      const res = await fetch(mediaUrl);
+      const data = await res.json();
+      
+      if (data.error || !data.data) {
+        break;
+      }
+      
+      for (const item of data.data) {
+        // Standard fields
+        summary.likes += item.like_count || 0;
+        summary.comments += item.comments_count || 0;
+
+        // Insights fields (saved, shares)
+        const insights = item.insights?.data || [];
+        for (const ins of insights) {
+          const metric = ins.name || ins.metric || '';
+          const values = ins.values || [];
+          const total = values.reduce((acc: number, v: Record<string, number>) => acc + (v.value || 0), 0);
+          if (metric === 'saved' || metric === 'save') summary.saves += total;
+          if (metric === 'shares') summary.shares += total;
+        }
+      }
+      
+      fetchedCount += data.data.length;
+      
+      if (data.paging?.cursors?.after) {
+        afterCursor = data.paging.cursors.after;
+      } else {
+        hasNext = false;
+      }
+    }
+    
+    summary.interactions = summary.likes + summary.comments + summary.shares + summary.saves;
 
     return NextResponse.json({ summary, by_gender: byGender });
   } catch (error: unknown) {

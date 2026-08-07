@@ -39,7 +39,7 @@ export async function GET(request: Request) {
     const domain = isMetaToken ? 'graph.facebook.com' : 'graph.instagram.com';
 
     const res = await fetch(
-      `https://${domain}/v22.0/${ig_user_id}/media?fields=id,media_type,timestamp&limit=100&access_token=${access_token}`
+      `https://${domain}/v22.0/${ig_user_id}/media?fields=id,media_type,caption,timestamp,insights.metric(impressions)&limit=100&access_token=${access_token}`
     );
     const data = await res.json();
 
@@ -47,21 +47,30 @@ export async function GET(request: Request) {
       return NextResponse.json({ data: [] });
     }
 
-    const reels = (data.data || [])
-      .filter((item: Record<string, unknown>) => item.media_type === 'REELS')
-      .map((item: Record<string, unknown>) => {
-        const date = new Date(item.timestamp as string);
-        const day = date.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
-        const hour = date.getHours().toString().padStart(2, '0') + ':00';
-        return { day, hour };
-      });
-
     const dayHourMap = new Map<string, { count: number; total_views: number }>();
-    for (const reel of reels) {
-      const key = `${reel.day}|${reel.hour}`;
-      const existing = dayHourMap.get(key) || { count: 0, total_views: 0 };
-      existing.count += 1;
-      dayHourMap.set(key, existing);
+
+    for (const item of data.data || []) {
+      if (item.media_type !== 'REELS' && !(item.media_type === 'VIDEO' && typeof item.caption === 'string' && item.caption.includes('reel'))) {
+        continue;
+      }
+      const date = new Date(item.timestamp as string);
+      const day = date.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
+      const hour = date.getHours().toString().padStart(2, '0') + ':00';
+      const key = `${day}|${hour}`;
+
+      if (!dayHourMap.has(key)) {
+        dayHourMap.set(key, { count: 0, total_views: 0 });
+      }
+      const entry = dayHourMap.get(key)!;
+      entry.count += 1;
+
+      const insights = item.insights?.data || [];
+      for (const ins of insights) {
+        const metric = ins.name || ins.metric || '';
+        const values = ins.values || [];
+        const total = values.reduce((acc: number, v: Record<string, number>) => acc + (v.value || 0), 0);
+        if (metric === 'impressions') entry.total_views += total;
+      }
     }
 
     const result = Array.from(dayHourMap.entries()).map(([key, val]) => {

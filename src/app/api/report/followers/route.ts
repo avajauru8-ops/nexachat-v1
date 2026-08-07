@@ -40,42 +40,32 @@ export async function GET(request: Request) {
 
     const since = new Date();
     since.setDate(since.getDate() - 30);
-    const sinceStr = since.toISOString().split('T')[0];
+    const sinceUnix = Math.floor(since.getTime() / 1000);
 
-    const [followersRes, followRes] = await Promise.all([
+    const [userRes, insightsRes] = await Promise.all([
       fetch(
-        `https://${domain}/v22.0/${ig_user_id}/insights?metric=follower_count&period=day&since=${sinceStr}&access_token=${access_token}`
+        `https://${domain}/v22.0/${ig_user_id}?fields=followers_count&access_token=${access_token}`
       ),
       fetch(
-        `https://${domain}/v22.0/${ig_user_id}/insights?metric=follows&period=day&since=${sinceStr}&access_token=${access_token}`
+        `https://${domain}/v22.0/${ig_user_id}/insights?metric=follower_count&period=day&since=${sinceUnix}&access_token=${access_token}`
       ),
     ]);
 
-    const followersData = await followersRes.json();
-    const followData = await followRes.json();
+    const userData = await userRes.json();
+    const insightsData = await insightsRes.json();
 
-    let totalFollowers = 0;
+    let totalFollowers = userData.followers_count || 0;
     let newFollowers = 0;
     let lostFollowers = 0;
 
-    if (!followersData.error) {
-      const fRows = followersData.data || [];
-      for (const row of fRows) {
+    if (!insightsData.error && insightsData.data) {
+      for (const row of insightsData.data) {
         const values = row.values || [];
-        if (values.length > 0) {
-          totalFollowers = values[values.length - 1].value || 0;
-        }
-      }
-    }
-
-    if (!followData.error) {
-      const rows = followData.data || [];
-      for (const row of rows) {
-        const values = row.values || [];
-        for (const v of values) {
-          const val = v.value || 0;
-          if (val > 0) newFollowers += val;
-          if (val < 0) lostFollowers += Math.abs(val);
+        if (values.length >= 2) {
+          const first = values[0].value || 0;
+          const last = values[values.length - 1].value || 0;
+          if (last > first) newFollowers = last - first;
+          else if (first > last) lostFollowers = first - last;
         }
       }
     }

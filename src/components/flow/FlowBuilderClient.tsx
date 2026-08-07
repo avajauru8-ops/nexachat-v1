@@ -426,8 +426,9 @@ export function FlowBuilderClient({
     if (!nodes.some((n) => n.type === 'triggerNode' || n.type === 'trigger')) {
       return 'Adicione o bloco "Gatilho Inicial" para iniciar a automação.';
     }
-    if (!nodes.some((n) => n.type === 'messageNode' || n.type === 'commentReplyNode')) {
-      return 'Adicione pelo menos uma "Mensagem do Bot" ou "Responder Comentário" antes de publicar.';
+    const validActionNodes = ['messageNode', 'commentReplyNode', 'aiAgentNode', 'humanHandoffNode'];
+    if (!nodes.some((n) => n.type && validActionNodes.includes(n.type))) {
+      return 'Adicione pelo menos uma "Mensagem do Bot", "Responder Comentário", "Agente de IA" ou "Handoff Humano" antes de publicar.';
     }
     return null;
   };
