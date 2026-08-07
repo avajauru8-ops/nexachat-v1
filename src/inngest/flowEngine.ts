@@ -117,7 +117,9 @@ export const executeFlow = inngest.createFunction(
         await step.run(`node-${loopNodeId}-${iteration}-comment-reply`, async () => {
           const publicReply = node.data?.publicReply as string | undefined;
           if (publicReply && commentId && pageAccessToken) {
-            const url = `https://graph.facebook.com/v22.0/${commentId}/replies`;
+            const isMetaToken = pageAccessToken.startsWith('EAA');
+            const domain = isMetaToken ? 'graph.facebook.com' : 'graph.instagram.com';
+            const url = `https://${domain}/v22.0/${commentId}/replies`;
             try {
               const response = await fetch(url, {
                 method: 'POST',
