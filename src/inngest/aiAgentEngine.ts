@@ -1,6 +1,7 @@
 import { inngest } from './client';
 import { createClient } from '@supabase/supabase-js';
 import { canSendMessage } from '@/utils/instagramGuard';
+import { chunkText } from '@/utils/chunkText';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
@@ -234,20 +235,24 @@ export const processAiAgent = inngest.createFunction(
       await step.run('send-meta-instagram-msg', async () => {
         try {
           const graphHost = account.access_token.startsWith('EAA') ? 'graph.facebook.com' : 'graph.instagram.com';
-          const res = await fetch(`https://${graphHost}/v22.0/me/messages`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${account.access_token}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              recipient: { id: senderId },
-              message: { text: aiResponseText }
-            })
-          });
+          const chunks = chunkText(aiResponseText, 950);
+          
+          for (const chunk of chunks) {
+            const res = await fetch(`https://${graphHost}/v22.0/me/messages`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${account.access_token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                recipient: { id: senderId },
+                message: { text: chunk }
+              })
+            });
 
-          if (!res.ok) {
-            console.error('[AI Agent] Falha no envio Graph API:', await res.json());
+            if (!res.ok) {
+              console.error('[AI Agent] Falha no envio Graph API:', await res.json());
+            }
           }
         } catch (sendErr) {
           console.error('[AI Agent] Erro de rede ao disparar resposta Meta:', sendErr);

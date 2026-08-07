@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { canSendMessage } from '@/utils/instagramGuard';
+import { chunkText } from '@/utils/chunkText';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
@@ -218,23 +219,28 @@ export async function executeAiDirect(data: {
 
       if (account?.access_token) {
         try {
-          const res = await fetch('https://graph.instagram.com/v22.0/me/messages', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${account.access_token}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              recipient: { id: senderId },
-              message: { text: aiResponseText }
-            })
-          });
+          const graphHost = account.access_token.startsWith('EAA') ? 'graph.facebook.com' : 'graph.instagram.com';
+          const chunks = chunkText(aiResponseText, 950);
 
-          const metaResult = await res.json();
-          if (!res.ok || metaResult.error) {
-            console.error('[AI Engine Direct] Falha no envio Meta Graph API:', metaResult);
-          } else {
-            console.log('[AI Engine Direct] Mensagem enviada com sucesso via Meta Graph API');
+          for (const chunk of chunks) {
+            const res = await fetch(`https://${graphHost}/v22.0/me/messages`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${account.access_token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                recipient: { id: senderId },
+                message: { text: chunk }
+              })
+            });
+
+            const metaResult = await res.json();
+            if (!res.ok || metaResult.error) {
+              console.error('[AI Engine Direct] Falha no envio Meta Graph API:', metaResult);
+            } else {
+              console.log('[AI Engine Direct] Mensagem enviada com sucesso via Meta Graph API');
+            }
           }
         } catch (sendErr) {
           console.error('[AI Engine Direct] Erro de rede ao enviar via Meta:', sendErr);

@@ -1,4 +1,5 @@
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import { chunkText } from '../utils/chunkText';
 
 const supabaseAdmin = createSupabaseClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -107,6 +108,29 @@ export async function sendMessageToMeta({
   const metaBody: any = {
     recipient: commentId ? { comment_id: commentId } : { id: igScopedId }
   };
+
+  // Se for apenas texto longo, divide em chunks
+  if (!attachmentId && !finalMediaUrl && content && content.length > 950) {
+    const chunks = chunkText(content, 950);
+    // Envia todos menos o último chunk (sem botões)
+    for (let i = 0; i < chunks.length - 1; i++) {
+      const tempBody = { ...metaBody, message: { text: chunks[i] } };
+      const tempRes = await fetch(metaUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${pageAccessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(tempBody)
+      });
+      const tempData = await tempRes.json();
+      if (tempData.error) {
+        throw new Error(tempData.error.message || 'Erro ao enviar chunk pela Meta');
+      }
+    }
+    // O último chunk será enviado pelo fluxo normal (podendo ter botões)
+    content = chunks[chunks.length - 1];
+  }
 
   if (attachmentId) {
     metaBody.message = {
