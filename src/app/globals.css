@@ -105,6 +105,7 @@ body {
 .react-flow__node textarea,
 .react-flow__node input,
 .react-flow__node select {
+  -webkit-user-select: text;
   user-select: text;
 }
 

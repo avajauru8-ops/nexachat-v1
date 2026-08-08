@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Check, Copy, Settings, Users, Database, Sparkles, Plus, Trash2, Save, CreditCard, Bell, Send, LayoutDashboard, ShieldAlert, UserPlus, RefreshCw, ShieldCheck, Cpu, Pencil, EyeOff, Eye, Globe, CheckCircle, X, Menu, Power, Wrench } from 'lucide-react';
+import { Check, Copy, Users, Sparkles, Plus, Trash2, Save, CreditCard, Bell, LayoutDashboard, ShieldAlert, UserPlus, RefreshCw, ShieldCheck, Cpu, Pencil, EyeOff, Eye, Globe, CheckCircle, X, Menu, Power, Wrench } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { DEFAULT_DASHBOARD_MENUS, notifyMenusChanged, type DashboardMenu } from '@/utils/dashboardMenus';
 
@@ -44,17 +44,15 @@ interface Props {
 
 export default function AdminDashboardClient({ currentUser }: Props) {
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'meta' | 'ai' | 'plans' | 'notifications' | 'menus'>(() => {
-    const tabParam = searchParams.get('tab');
-    return (tabParam as any) || 'dashboard';
-  });
+  type TabType = 'dashboard' | 'users' | 'meta' | 'ai' | 'plans' | 'notifications' | 'menus';
+  const tabParam = searchParams.get('tab') as TabType | null;
+  const [activeTab, setActiveTab] = useState<TabType>(tabParam || 'dashboard');
+  const [prevTabParam, setPrevTabParam] = useState<TabType | null>(tabParam);
 
-  useEffect(() => {
-    const tabParam = searchParams.get('tab');
-    if (tabParam && tabParam !== activeTab) {
-      setActiveTab(tabParam as any);
-    }
-  }, [searchParams]);
+  if (tabParam !== prevTabParam) {
+    setPrevTabParam(tabParam);
+    if (tabParam) setActiveTab(tabParam);
+  }
 
   const [users, setUsers] = useState<UserItem[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
@@ -62,7 +60,7 @@ export default function AdminDashboardClient({ currentUser }: Props) {
   const [newEmail, setNewEmail] = useState('');
   const [newName, setNewName] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [newRole, setNewRole] = useState('Atendente');
+  const [newRole, setNewRole] = useState('Usuário');
   const [isCreatingUser, setIsCreatingUser] = useState(false);
 
   const [showEditUserModal, setShowEditUserModal] = useState(false);
@@ -82,7 +80,6 @@ export default function AdminDashboardClient({ currentUser }: Props) {
   const [showMetaSecret, setShowMetaSecret] = useState(false);
   const [showMetaVerifyToken, setShowMetaVerifyToken] = useState(false);
   const [isSavingMeta, setIsSavingMeta] = useState(false);
-  const [copiedWebhookUrl, setCopiedWebhookUrl] = useState(false);
 
   const [geminiApiKey, setGeminiApiKey] = useState('');
   const [openaiApiKey, setOpenaiApiKey] = useState('');
@@ -92,12 +89,10 @@ export default function AdminDashboardClient({ currentUser }: Props) {
   const [defaultModel, setDefaultModel] = useState('gemini-flash-latest');
   const [globalSystemPrompt, setGlobalSystemPrompt] = useState('Você é um assistente virtual atencioso.');
   const [isSavingAi, setIsSavingAi] = useState(false);
-  const [isLoadingAi, setIsLoadingAi] = useState(true);
 
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
   const [plans, setPlans] = useState<PlanItem[]>([]);
-  const [isLoadingPlans, setIsLoadingPlans] = useState(true);
   const [showCreatePlanModal, setShowCreatePlanModal] = useState(false);
   const [planName, setPlanName] = useState('');
   const [planPrice, setPlanPrice] = useState('97');
@@ -120,7 +115,6 @@ export default function AdminDashboardClient({ currentUser }: Props) {
   const [notifType, setNotifType] = useState('info');
   const [isSendingNotif, setIsSendingNotif] = useState(false);
 
-  const [isClient, setIsClient] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState('');
 
   const [menus, setMenus] = useState<DashboardMenu[]>(DEFAULT_DASHBOARD_MENUS);
@@ -128,8 +122,9 @@ export default function AdminDashboardClient({ currentUser }: Props) {
   const [isSavingMenus, setIsSavingMenus] = useState(false);
 
   useEffect(() => {
-    setIsClient(true);
-    setWebhookUrl(`${window.location.origin}/api/webhooks/instagram`);
+    setTimeout(() => {
+      setWebhookUrl(`${window.location.origin}/api/webhooks/instagram`);
+    }, 0);
     fetchUsers();
     fetchMetaCredentials();
     fetchAiCredentials();
@@ -145,14 +140,14 @@ export default function AdminDashboardClient({ currentUser }: Props) {
     setTimeout(() => setCopiedField(null), 2000);
   };
 
-  const fetchUsers = () => {
+  function fetchUsers() {
     fetch('/api/admin/users')
       .then(res => res.json())
       .then(data => { if (data.users) setUsers(data.users); })
       .finally(() => setIsLoadingUsers(false));
   };
 
-  const fetchMetaCredentials = () => {
+  function fetchMetaCredentials() {
     fetch('/api/admin/meta-credentials')
       .then(res => res.json())
       .then(data => {
@@ -162,7 +157,7 @@ export default function AdminDashboardClient({ currentUser }: Props) {
       });
   };
 
-  const fetchAiCredentials = () => {
+  function fetchAiCredentials() {
     fetch('/api/admin/ai-credentials')
       .then(res => res.json())
       .then(data => {
@@ -171,24 +166,22 @@ export default function AdminDashboardClient({ currentUser }: Props) {
         setDefaultProvider(data.default_provider || 'gemini');
         setDefaultModel(data.default_model || 'gemini-flash-latest');
         setGlobalSystemPrompt(data.global_system_prompt || '');
-      })
-      .finally(() => setIsLoadingAi(false));
-  };
+      });
+  }
 
-  const fetchPlans = () => {
+  function fetchPlans() {
     fetch('/api/admin/plans')
       .then(res => res.json())
-      .then(data => { if (data.plans) setPlans(data.plans); })
-      .finally(() => setIsLoadingPlans(false));
-  };
+      .then(data => { if (data.plans) setPlans(data.plans); });
+  }
 
-  const fetchNotifications = () => {
+  function fetchNotifications() {
     fetch('/api/admin/notifications')
       .then(res => res.json())
       .then(data => { if (data.notifications) setNotifications(data.notifications); });
   };
 
-  const fetchMenus = () => {
+  function fetchMenus() {
     fetch('/api/admin/menus')
       .then(res => res.json())
       .then(data => { if (Array.isArray(data.menus)) setMenus(data.menus); })
@@ -238,7 +231,10 @@ export default function AdminDashboardClient({ currentUser }: Props) {
         toast.success('Usuário criado!');
         setShowCreateUserModal(false);
         fetchUsers();
-      } else toast.error('Erro ao criar usuário');
+      } else {
+        const data = await res.json().catch(() => null);
+        toast.error(data?.error || 'Erro ao criar usuário');
+      }
     } finally { setIsCreatingUser(false); }
   };
 
@@ -264,21 +260,6 @@ export default function AdminDashboardClient({ currentUser }: Props) {
       setShowEditUserModal(false);
       fetchUsers();
     } finally { setIsUpdatingUser(false); }
-  };
-
-  const handleChangeRole = async (userId: string, role: string) => {
-    const toastId = toast.loading('Atualizando permissões...');
-    try {
-      const res = await fetch('/api/admin/users', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, role })
-      });
-      if (res.ok) {
-        toast.success('Papel do usuário atualizado!');
-        fetchUsers();
-      } else toast.error('Erro ao alterar papel.');
-    } catch { toast.error('Erro de servidor.'); }
   };
 
   const executeDeleteUser = async () => {
