@@ -1,4 +1,4 @@
-import { processMetaPayload } from './src/utils/webhookProcessor.ts';
+import { processMetaPayload } from './src/utils/webhookProcessor';
 import dotenv from "dotenv";
 dotenv.config({path: ".env.local"});
 
