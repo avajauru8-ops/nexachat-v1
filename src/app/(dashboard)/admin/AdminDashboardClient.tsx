@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Check, Copy, Users, Sparkles, Plus, Trash2, Save, CreditCard, Bell, LayoutDashboard, ShieldAlert, UserPlus, RefreshCw, ShieldCheck, Cpu, Pencil, EyeOff, Eye, Globe, CheckCircle, X, Menu, Power, Wrench } from 'lucide-react';
+import { Check, Copy, Users, Sparkles, Plus, Trash2, Save, CreditCard, Bell, LayoutDashboard, ShieldAlert, UserPlus, RefreshCw, ShieldCheck, Cpu, Pencil, EyeOff, Eye, Globe, CheckCircle, X, Menu, Power, Wrench, Webhook } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { DEFAULT_DASHBOARD_MENUS, notifyMenusChanged, type DashboardMenu } from '@/utils/dashboardMenus';
 
@@ -44,7 +44,7 @@ interface Props {
 
 export default function AdminDashboardClient({ currentUser }: Props) {
   const searchParams = useSearchParams();
-  type TabType = 'dashboard' | 'users' | 'meta' | 'ai' | 'plans' | 'notifications' | 'menus';
+  type TabType = 'dashboard' | 'users' | 'meta' | 'meta-test' | 'ai' | 'plans' | 'notifications' | 'menus';
   const tabParam = searchParams.get('tab') as TabType | null;
   const [activeTab, setActiveTab] = useState<TabType>(tabParam || 'dashboard');
   const [prevTabParam, setPrevTabParam] = useState<TabType | null>(tabParam);
@@ -121,6 +121,13 @@ export default function AdminDashboardClient({ currentUser }: Props) {
   const [isLoadingMenus, setIsLoadingMenus] = useState(true);
   const [isSavingMenus, setIsSavingMenus] = useState(false);
 
+  // Meta Test States
+  const [igAccounts, setIgAccounts] = useState<any[]>([]);
+  const [selectedIgAccount, setSelectedIgAccount] = useState('');
+  const [testResult, setTestResult] = useState<any>(null);
+  const [isTesting, setIsTesting] = useState(false);
+  const [testTargetId, setTestTargetId] = useState('');
+
   useEffect(() => {
     setTimeout(() => {
       setWebhookUrl(`${window.location.origin}/api/webhooks/instagram`);
@@ -131,7 +138,47 @@ export default function AdminDashboardClient({ currentUser }: Props) {
     fetchPlans();
     fetchNotifications();
     fetchMenus();
+    fetchIgAccounts();
   }, []);
+
+  function fetchIgAccounts() {
+    fetch('/api/admin/meta-test')
+      .then(res => res.json())
+      .then(data => { 
+        if (data.accounts) {
+          setIgAccounts(data.accounts);
+          if (data.accounts.length > 0) setSelectedIgAccount(data.accounts[0].id);
+        }
+      });
+  }
+
+  const runMetaTest = async (action: string) => {
+    if (!selectedIgAccount) {
+      toast.error('Selecione uma conta primeiro.');
+      return;
+    }
+    if (action === 'test_dm' && !testTargetId) {
+      toast.error('Digite o ID de destino para a DM.');
+      return;
+    }
+    setIsTesting(true);
+    setTestResult(null);
+    try {
+      const res = await fetch('/api/admin/meta-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, accountId: selectedIgAccount, targetId: testTargetId })
+      });
+      const data = await res.json();
+      setTestResult(data);
+      if (res.ok) toast.success('Teste executado!');
+      else toast.error('Falha no teste.');
+    } catch (e) {
+      toast.error('Erro ao executar teste.');
+    } finally {
+      setIsTesting(false);
+    }
+  };
 
   const handleCopy = (text: string, fieldId: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -423,6 +470,15 @@ export default function AdminDashboardClient({ currentUser }: Props) {
           }`}
         >
           <Menu className="w-4 h-4" /> Menus & Manutenção
+        </button>
+
+        <button
+          onClick={() => setActiveTab('meta-test')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+            activeTab === 'meta-test' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+          }`}
+        >
+          <Webhook className="w-4 h-4" /> Testes Meta API
         </button>
       </div>
 
@@ -1628,6 +1684,101 @@ export default function AdminDashboardClient({ currentUser }: Props) {
               <br />
               Alterações valem para todos os usuários instantaneamente após salvar.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* ABA: TESTES META API */}
+      {activeTab === 'meta-test' && (
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-6">
+          <div className="border-b border-gray-100 pb-4">
+            <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
+              <Webhook className="w-5 h-5 text-indigo-600" /> Testes da API Meta (Instagram)
+            </h2>
+            <p className="text-xs text-gray-500 mt-0.5">Teste as permissões e funções da Graph API usando contas conectadas.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Selecione uma Conta</label>
+                <select
+                  value={selectedIgAccount}
+                  onChange={e => setSelectedIgAccount(e.target.value)}
+                  className="w-full px-3.5 py-2 border border-gray-300 rounded-xl text-xs font-medium text-gray-900 outline-none focus:border-indigo-500 bg-white"
+                >
+                  <option value="">Selecione...</option>
+                  {igAccounts.map(acc => (
+                    <option key={acc.id} value={acc.id}>
+                      {acc.name || acc.ig_user_id} ({acc.status})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2 pt-2 border-t border-gray-100">
+                <p className="text-xs font-bold text-gray-700">Testes Rápidos</p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => runMetaTest('check_permissions')}
+                    disabled={isTesting}
+                    className="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-[11px] font-bold border border-indigo-200 disabled:opacity-50"
+                  >
+                    🔍 Ver Permissões
+                  </button>
+                  <button
+                    onClick={() => runMetaTest('test_insights')}
+                    disabled={isTesting}
+                    className="px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-[11px] font-bold border border-blue-200 disabled:opacity-50"
+                  >
+                    📊 Testar Insights
+                  </button>
+                  <button
+                    onClick={() => runMetaTest('test_comments')}
+                    disabled={isTesting}
+                    className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-[11px] font-bold border border-emerald-200 disabled:opacity-50"
+                  >
+                    💬 Testar Comentários
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-2 border-t border-gray-100">
+                <p className="text-xs font-bold text-gray-700">Testar Envio de DM</p>
+                <input
+                  type="text"
+                  placeholder="ID do Usuário Destino (ig_scoped_id)"
+                  value={testTargetId}
+                  onChange={e => setTestTargetId(e.target.value)}
+                  className="w-full px-3.5 py-2 border border-gray-300 rounded-xl text-xs font-medium text-gray-900 outline-none focus:border-indigo-500 mb-2"
+                />
+                <button
+                  onClick={() => runMetaTest('test_dm')}
+                  disabled={isTesting}
+                  className="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-[11px] font-bold w-full disabled:opacity-50"
+                >
+                  Enviar Mensagem de Teste
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-gray-900 rounded-xl p-4 overflow-hidden flex flex-col h-[400px]">
+              <div className="flex items-center justify-between mb-2 shrink-0">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Console de Retorno API</span>
+                {isTesting && <span className="text-[10px] font-bold text-emerald-400 animate-pulse">Processando...</span>}
+              </div>
+              <div className="flex-1 overflow-y-auto bg-black/50 rounded-lg p-3 border border-white/5">
+                {testResult ? (
+                  <pre className="text-[11px] font-mono text-emerald-400 whitespace-pre-wrap break-all">
+                    {JSON.stringify(testResult, null, 2)}
+                  </pre>
+                ) : (
+                  <p className="text-[11px] font-mono text-gray-500 italic text-center mt-10">
+                    O resultado das requisições aparecerá aqui.
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}

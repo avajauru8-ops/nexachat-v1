@@ -40,6 +40,38 @@ export async function updateSession(request: NextRequest) {
     const isAuthRoute = request.nextUrl.pathname.startsWith('/auth')
     const isApiRoute = request.nextUrl.pathname.startsWith('/api')
 
+    const now = Date.now()
+    const lastActiveCookie = request.cookies.get('last_active')?.value
+    const lastActive = lastActiveCookie ? parseInt(lastActiveCookie, 10) : now
+    const SESSION_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutos
+
+    // Verificação de timeout por inatividade (5 minutos)
+    if (user && (now - lastActive > SESSION_TIMEOUT_MS)) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/auth/login'
+      const redirectResponse = NextResponse.redirect(url)
+      
+      // Função de Limpeza Profunda: Remove todos os cookies do Supabase e o timer para evitar bloat
+      request.cookies.getAll().forEach(cookie => {
+        if (cookie.name.startsWith('sb-')) {
+          redirectResponse.cookies.set(cookie.name, '', { maxAge: 0, path: '/' })
+        }
+      })
+      redirectResponse.cookies.set('last_active', '', { maxAge: 0, path: '/' })
+      return redirectResponse
+    }
+
+    // Se usuário está ativo, atualiza o cookie do timer
+    if (user) {
+      supabaseResponse.cookies.set('last_active', now.toString(), {
+        path: '/',
+        maxAge: 5 * 60, // Expira o cookie em 5 minutos
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production'
+      })
+    }
+
     // Se não estiver logado e tentar acessar área protegida, vai para login
     if (!user && !isAuthRoute && !isApiRoute) {
       const url = request.nextUrl.clone()

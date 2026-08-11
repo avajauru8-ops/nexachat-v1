@@ -85,6 +85,7 @@ export function SidebarLinks({ workspaceId, initialUnreadCount }: { workspaceId?
       { name: '💳 Planos & Assinaturas', icon: CreditCard, tab: 'plans' },
       { name: '📢 Envio de Notificações', icon: Bell, tab: 'notifications' },
       { name: '🧭 Menus & Manutenção', icon: Menu, tab: 'menus' },
+      { name: '🧪 Testes Meta API', icon: Webhook, tab: 'meta-test' },
     ];
 
     return (
