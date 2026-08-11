@@ -3,7 +3,8 @@ import dotenv from "dotenv";
 dotenv.config({path: ".env.local"});
 
 // Mock inngest
-import { inngest } from './src/inngest/client.ts';
+import { inngest } from './src/inngest/client';
+// @ts-ignore
 inngest.send = async (evt) => {
   console.log("Inngest send mock:", JSON.stringify(evt));
 };
