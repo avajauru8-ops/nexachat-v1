@@ -1,8 +1,8 @@
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 
-const supabaseAdmin = createSupabaseClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+const getSupabaseAdmin = () => createSupabaseClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 );
 
 export interface ScheduledPost {
@@ -56,6 +56,7 @@ export function isTransientMetaError(error: unknown): boolean {
  * Requer a permissão "instagram_content_publish" na app Meta.
  */
 export async function publishPostToMeta(post: ScheduledPost) {
+  const supabaseAdmin = getSupabaseAdmin();
   const { data: account } = await supabaseAdmin
     .from('instagram_accounts')
     .select('ig_user_id, access_token')
