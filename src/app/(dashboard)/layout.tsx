@@ -6,6 +6,8 @@ import { MenuGuard } from "@/components/layout/MenuGuard";
 import { Suspense } from "react";
 import { SidebarProvider } from "@/contexts/SidebarContext";
 
+import { InactivityTimer } from "@/components/common/InactivityTimer";
+
 export default function DashboardLayout({
   children,
 }: {
@@ -16,6 +18,7 @@ export default function DashboardLayout({
       <div className="flex h-screen bg-dashboard-mesh font-sans">
         <Suspense fallback={null}>
           <GlobalAlertModal />
+          <InactivityTimer timeoutMinutes={5} />
         </Suspense>
         <SidebarWrapper>
           <Sidebar />
